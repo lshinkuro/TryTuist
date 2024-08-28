@@ -9,6 +9,7 @@ import UIKit
 import RxSwift
 import RxRelay
 import TTUI
+import Utility
 
 class ProfileViewController: BaseViewController {
     
@@ -138,6 +139,10 @@ class ProfileViewController: BaseViewController {
             make.centerY.equalToSuperview()
             make.width.equalTo(100)
             make.height.equalTo(40)
+        }
+        
+        activateButton.addTapGestureAction {
+            self.quickActionStack.swap(self.vouchersView, self.pointsView)
         }
         
         // Quick Actions

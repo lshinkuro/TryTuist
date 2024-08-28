@@ -8,11 +8,17 @@
 import UIKit
 import TTUI
 import Coordinator
+import Utility
+import Lottie
 
 class SplashScreenViewController: BaseViewController {
     
     
+    @IBOutlet weak var contentLottieView: UIView!
     weak var coordinator: SplashScreenCoordinator!
+    
+    var lottieView: LottieAnimationView =  LottieAnimationView(name: "Emoji-Mata Kedip")
+
     
     // MARK: used if screen using NIB file
     init(coordinator: SplashScreenCoordinator!) {
@@ -30,9 +36,16 @@ class SplashScreenViewController: BaseViewController {
     }
     
     private func setup() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-//            self.coordinator.goToOnBoard()
-            self.isTokenExistInKeychain() ?  self.coordinator.goToDashboard() : self.coordinator.goToLogin()
+        contentLottieView.addSubview(lottieView)
+        lottieView.frame = contentLottieView.bounds
+        lottieView.contentMode = .scaleAspectFit
+        lottieView.loopMode = .loop
+        lottieView.isHidden = false
+        lottieView.play()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.coordinator.goToOnBoard()
+//            self.isTokenExistInKeychain() ?  self.coordinator.goToDashboard() : self.coordinator.goToLogin()
             
         }
     }

@@ -11,6 +11,7 @@ import TTUI
 import RxSwift
 import RxCocoa
 import NetworkManager
+import Utility
 
 public class SignUpViewController: BaseViewController {
     

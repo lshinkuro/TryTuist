@@ -9,6 +9,7 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="SplashScreenViewController" customModule="AuthenticationFeature" customModuleProvider="target">
             <connections>
+                <outlet property="contentLottieView" destination="f0k-Du-UNC" id="IWw-XM-YWE"/>
                 <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
             </connections>
         </placeholder>
@@ -17,24 +18,23 @@
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="background_spalsh" translatesAutoresizingMaskIntoConstraints="NO" id="MgN-oh-YxE">
-                    <rect key="frame" x="126.66666666666669" y="336" width="140" height="180"/>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="f0k-Du-UNC">
+                    <rect key="frame" x="0.0" y="288.66666666666669" width="393" height="300.00000000000006"/>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <constraints>
-                        <constraint firstAttribute="height" constant="180" id="ENU-0E-kgo"/>
-                        <constraint firstAttribute="width" constant="140" id="TdJ-Qs-Lkg"/>
+                        <constraint firstAttribute="height" constant="300" id="SZS-z0-Z7V"/>
                     </constraints>
-                </imageView>
+                </view>
             </subviews>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
             <color key="backgroundColor" red="0.070588235294117646" green="0.070588235294117646" blue="0.070588235294117646" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
             <constraints>
-                <constraint firstItem="MgN-oh-YxE" firstAttribute="centerY" secondItem="i5M-Pr-FkT" secondAttribute="centerY" id="Hhe-dN-xKE"/>
-                <constraint firstItem="MgN-oh-YxE" firstAttribute="centerX" secondItem="i5M-Pr-FkT" secondAttribute="centerX" id="zFA-k0-oFl"/>
+                <constraint firstItem="f0k-Du-UNC" firstAttribute="centerY" secondItem="fnl-2z-Ty3" secondAttribute="centerY" id="KOV-nl-YwL"/>
+                <constraint firstItem="f0k-Du-UNC" firstAttribute="centerX" secondItem="i5M-Pr-FkT" secondAttribute="centerX" id="LT0-3K-Gep"/>
+                <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="f0k-Du-UNC" secondAttribute="trailing" id="WGL-Od-VRh"/>
+                <constraint firstItem="f0k-Du-UNC" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" id="bC6-Au-tkg"/>
             </constraints>
             <point key="canvasLocation" x="36" y="20"/>
         </view>
     </objects>
-    <resources>
-        <image name="background_spalsh" width="140" height="180"/>
-    </resources>
 </document>

@@ -7,6 +7,7 @@
 
 import UIKit
 import TTUI
+import Utility
 import RxSwift
 import RxCocoa
 

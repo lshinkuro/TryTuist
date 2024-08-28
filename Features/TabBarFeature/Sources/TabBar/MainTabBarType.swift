@@ -8,6 +8,7 @@
 import Foundation
 import UIKit
 import TTUI
+import Utility
 
 enum MainTabBarType {
     case home

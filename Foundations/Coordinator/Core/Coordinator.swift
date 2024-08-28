@@ -62,14 +62,12 @@ public extension Coordinator {
 
 public extension Coordinator {
   
-    // Fungsi untuk kembali ke layar sebelumnya
     func popToPreviousScreen(animated: Bool = true) {
         if let navigationController = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first(where: { $0.isKeyWindow })?.rootViewController as? UINavigationController {
             navigationController.popViewController(animated: animated)
         }
     }
   
-    // Fungsi untuk kembali ke root view controller
     func popToRoot(animated: Bool = true) {
         if let navigationController = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first(where: { $0.isKeyWindow })?.rootViewController as? UINavigationController {
             navigationController.popToRootViewController(animated: animated)

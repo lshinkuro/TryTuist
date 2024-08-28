@@ -10,6 +10,7 @@ import TTUI
 import RxSwift
 import RxCocoa
 import NetworkManager
+import Utility
 //import Alamofire
 
 public class SignInViewController: BaseViewController {
@@ -57,7 +58,6 @@ public class SignInViewController: BaseViewController {
         return stackView
     }()
     
-    
     let nameField = InputField()
     let passwordField = InputField()
     
@@ -93,7 +93,6 @@ public class SignInViewController: BaseViewController {
             guard let self = self else { return }
             self.coordinator.goToSignUp()
         }).disposed(by: disposeBag)
-        
         
     }
     
@@ -135,14 +134,8 @@ public class SignInViewController: BaseViewController {
     
     func setupViewConstraint() {
         view.addSubview(formView)
-        formView.addSubview(titleLabel)
-        formView.addSubview(nameField)
-        formView.addSubview(passwordField)
-        formView.addSubview(signButton)
-        formView.addSubview(stackView)
-        
-        stackView.addArrangedSubview(signUpLabel)
-        stackView.addArrangedSubview(signUpButton)
+        formView.add(titleLabel, nameField, passwordField,signButton, stackView)
+        stackView.addArrange(signUpLabel, signUpButton)
 
         
         formView.snp.makeConstraints { make in

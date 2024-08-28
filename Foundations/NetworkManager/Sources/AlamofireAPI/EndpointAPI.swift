@@ -8,6 +8,7 @@
 import Foundation
 import Alamofire
 import TTUI
+import Utility
 
 public enum EndpointAPI {
     case login(param: LoginParam)

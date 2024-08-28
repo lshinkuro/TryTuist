@@ -88,6 +88,9 @@ class TabbarCoordinator: NSObject, TabbarCoordinatorable {
             tabBarItem.image = tabBarType.setImage()
             tabBarItem.selectedImage =  tabBarType.selectedImage()
         }
+        
+        UITabBar.appearance().unselectedItemTintColor = .gray
+        UITabBar.appearance().tintColor = .label
     }
 }
 

@@ -37,3 +37,4 @@ public enum ScreenSize {
     static let maxLength    = max(ScreenSize.width, ScreenSize.height)
     static let minLength    = min(ScreenSize.width, ScreenSize.height)
 }
+
