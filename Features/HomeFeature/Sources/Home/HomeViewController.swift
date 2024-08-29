@@ -7,6 +7,7 @@
 
 import UIKit
 import SkeletonView
+import UserNotifications
 
 class HomeViewController: UIViewController {
     
@@ -47,7 +48,7 @@ class HomeViewController: UIViewController {
         view.hideSkeleton()
         tableView.reloadData()
     }
-    
+
 }
 
 extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
@@ -61,6 +62,10 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
                return UITableViewCell()
            }
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    
     }
 }
 

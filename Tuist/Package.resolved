@@ -1,5 +1,5 @@
 {
-  "originHash" : "e08ed8386151a3a9dded294e3d18a50f4d9e46cb4d4fc878c8b651942a9c5784",
+  "originHash" : "44543e8f7ccfc665a06635c4537da6f6b8425a0f77b7547ee7ea015520e7aa86",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -35,6 +35,15 @@
       "state" : {
         "revision" : "9118aca998dbe2ceac45d64b21a91c6376928df7",
         "version" : "11.1.0"
+      }
+    },
+    {
+      "identity" : "flex",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FLEXTool/FLEX.git",
+      "state" : {
+        "revision" : "e0acf59d06d498041f65bbea1e5914b6e4b39733",
+        "version" : "5.22.10"
       }
     },
     {

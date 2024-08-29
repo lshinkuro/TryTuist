@@ -14,6 +14,7 @@ let project = Project(
                     .TabBarFeature,
                     .AuthenticationFeature,
                     .HomeFeature,
+                    .Utility,
                     .ProfileFeature,
                     .CalenderFeature,
                     .FocuseFeature,
@@ -22,7 +23,8 @@ let project = Project(
                     .lottie,
                     .keychainSwift,
                     .keychainSwift,
-                    .snapkit
+                    .snapkit,
+                    .flex
                  ]),
         
         //MARK: Foundations
@@ -35,7 +37,7 @@ let project = Project(
                     "Foundations/TTUI/Resources/**/*.json"
                    ],
                    dependencies: [
-                    .rxSwift, .rxRelay , .rxCocoa , .skeletonView, .lottie, .snapkit
+                    .rxSwift, .rxRelay , .rxCocoa , .skeletonView, .lottie, .snapkit, .Utility
                    ]),
         
             .framework(.Coordinator,
@@ -109,7 +111,7 @@ let project = Project(
                         .rxSwift, .rxRelay , .rxCocoa , .skeletonView
                        ]),
         .framework(.FocuseFeature,
-                   sources: ["Features/FocuseFeature/Sources/**/*.swift"],
+                   sources: [TypeAssets.swift.resourcePath(in: .FocuseFeature, type: .sources)],
                    resources: ["Features/FocuseFeature/Sources/**/*.xib",
                                "Features/FocuseFeature/Resources/**/*.xcassets"
                               ],
@@ -146,7 +148,7 @@ public extension ProjectDescription.Target {
                         "App/Resources/**/*.json"],
             dependencies: dependencies,
             settings: .settings(
-              base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
+                base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
         )
     }
     
@@ -160,7 +162,7 @@ public extension ProjectDescription.Target {
             resources: resources,
             dependencies: dependencies,
             settings: .settings(
-              base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
+                base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
         )
     }
     
@@ -174,7 +176,7 @@ public extension ProjectDescription.Target {
             resources: resources,
             dependencies: dependencies,
             settings: .settings(
-              base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
+                base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
         )
     }
     
@@ -229,5 +231,32 @@ extension TargetDependency {
     static let lottie = TargetDependency.external(name: "Lottie")
     static let keychainSwift = TargetDependency.external(name: "KeychainSwift")
     static let snapkit = TargetDependency.external(name: "SnapKit")
+    static let flex = TargetDependency.external(name: "FLEX")
+    
     
 }
+
+enum TypeAssets: String {
+    case xib
+    case xcassets
+    case swift
+    case json
+    
+    func resourcePath(in feature: String, type : TypeSources, module: TypeModule = .features ) -> ProjectDescription.SourceFileGlob {
+        return "\(module.rawValue)/\(feature)/\(type.rawValue)/**/*.\(self.rawValue)"
+    }
+    
+    enum TypeSources: String {
+        case sources = "Sources"
+        case resources = "Resources"
+    }
+    
+    enum TypeModule: String {
+        case features = "Features"
+        case foundations = "Foundations"
+    }
+    
+}
+
+
+
