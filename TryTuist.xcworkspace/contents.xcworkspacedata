@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:TryTuist.xcodeproj">
+   </FileRef>
+   <Group
+      location = "container:"
+      name = "Dependencies">
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/Alamofire/Alamofire.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/FLEX/FLEX.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/FloatingPanel/FloatingPanel.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/IQKeyboardManagerSwift/IQKeyboardManagerSwift.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/KeychainSwift/KeychainSwift.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/Lottie/Lottie.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/RxSwift/RxSwift.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/SkeletonView/SkeletonView.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/SnapKit/SnapKit.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/Toast/Toast.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Tuist/.build/tuist-derived/netfox/netfox.xcodeproj">
+      </FileRef>
+   </Group>
+</Workspace>
