@@ -11,10 +11,12 @@ import Utility
 import RxSwift
 import RxCocoa
 
+
 struct OnboardingItem: Equatable {
     let image: UIImage?
     let title: String
     let subtitle: String
+    let bgImage: UIImage?
 }
 
 class OnBoardingViewController: BaseViewController {
@@ -45,13 +47,22 @@ class OnBoardingViewController: BaseViewController {
         return bt
     }()
     
+    let backgroundImage: UIImageView = {
+        // Set the background image
+        let bgImage = UIImageView()
+        bgImage.image = UIImage(named: "bg-1")
+        bgImage.contentMode = .scaleAspectFill
+        bgImage.alpha = 0.3
+        return bgImage
+    }()
+    
     
     weak var coordinator: OnBoardingCoordinator!
     
     private let items: [OnboardingItem] = [
-        .init(image: UIImage(named: "onboarding-1"), title: "Manage your tasks", subtitle: "You can easily manage all of your daily tasks in DoMe for free"),
-        .init(image: UIImage(named: "onboarding-2"), title: "Create daily routine", subtitle: "In Uptodo  you can create your personalized routine to stay productive"),
-        .init(image: UIImage(named: "onboarding-3"), title: "Orgonaize your tasks", subtitle: "You can organize your daily tasks by adding your tasks into separate categories")
+        .init(image: UIImage(named: "onboarding-1"), title: "Manage your tasks", subtitle: "You can easily manage all of your daily tasks in DoMe for free", bgImage: UIImage(named: "bg-1")),
+        .init(image: UIImage(named: "onboarding-2"), title: "Create daily routine", subtitle: "In Uptodo  you can create your personalized routine to stay productive", bgImage: UIImage(named: "bg-2")),
+        .init(image: UIImage(named: "onboarding-3"), title: "Orgonaize your tasks", subtitle: "You can organize your daily tasks by adding your tasks into separate categories", bgImage: UIImage(named: "bg-3"))
     ]
     
     private var currentPage: Int = 0
@@ -86,6 +97,7 @@ class OnBoardingViewController: BaseViewController {
         pageControl.pageIndicatorTintColor = .foodBrightCoral1
         pageControl.currentPageIndicatorTintColor = .gray
         
+        view.addSubview(backgroundImage)
         view.addSubview(collectionView)
         view.addSubview(skipButton)
         view.addSubview(nextButton)
@@ -116,6 +128,8 @@ class OnBoardingViewController: BaseViewController {
             make.top.equalToSuperview().offset(50)
             make.height.equalTo(34)
         }
+        
+        backgroundImage.frame = view.bounds
             
     }
     
@@ -127,6 +141,7 @@ class OnBoardingViewController: BaseViewController {
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.showsVerticalScrollIndicator = false
     }
+    
 
 
 }
@@ -156,41 +171,29 @@ extension OnBoardingViewController: UICollectionViewDataSource, UICollectionView
         let page = (collectionView.contentOffset.x / collectionView.frame.width)
             .rounded(.toNearestOrAwayFromZero)
         
+        
+        
         pageControl.currentPage = Int(page)
+        
+         let nextPage = page + 1
+         let alphaValue = max(0.0, 1.0 - CGFloat(page / nextPage))
+
+         UIView.animate(withDuration: 0.3) {
+             self.backgroundImage.alpha = alphaValue
+         }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         if let indexPath = collectionView.indexPathsForVisibleItems.first {
             currentPage = indexPath.row
+            updateBackgroundImage(for: currentPage)
         }
     }
-}
 
-final class CarouselLayout: UICollectionViewFlowLayout {
-    override init() {
-        super.init()
-        self.minimumInteritemSpacing = 0
-        self.minimumLineSpacing = 0
-        self.scrollDirection = .horizontal
-        self.sectionInset = .zero
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func prepare() {
-        super.prepare()
-        if let collectionView = collectionView {
-            itemSize = collectionView.frame.size
-        }
-    }
-    
-    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
-        guard itemSize != newBounds.size else { return false }
-        itemSize = newBounds.size
-        return true
+    private func updateBackgroundImage(for page: Int) {
+        UIView.transition(with: backgroundImage, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            self.backgroundImage.image = self.items[page].bgImage
+        }, completion: nil)
     }
 }
 

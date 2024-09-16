@@ -18,13 +18,17 @@ let project = Project(
                     .ProfileFeature,
                     .CalenderFeature,
                     .FocuseFeature,
+                    .CoreDataManager,
                     .alamofire,
                     .netfox,
                     .lottie,
                     .keychainSwift,
                     .keychainSwift,
                     .snapkit,
-                    .flex
+                    .flex,
+                    .toast,
+                    .floatingPanel,
+                    .IQKeyboardManagerSwift
                  ]),
         
         //MARK: Foundations
@@ -87,8 +91,8 @@ let project = Project(
                                    "Features/HomeFeature/Resources/**/*.xcassets"
                                   ],
                        dependencies: [
-                        .Utility, .TTUI, .Dependency, .Coordinator,
-                        .snapkit, .skeletonView
+                        .Utility, .TTUI, .Dependency, .Coordinator, .CoreDataManager,
+                        .snapkit, .skeletonView, .toast, .floatingPanel
                        ]),
         
             .framework(.ProfileFeature,
@@ -121,13 +125,19 @@ let project = Project(
                     
                    ]),
         
-            .framework(.TabBarFeature,
-                       sources: ["Features/TabBarFeature/Sources/**/*.swift"],
-                       resources: [],
-                       dependencies: [
-                        .Utility, .TTUI, .Dependency, .Coordinator
-                       ]),
-    ]
+        .framework(.TabBarFeature,
+                   sources: ["Features/TabBarFeature/Sources/**/*.swift"],
+                   resources: [],
+                   dependencies: [
+                    .Utility, .TTUI, .Dependency, .Coordinator
+                   ]),
+        
+        .framework(.CoreDataManager,
+                   sources: ["Foundations/CoreDataManager/**/*.swift"],
+                   resources: [ "Foundations/CoreDataManager/Resources/**/*.xcdatamodeld",
+                                "Foundations/CoreDataManager/Resources/**/*.xcassets"],
+                   dependencies: []),
+]
 )
 
 
@@ -145,7 +155,8 @@ public extension ProjectDescription.Target {
             resources: ["App/Sources/**/*.xib",
                         "App/Resources/**/*.xcassets",
                         "App/Resources/**/*.ttf",
-                        "App/Resources/**/*.json"],
+                        "App/Resources/**/*.json",
+                        "App/Resources/**/*.strings"],
             dependencies: dependencies,
             settings: .settings(
                 base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
@@ -199,6 +210,7 @@ internal extension String {
     static let ProfileFeature = "ProfileFeature"
     static let CalenderFeature = "CalenderFeature"
     static let FocuseFeature = "FocuseFeature"
+    static let CoreDataManager = "CoreDataManager"
     
 }
 
@@ -217,6 +229,8 @@ extension TargetDependency {
     static let ProfileFeature = TargetDependency.target(name: "ProfileFeature")
     static let CalenderFeature = TargetDependency.target(name: "CalenderFeature")
     static let FocuseFeature = TargetDependency.target(name: "FocuseFeature")
+    static let CoreDataManager = TargetDependency.target(name: "CoreDataManager")
+
     
     
     
@@ -232,6 +246,9 @@ extension TargetDependency {
     static let keychainSwift = TargetDependency.external(name: "KeychainSwift")
     static let snapkit = TargetDependency.external(name: "SnapKit")
     static let flex = TargetDependency.external(name: "FLEX")
+    static let toast = TargetDependency.external(name: "Toast")
+    static let floatingPanel = TargetDependency.external(name: "FloatingPanel")
+    static let IQKeyboardManagerSwift = TargetDependency.external(name: "IQKeyboardManagerSwift")
     
     
 }

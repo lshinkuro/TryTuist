@@ -19,20 +19,21 @@
             <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" translatesAutoresizingMaskIntoConstraints="NO" id="3XZ-oL-RpQ">
-                    <rect key="frame" x="0.0" y="59" width="393" height="759"/>
+                <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="none" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" translatesAutoresizingMaskIntoConstraints="NO" id="3XZ-oL-RpQ">
+                    <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                     <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                    <color key="sectionIndexBackgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="boolean" keyPath="isSkeletonable" value="YES"/>
                     </userDefinedRuntimeAttributes>
                 </tableView>
             </subviews>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
-            <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+            <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
             <constraints>
-                <constraint firstItem="3XZ-oL-RpQ" firstAttribute="top" secondItem="fnl-2z-Ty3" secondAttribute="top" id="Jg4-94-uwl"/>
+                <constraint firstItem="3XZ-oL-RpQ" firstAttribute="top" secondItem="i5M-Pr-FkT" secondAttribute="top" id="Jg4-94-uwl"/>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="3XZ-oL-RpQ" secondAttribute="trailing" id="RUL-EX-eYD"/>
-                <constraint firstItem="fnl-2z-Ty3" firstAttribute="bottom" secondItem="3XZ-oL-RpQ" secondAttribute="bottom" id="f0T-D8-3t7"/>
+                <constraint firstAttribute="bottom" secondItem="3XZ-oL-RpQ" secondAttribute="bottom" id="f0T-D8-3t7"/>
                 <constraint firstItem="3XZ-oL-RpQ" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" id="qMk-ty-fWz"/>
             </constraints>
             <point key="canvasLocation" x="61" y="21"/>

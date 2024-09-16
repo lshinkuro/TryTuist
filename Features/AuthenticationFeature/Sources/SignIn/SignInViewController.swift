@@ -138,42 +138,37 @@ public class SignInViewController: BaseViewController {
         stackView.addArrange(signUpLabel, signUpButton)
 
         
-        formView.snp.makeConstraints { make in
-            make.horizontalEdges.equalToSuperview().inset(20)
-            make.centerY.equalToSuperview()
+        formView.snp.makeConstraints {
+            $0.horizontalEdges.equalToSuperview().inset(20)
+            $0.centerY.equalToSuperview()
         }
         
         titleLabel.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(20)
-            make.trailing.equalToSuperview().offset(-20)
+            make.horizontalEdges.equalToSuperview().inset(20)
             make.top.equalToSuperview().offset(15)
             make.height.equalTo(80)
         }
         
         nameField.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(20)
-            make.trailing.equalToSuperview().offset(-20)
+            make.horizontalEdges.equalToSuperview().inset(20)
             make.top.equalTo(titleLabel.snp.bottom).offset(20)
             make.height.equalTo(80)
         }
         
         passwordField.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(20)
-            make.trailing.equalToSuperview().offset(-20)
+            make.horizontalEdges.equalToSuperview().inset(20)
             make.top.equalTo(nameField.snp.bottom).offset(20)
             make.height.equalTo(80)
         }
         
         signButton.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(20)
-            make.trailing.equalToSuperview().offset(-20)
+            make.horizontalEdges.equalToSuperview().inset(20)
             make.top.equalTo(passwordField.snp.bottom).offset(50)
             make.height.equalTo(40)
         }
         
         stackView.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(20)
-            make.trailing.equalToSuperview().offset(-20)
+            make.horizontalEdges.equalToSuperview().inset(20)
             make.top.equalTo(signButton.snp.bottom).offset(10)
             make.bottom.equalToSuperview().offset(-20)
             make.height.equalTo(20)

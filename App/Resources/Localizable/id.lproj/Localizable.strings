@@ -1,0 +1,12 @@
+/* 
+  Localizable.strings
+  TryTuist
+
+  Created by Phincon on 30/08/24.
+  
+*/
+
+//MARK: - Coach Mark
+"coachmark.first_title" = "Selamat datang di Try Tuist!";
+"coachmark.second_title" = "Beragam pilihan fitur";
+"coachmark.third_title" = "Siap untuk menjelajah?";

@@ -10,6 +10,7 @@
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="SplashScreenViewController" customModule="AuthenticationFeature" customModuleProvider="target">
             <connections>
                 <outlet property="contentLottieView" destination="f0k-Du-UNC" id="IWw-XM-YWE"/>
+                <outlet property="titleLbl" destination="Zc9-jk-uCE" id="5mc-6t-Cyl"/>
                 <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
             </connections>
         </placeholder>
@@ -25,16 +26,26 @@
                         <constraint firstAttribute="height" constant="300" id="SZS-z0-Z7V"/>
                     </constraints>
                 </view>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Zc9-jk-uCE">
+                    <rect key="frame" x="10" y="229" width="373" height="39.666666666666686"/>
+                    <fontDescription key="fontDescription" name="Menlo-Regular" family="Menlo" pointSize="34"/>
+                    <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <nil key="highlightedColor"/>
+                </label>
             </subviews>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
             <color key="backgroundColor" red="0.070588235294117646" green="0.070588235294117646" blue="0.070588235294117646" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
             <constraints>
+                <constraint firstItem="Zc9-jk-uCE" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" constant="10" id="6Hj-z0-vjd"/>
+                <constraint firstItem="Zc9-jk-uCE" firstAttribute="centerX" secondItem="i5M-Pr-FkT" secondAttribute="centerX" id="BVi-EV-CaW"/>
                 <constraint firstItem="f0k-Du-UNC" firstAttribute="centerY" secondItem="fnl-2z-Ty3" secondAttribute="centerY" id="KOV-nl-YwL"/>
                 <constraint firstItem="f0k-Du-UNC" firstAttribute="centerX" secondItem="i5M-Pr-FkT" secondAttribute="centerX" id="LT0-3K-Gep"/>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="f0k-Du-UNC" secondAttribute="trailing" id="WGL-Od-VRh"/>
                 <constraint firstItem="f0k-Du-UNC" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" id="bC6-Au-tkg"/>
+                <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="Zc9-jk-uCE" secondAttribute="trailing" constant="10" id="buI-cA-5bV"/>
+                <constraint firstItem="f0k-Du-UNC" firstAttribute="top" secondItem="Zc9-jk-uCE" secondAttribute="bottom" constant="20" id="l82-Yq-Rgh"/>
             </constraints>
-            <point key="canvasLocation" x="36" y="20"/>
+            <point key="canvasLocation" x="35.877862595419849" y="19.718309859154932"/>
         </view>
     </objects>
 </document>

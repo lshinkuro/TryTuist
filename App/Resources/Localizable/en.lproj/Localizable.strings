@@ -1,0 +1,12 @@
+/* 
+  Localizable.strings
+  TryTuist
+
+  Created by Phincon on 30/08/24.
+  
+*/
+
+//MARK: - Coach Mark
+"coachmark.first_title" = "Welcome to OCTO Mobile!";
+"coachmark.second_title" = "Array of menu";
+"coachmark.third_title" = "Ready to explore?";

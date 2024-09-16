@@ -162,7 +162,7 @@ extension UIWindow {
         let alert = UIAlertController(title: "Debug", message: "show debug status", preferredStyle: .actionSheet)
         
         #if DEBUG
-        alert.addAction(UIAlertAction(title: "Network Debug", style: .default, handler: { _ in
+        alert.addAction(UIAlertAction(title: "NETWORK DEBUG", style: .default, handler: { _ in
             NFX.sharedInstance().start()
         }))
         #endif
@@ -172,7 +172,7 @@ extension UIWindow {
             FLEXManager.shared.showExplorer()
         }))
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "CANCEL", style: .cancel, handler: nil))
         
         controller.present(alert, animated: true, completion: {})
         #endif
@@ -196,17 +196,12 @@ extension UIApplication {
     }
     
     var firstKeyWindow: UIWindow? {
-        // 1
         let windowScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-        // 2
         let activeScene = windowScenes
             .filter { $0.activationState == .foregroundActive }
-        // 3
         let firstActiveScene = activeScene.first
-        // 4
         let keyWindow = firstActiveScene?.keyWindow
-        
         return keyWindow
     }
 }

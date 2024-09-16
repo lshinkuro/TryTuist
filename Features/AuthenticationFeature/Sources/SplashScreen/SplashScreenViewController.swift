@@ -14,7 +14,9 @@ import Lottie
 class SplashScreenViewController: BaseViewController {
     
     
+    @IBOutlet weak var titleLbl: UILabel!
     @IBOutlet weak var contentLottieView: UIView!
+    
     weak var coordinator: SplashScreenCoordinator!
     
     var lottieView: LottieAnimationView =  LottieAnimationView(name: "Emoji-Mata Kedip")
@@ -36,6 +38,7 @@ class SplashScreenViewController: BaseViewController {
     }
     
     private func setup() {
+        titleLbl.text = .localized("coachmark.first_title")
         contentLottieView.addSubview(lottieView)
         lottieView.frame = contentLottieView.bounds
         lottieView.contentMode = .scaleAspectFit
@@ -44,8 +47,8 @@ class SplashScreenViewController: BaseViewController {
         lottieView.play()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            self.coordinator.goToOnBoard()
-//            self.isTokenExistInKeychain() ?  self.coordinator.goToDashboard() : self.coordinator.goToLogin()
+//            self.coordinator.goToOnBoard()
+            self.isTokenExistInKeychain() ?  self.coordinator.goToDashboard() : self.coordinator.goToLogin()
             
         }
     }

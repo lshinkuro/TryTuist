@@ -14,9 +14,11 @@ import SkeletonView
 class FocusesViewController: BaseViewController {
     
     // MARK: - UI Elements
-    let tabBar = UISegmentedControl(items: [TypeSegment.store.rawValue, TypeSegment.voucher.rawValue])
-    let tableView = UITableView()
-
+    private let tabBar = UISegmentedControl(items: [TypeSegment.store.rawValue, TypeSegment.voucher.rawValue])
+    private let tableView = UITableView()
+    private let customTabBar = CustomTabBar()
+    private var dataArray: [String] = ["Recent", "Pending", "Completed","Failed"]
+    
     var displayedOrders: [Order] = []
     weak var coordinator: FocuseCoordinator!
     
@@ -33,12 +35,41 @@ class FocusesViewController: BaseViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         setupTabBar()
+        setupCustomTabBar()
         setupTableView()
     }
     
     override func bindingData() {
         super.bindingData()
         displayedOrders = orders
+    }
+    
+    private func setupCustomTabBar() {
+        customTabBar.titles = dataArray
+        customTabBar.buttonTapped = { [weak self] index in
+            self?.handleTabSelection(index: index)
+        }
+        
+        view.addSubview(customTabBar)
+        customTabBar.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(16)
+            make.leading.trailing.equalToSuperview().inset(16)
+            make.height.equalTo(40)
+        }
+    }
+    
+    private func handleTabSelection(index: Int) {
+        switch index {
+        case 0:
+            displayedOrders = orders
+        case 1:
+            displayedOrders = vouchers
+        default:
+            displayedOrders = vouchers
+        }
+        tableView.reloadData()
+        print("Selected tab at index: \(index)")
+        // Update your data or views based on the selected tab
     }
     
     
@@ -50,6 +81,7 @@ class FocusesViewController: BaseViewController {
             make.leading.trailing.equalToSuperview().inset(16)
         }
         tabBar.addTarget(self, action: #selector(tabBarChanged), for: .valueChanged)
+        tabBar.isHidden = true
     }
     
     @objc func tabBarChanged() {
@@ -68,7 +100,7 @@ class FocusesViewController: BaseViewController {
         tableView.register(OrderCell.self, forCellReuseIdentifier: "OrderCell")
         tableView.separatorStyle = .none
         tableView.snp.makeConstraints { make in
-            make.top.equalTo(tabBar.snp.bottom).offset(16)
+            make.top.equalTo(customTabBar.snp.bottom).offset(16)
             make.leading.trailing.bottom.equalToSuperview()
         }
     }

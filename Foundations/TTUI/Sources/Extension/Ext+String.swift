@@ -10,7 +10,7 @@ import UIKit
 import Foundation
 import Utility
 
-extension String {
+public extension String {
     
     func fromBase64() -> String? {
         guard let data = Data(base64Encoded: self) else {

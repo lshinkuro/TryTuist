@@ -1,5 +1,5 @@
 {
-  "originHash" : "44543e8f7ccfc665a06635c4537da6f6b8425a0f77b7547ee7ea015520e7aa86",
+  "originHash" : "ff8428ab2a9f0a3469c4407daf187ee412a7c57abefa4e47538eee4043752f50",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -44,6 +44,15 @@
       "state" : {
         "revision" : "e0acf59d06d498041f65bbea1e5914b6e4b39733",
         "version" : "5.22.10"
+      }
+    },
+    {
+      "identity" : "floatingpanel",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SCENEE/FloatingPanel.git",
+      "state" : {
+        "revision" : "71f419a3cd212afc7615e2179c2fec1df1aa74da",
+        "version" : "2.8.5"
       }
     },
     {
@@ -98,6 +107,15 @@
       "state" : {
         "revision" : "2d12673670417654f08f5f90fdd62926dc3a2648",
         "version" : "100.0.0"
+      }
+    },
+    {
+      "identity" : "iqkeyboardmanager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/hackiftekhar/IQKeyboardManager.git",
+      "state" : {
+        "revision" : "fa9b2bac94b3fabe2d6ca7c74b269d4e8c355111",
+        "version" : "7.1.1"
       }
     },
     {
@@ -188,6 +206,15 @@
       "state" : {
         "revision" : "e17d61f26df0f0e06f58f6977ba05a097a720106",
         "version" : "1.27.1"
+      }
+    },
+    {
+      "identity" : "toast-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/BastiaanJansen/toast-swift",
+      "state" : {
+        "revision" : "9a40b722b6eeb9683d47e3584501e81525741291",
+        "version" : "2.1.2"
       }
     }
   ],
