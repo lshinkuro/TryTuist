@@ -14,34 +14,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2A717419231F3C0B8A3E0F06"
-               BuildableName = "Alamofire.framework"
-               BlueprintName = "Alamofire"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/Alamofire/Alamofire.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "87EA802785C2DA6B58134CC2"
-               BuildableName = "Alamofire_Alamofire.bundle"
-               BlueprintName = "Alamofire_Alamofire"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/Alamofire/Alamofire.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "03503111B8D6ADB893B77368"
                BuildableName = "AuthenticationFeature.framework"
                BlueprintName = "AuthenticationFeature"
@@ -112,34 +84,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4CDE5457F4D90A2C42AB7707"
-               BuildableName = "FLEX.framework"
-               BlueprintName = "FLEX"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/FLEX/FLEX.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "6E94AAB42417057864E0FA0B"
-               BuildableName = "FloatingPanel.framework"
-               BlueprintName = "FloatingPanel"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/FloatingPanel/FloatingPanel.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "BE3BAB6D9AFA7E8ECA9CD2CE"
                BuildableName = "FocuseFeature.framework"
                BlueprintName = "FocuseFeature"
@@ -158,48 +102,6 @@
                BuildableName = "HomeFeature.framework"
                BlueprintName = "HomeFeature"
                ReferencedContainer = "container:TryTuist.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "AE3237C1BBF9D6B0DD4C2397"
-               BuildableName = "IQKeyboardManagerSwift.framework"
-               BlueprintName = "IQKeyboardManagerSwift"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/IQKeyboardManagerSwift/IQKeyboardManagerSwift.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E3BE516145FCC4F71282A432"
-               BuildableName = "IQKeyboardManagerSwift_IQKeyboardManagerSwift.bundle"
-               BlueprintName = "IQKeyboardManagerSwift_IQKeyboardManagerSwift"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/IQKeyboardManagerSwift/IQKeyboardManagerSwift.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "14688E1D80A7116114946FA7"
-               BuildableName = "KeychainSwift.framework"
-               BlueprintName = "KeychainSwift"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/KeychainSwift/KeychainSwift.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -238,118 +140,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B8553AE058E48CADF8895B28"
-               BuildableName = "RxCocoa.framework"
-               BlueprintName = "RxCocoa"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/RxSwift/RxSwift.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8A30B8272F02FD2827613749"
-               BuildableName = "RxCocoaRuntime.framework"
-               BlueprintName = "RxCocoaRuntime"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/RxSwift/RxSwift.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "95C3C64AA50990FE5F757F3A"
-               BuildableName = "RxRelay.framework"
-               BlueprintName = "RxRelay"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/RxSwift/RxSwift.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8347C3C08CE16ABDA172FCE3"
-               BuildableName = "RxSwift.framework"
-               BlueprintName = "RxSwift"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/RxSwift/RxSwift.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4F30707FB9D6C278017F46DB"
-               BuildableName = "SkeletonView.framework"
-               BlueprintName = "SkeletonView"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/SkeletonView/SkeletonView.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "23427CDC64A4C282F6B1C99A"
-               BuildableName = "SkeletonView_SkeletonView.bundle"
-               BlueprintName = "SkeletonView_SkeletonView"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/SkeletonView/SkeletonView.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8A043024BB190898066F1729"
-               BuildableName = "SnapKit.framework"
-               BlueprintName = "SnapKit"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/SnapKit/SnapKit.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "6373C89B0415733128F88C67"
-               BuildableName = "SnapKit_SnapKit.bundle"
-               BlueprintName = "SnapKit_SnapKit"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/SnapKit/SnapKit.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "50C7E958F09ACC166F187390"
                BuildableName = "TTUI.framework"
                BlueprintName = "TTUI"
@@ -368,20 +158,6 @@
                BuildableName = "TabBarFeature.framework"
                BlueprintName = "TabBarFeature"
                ReferencedContainer = "container:TryTuist.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "20F3065121F4330C64986211"
-               BuildableName = "Toast.framework"
-               BlueprintName = "Toast"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/Toast/Toast.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -412,34 +188,6 @@
                ReferencedContainer = "container:TryTuist.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C6D8153E58B10ACFF56CE5BC"
-               BuildableName = "_LottieStub.framework"
-               BlueprintName = "_LottieStub"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/Lottie/Lottie.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "ACDE267B12BD825D02E7FEF4"
-               BuildableName = "netfox.framework"
-               BlueprintName = "netfox"
-               ReferencedContainer = "container:Tuist/.build/tuist-derived/netfox/netfox.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -463,10 +211,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2A717419231F3C0B8A3E0F06"
-            BuildableName = "Alamofire.framework"
-            BlueprintName = "Alamofire"
-            ReferencedContainer = "container:Tuist/.build/tuist-derived/Alamofire/Alamofire.xcodeproj">
+            BlueprintIdentifier = "03503111B8D6ADB893B77368"
+            BuildableName = "AuthenticationFeature.framework"
+            BlueprintName = "AuthenticationFeature"
+            ReferencedContainer = "container:TryTuist.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </LaunchAction>
@@ -479,10 +227,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2A717419231F3C0B8A3E0F06"
-            BuildableName = "Alamofire.framework"
-            BlueprintName = "Alamofire"
-            ReferencedContainer = "container:Tuist/.build/tuist-derived/Alamofire/Alamofire.xcodeproj">
+            BlueprintIdentifier = "03503111B8D6ADB893B77368"
+            BuildableName = "AuthenticationFeature.framework"
+            BlueprintName = "AuthenticationFeature"
+            ReferencedContainer = "container:TryTuist.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

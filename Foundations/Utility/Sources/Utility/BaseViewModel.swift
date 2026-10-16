@@ -4,10 +4,8 @@
 //
 //  Created by Phincon on 19/08/24.
 //
-
 import Foundation
-import RxSwift
-import RxCocoa
+import Combine
 
 public enum StateLoading: Int {
     case notLoad
@@ -16,11 +14,9 @@ public enum StateLoading: Int {
     case failed
 }
 
-open class BaseViewModel {
-    
-    public let bag: DisposeBag = DisposeBag()
-    public var loadingState = BehaviorRelay<StateLoading>(value: .notLoad)
-    
+/// Base view model yang di-observe langsung oleh SwiftUI view.
+open class BaseViewModel: ObservableObject {
+    @Published public var loadingState: StateLoading = .notLoad
+
     public init() {}
 }
-

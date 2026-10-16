@@ -1,6 +1,9 @@
 import ProjectDescription
+
 let appName = "TryTuist"
 let prefixBundleID = "com.lshinkuro"
+/// Minimal iOS version untuk seluruh target.
+let minimumIOSVersion = "17.0"
 
 let project = Project(
     name: appName,
@@ -18,200 +21,137 @@ let project = Project(
                     .ProfileFeature,
                     .CalenderFeature,
                     .FocuseFeature,
-                    .CoreDataManager,
-                    .alamofire,
-                    .netfox,
-                    .lottie,
-                    .keychainSwift,
-                    .keychainSwift,
-                    .snapkit,
-                    .flex,
-                    .toast,
-                    .floatingPanel,
-                    .IQKeyboardManagerSwift
+                    .CoreDataManager
                  ]),
-        
         //MARK: Foundations
         .framework(.TTUI,
                    sources: ["Foundations/TTUI/Sources/**/*.swift"],
                    resources: [
-                    "Foundations/TTUI/Sources/**/*.xib",
-                    "Foundations/TTUI/Resources/**/*.xcassets",
-                    "Foundations/TTUI/Resources/**/*.ttf",
-                    "Foundations/TTUI/Resources/**/*.json"
+                    "Foundations/TTUI/Resources/**/*.xcassets"
                    ],
                    dependencies: [
-                    .rxSwift, .rxRelay , .rxCocoa , .skeletonView, .lottie, .snapkit, .Utility
+                    .Utility
                    ]),
-        
-            .framework(.Coordinator,
-                       sources: ["Foundations/Coordinator/**/*.swift"],
-                       resources: [],
-                       dependencies: []),
-        
-            .framework(.Dependency,
-                       sources: ["Foundations/Dependency/**/*.swift"],
-                       resources: [],
-                       dependencies: [
-                        .target(name: "Coordinator"),
-                       ]),
+        .framework(.Coordinator,
+                   sources: ["Foundations/Coordinator/**/*.swift"],
+                   resources: [],
+                   dependencies: []),
+        .framework(.Dependency,
+                   sources: ["Foundations/Dependency/**/*.swift"],
+                   resources: [],
+                   dependencies: [
+                    .Coordinator
+                   ]),
         .framework(.Utility,
                    sources: ["Foundations/Utility/**/*.swift"],
                    resources: [],
                    dependencies: [
-                    .Coordinator,
-                    .rxSwift, .rxRelay , .rxCocoa , .skeletonView, .lottie, .snapkit
+                    .Coordinator
                    ]),
-        
-            .framework(.NetworkManager,
-                       sources: ["Foundations/NetworkManager/**/*.swift"],
-                       resources: [],
-                       dependencies: [
-                        .Utility, .TTUI, .Coordinator,
-                        .alamofire
-                       ]),
-        
+        .framework(.NetworkManager,
+                   sources: ["Foundations/NetworkManager/**/*.swift"],
+                   resources: [],
+                   dependencies: [
+                    .Utility
+                   ]),
+        .framework(.CoreDataManager,
+                   sources: ["Foundations/CoreDataManager/**/*.swift"],
+                   resources: ["Foundations/CoreDataManager/Resources/**/*.xcdatamodeld"],
+                   dependencies: []),
         //MARK: Features
         .framework(.AuthenticationFeature,
-                   sources: ["Features/AuthenticationFeature/Sources/**/*.swift",
-                             "Features/AuthenticationFeature/Sources/**/*.xcassets",],
-                   resources: [
-                    "Features/AuthenticationFeature/Sources/**/*.xib",
-                    "Features/AuthenticationFeature/Resources/**/*.xcassets",
-                    
-                   ],
+                   sources: ["Features/AuthenticationFeature/Sources/**/*.swift"],
+                   resources: ["Features/AuthenticationFeature/Resources/**/*.xcassets"],
                    dependencies: [
-                    .Utility, .TTUI, .NetworkManager,
-                    .rxSwift, .rxRelay , .rxCocoa , .skeletonView, .lottie
+                    .Utility, .TTUI, .NetworkManager, .Dependency, .Coordinator
                    ]),
-        
-            .framework(.HomeFeature,
-                       sources: ["Features/HomeFeature/Sources/**/*.swift"],
-                       resources: ["Features/HomeFeature/Sources/**/*.xib",
-                                   "Features/HomeFeature/Resources/**/*.xcassets"
-                                  ],
-                       dependencies: [
-                        .Utility, .TTUI, .Dependency, .Coordinator, .CoreDataManager,
-                        .snapkit, .skeletonView, .toast, .floatingPanel
-                       ]),
-        
-            .framework(.ProfileFeature,
-                       sources: ["Features/ProfileFeature/Sources/**/*.swift"],
-                       resources: ["Features/ProfileFeature/Sources/**/*.xib",
-                                   "Features/ProfileFeature/Resources/**/*.xcassets"
-                                  ],
-                       dependencies: [
-                        .Utility, .TTUI, .Dependency, .Coordinator,
-                        .rxSwift, .rxRelay , .rxCocoa , .skeletonView
-                       ]),
-        
-            .framework(.CalenderFeature,
-                       sources: ["Features/CalenderFeature/Sources/**/*.swift"],
-                       resources: ["Features/CalenderFeature/Sources/**/*.xib",
-                                   "Features/CalenderFeature/Resources/**/*.xcassets"
-                                  ],
-                       dependencies: [
-                        .Utility, .TTUI, .Dependency, .Coordinator,
-                        .rxSwift, .rxRelay , .rxCocoa , .skeletonView
-                       ]),
+        .framework(.HomeFeature,
+                   sources: ["Features/HomeFeature/Sources/**/*.swift"],
+                   resources: ["Features/HomeFeature/Resources/**/*.xcassets"],
+                   dependencies: [
+                    .Utility, .TTUI, .Dependency, .Coordinator, .CoreDataManager
+                   ]),
+        .framework(.ProfileFeature,
+                   sources: ["Features/ProfileFeature/Sources/**/*.swift"],
+                   resources: [],
+                   dependencies: [
+                    .Utility, .TTUI, .Dependency, .Coordinator
+                   ]),
+        .framework(.CalenderFeature,
+                   sources: ["Features/CalenderFeature/Sources/**/*.swift"],
+                   resources: [],
+                   dependencies: [
+                    .Utility, .TTUI, .Dependency, .Coordinator
+                   ]),
         .framework(.FocuseFeature,
-                   sources: [TypeAssets.swift.resourcePath(in: .FocuseFeature, type: .sources)],
-                   resources: ["Features/FocuseFeature/Sources/**/*.xib",
-                               "Features/FocuseFeature/Resources/**/*.xcassets"
-                              ],
+                   sources: ["Features/FocuseFeature/Sources/**/*.swift"],
+                   resources: [],
                    dependencies: [
-                    .Utility, .TTUI, .Dependency, .Coordinator,
-                    .rxSwift, .rxRelay , .rxCocoa , .skeletonView
-                    
+                    .Utility, .TTUI, .Dependency, .Coordinator
                    ]),
-        
         .framework(.TabBarFeature,
                    sources: ["Features/TabBarFeature/Sources/**/*.swift"],
                    resources: [],
                    dependencies: [
                     .Utility, .TTUI, .Dependency, .Coordinator
-                   ]),
-        
-        .framework(.CoreDataManager,
-                   sources: ["Foundations/CoreDataManager/**/*.swift"],
-                   resources: [ "Foundations/CoreDataManager/Resources/**/*.xcdatamodeld",
-                                "Foundations/CoreDataManager/Resources/**/*.xcassets"],
-                   dependencies: []),
-]
+                   ])
+    ]
 )
 
-
-
 public extension ProjectDescription.Target {
-    
     static func mainApp(_ name: String, dependencies: [TargetDependency]) -> ProjectDescription.Target {
         .target(
             name: "\(name)",
             destinations: .iOS,
             product: .app,
             bundleId: "\(prefixBundleID).\(name.dashSeparator)",
+            deploymentTargets: .iOS(minimumIOSVersion),
             infoPlist: .file(path: .relativeToManifest("App/Info.plist")),
-            sources: ["App/Sources/**/*.swift",],
-            resources: ["App/Sources/**/*.xib",
-                        "App/Resources/**/*.xcassets",
+            sources: ["App/Sources/**/*.swift"],
+            resources: ["App/Resources/**/*.xcassets",
                         "App/Resources/**/*.ttf",
-                        "App/Resources/**/*.json",
                         "App/Resources/**/*.strings"],
             dependencies: dependencies,
-            settings: .settings(
-                base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
+            settings: .settings(base: baseSettings)
         )
     }
-    
+
     static func framework(_ targetName: String, sources: SourceFilesList?, resources: ResourceFileElements?, dependencies: [TargetDependency]) -> ProjectDescription.Target {
         .target(
             name: targetName,
             destinations: .iOS,
             product: .framework,
             bundleId: "\(prefixBundleID).\(targetName.dashSeparator)",
+            deploymentTargets: .iOS(minimumIOSVersion),
             sources: sources,
             resources: resources,
             dependencies: dependencies,
-            settings: .settings(
-                base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
+            settings: .settings(base: baseSettings)
         )
     }
-    
-    static func example(_ targetName: String, sources: SourceFilesList?, resources: ResourceFileElements?, dependencies: [TargetDependency]) -> ProjectDescription.Target {
-        .target(
-            name: targetName,
-            destinations: .iOS,
-            product: .app,
-            bundleId: "\(prefixBundleID).\(targetName.dashSeparator)",
-            sources: sources,
-            resources: resources,
-            dependencies: dependencies,
-            settings: .settings(
-                base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
-        )
-    }
-    
 }
+
+private let baseSettings: SettingsDictionary = [
+    "OTHER_LDFLAGS": "$(inherited) -ObjC",
+    "SWIFT_VERSION": "5.0"
+]
 
 internal extension String {
     var dashSeparator: String {
         self.replacingOccurrences(of: " ", with: "-")
     }
-    
     static let TabBarFeature = "TabBarFeature"
     static let Dependency = "Dependency"
     static let TTUI = "TTUI"
     static let Coordinator = "Coordinator"
     static let Utility = "Utility"
     static let NetworkManager = "NetworkManager"
-    
     static let AuthenticationFeature = "AuthenticationFeature"
     static let HomeFeature = "HomeFeature"
     static let ProfileFeature = "ProfileFeature"
     static let CalenderFeature = "CalenderFeature"
     static let FocuseFeature = "FocuseFeature"
     static let CoreDataManager = "CoreDataManager"
-    
 }
 
 extension TargetDependency {
@@ -222,58 +162,10 @@ extension TargetDependency {
     static let Utility = TargetDependency.target(name: "Utility")
     static let NetworkManager = TargetDependency.target(name: "NetworkManager")
     static let TabBarFeature = TargetDependency.target(name: "TabBarFeature")
-    
-    
     static let AuthenticationFeature = TargetDependency.target(name: "AuthenticationFeature")
     static let HomeFeature = TargetDependency.target(name: "HomeFeature")
     static let ProfileFeature = TargetDependency.target(name: "ProfileFeature")
     static let CalenderFeature = TargetDependency.target(name: "CalenderFeature")
     static let FocuseFeature = TargetDependency.target(name: "FocuseFeature")
     static let CoreDataManager = TargetDependency.target(name: "CoreDataManager")
-
-    
-    
-    
-    // MARK: TargetDependency External
-    static let kingFisher = TargetDependency.external(name: "Kingfisher")
-    static let skeletonView = TargetDependency.external(name: "SkeletonView")
-    static let rxSwift = TargetDependency.external(name: "RxSwift")
-    static let rxRelay = TargetDependency.external(name: "RxRelay")
-    static let rxCocoa = TargetDependency.external(name: "RxCocoa")
-    static let alamofire = TargetDependency.external(name: "Alamofire")
-    static let netfox = TargetDependency.external(name: "netfox")
-    static let lottie = TargetDependency.external(name: "Lottie")
-    static let keychainSwift = TargetDependency.external(name: "KeychainSwift")
-    static let snapkit = TargetDependency.external(name: "SnapKit")
-    static let flex = TargetDependency.external(name: "FLEX")
-    static let toast = TargetDependency.external(name: "Toast")
-    static let floatingPanel = TargetDependency.external(name: "FloatingPanel")
-    static let IQKeyboardManagerSwift = TargetDependency.external(name: "IQKeyboardManagerSwift")
-    
-    
 }
-
-enum TypeAssets: String {
-    case xib
-    case xcassets
-    case swift
-    case json
-    
-    func resourcePath(in feature: String, type : TypeSources, module: TypeModule = .features ) -> ProjectDescription.SourceFileGlob {
-        return "\(module.rawValue)/\(feature)/\(type.rawValue)/**/*.\(self.rawValue)"
-    }
-    
-    enum TypeSources: String {
-        case sources = "Sources"
-        case resources = "Resources"
-    }
-    
-    enum TypeModule: String {
-        case features = "Features"
-        case foundations = "Foundations"
-    }
-    
-}
-
-
-

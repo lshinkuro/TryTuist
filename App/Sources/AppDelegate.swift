@@ -6,57 +6,25 @@
 //
 
 import UIKit
-import AuthenticationFeature
-import ProfileFeature
-import HomeFeature
-import CalenderFeature
-import FocuseFeature
-import TTUI
-import TabBarFeature
-import Dependency
-import netfox
 import UserNotifications
-import FLEX
 
 @main
 class AppDelegate: NSObject, UIApplicationDelegate {
-    
-    var window: UIWindow?
-    
-    var app: AppCoordinator?
-    
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        
         UNUserNotificationCenter.current().delegate = self
         NotificationManager.shared.requestNotificationPermission()
-        
-        window = .init(frame: UIScreen.main.bounds)
-        
-        let nav = UINavigationController()
-        window?.rootViewController = nav
-        window?.makeKeyAndVisible()
-        
-        
-        
-        //MARK: set coordinator
-        
-        let homeDependency = HomeModule()
-        let profileDependency = ProfileModule()
-        let calenderDependency = CalenderModule()
-        let focusDependency = FocusModule()
-        
-        let tabBarDependency = TabBarModule(homeDependency: homeDependency,calenderDependency: calenderDependency, focusDependency: focusDependency, profileDependency: profileDependency)
-        let authDependency = AuthenticationModule(tabBarDependency: tabBarDependency)
-        
-        app = AppCoordinator(profileDependency: profileDependency,
-                             homeDependency: homeDependency,
-                             authDependency: authDependency,
-                             tabBarDependency: tabBarDependency,
-                             navigationController: nav)
-        app?.start()
+        // Setup window & coordinator ada di SceneDelegate.
         return true
     }
-    
+
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
@@ -139,45 +107,6 @@ extension AppDelegate {
     }
 }
 
-
-extension UIWindow {
-    open override func motionBegan(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
-        // code you want to implement
-        #if DEV || DEBUG
-        if motion == .motionShake {
-            guard let view = UIApplication.topViewController() else {
-                return
-            }
-            
-            if view.responds(to: Selector(("shouldForceLandscape"))) {
-                // If the rootViewController should force landscape, do not handle shake
-                return
-            }
-            showSimpleActionSheet(controller: view)
-        }
-        #endif
-    }
-    
-    func showSimpleActionSheet(controller: UIViewController) {
-        let alert = UIAlertController(title: "Debug", message: "show debug status", preferredStyle: .actionSheet)
-        
-        #if DEBUG
-        alert.addAction(UIAlertAction(title: "NETWORK DEBUG", style: .default, handler: { _ in
-            NFX.sharedInstance().start()
-        }))
-        #endif
-        
-        #if DEV || DEBUG
-        alert.addAction(UIAlertAction(title: "UI DEBUGGING 😮‍💨", style: .default, handler: { _ in
-            FLEXManager.shared.showExplorer()
-        }))
-        
-        alert.addAction(UIAlertAction(title: "CANCEL", style: .cancel, handler: nil))
-        
-        controller.present(alert, animated: true, completion: {})
-        #endif
-    }
-}
 
 extension UIApplication {
     class func topViewController(base: UIViewController? = UIApplication.shared.firstKeyWindow?.rootViewController) -> UIViewController? {
