@@ -4,6 +4,7 @@
 //
 
 import UIKit
+import Debugger
 
 /// Window harus dibuat dari `UIWindowScene` (scene lifecycle wajib sejak SDK iOS 26).
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -16,7 +17,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        let window = UIWindow(windowScene: windowScene)
+        // ShakeWindow: shake device (Simulator: ⌃⌘Z) → buka Debugger. Tidak aktif di build Prod.
+        let window = ShakeWindow(windowScene: windowScene)
         self.window = window
 
         let router = AppRouter(window: window)

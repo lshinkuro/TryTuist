@@ -27,6 +27,7 @@ struct FocusesView: View {
             .padding(Spacing.xl)
         }
         .background(Color.appBackground.ignoresSafeArea())
+        .refreshable { @MainActor in store.send(.onAppear) }
         .task { @MainActor in store.send(.onAppear) }
     }
 

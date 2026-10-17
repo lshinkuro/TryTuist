@@ -2,8 +2,8 @@
 //  InMemoryCartRepository.swift
 //  HomeFeature · Data
 //
-//  Keranjang di memori (hilang saat app ditutup). Ganti dengan implementasi
-//  API/CoreData nanti tanpa mengubah Store karena Store hanya kenal `CartRepository`.
+//  Isi keranjang disimpan di memori (hilang saat app ditutup).
+//  Checkout dikirim lewat `CheckoutRemoteDataSource` → API (`POST /v1/orders`) atau Mock.
 //
 import Combine
 import Foundation
@@ -11,6 +11,15 @@ import Foundation
 @MainActor
 final class InMemoryCartRepository: CartRepository {
     private let items = CurrentValueSubject<[CartItem], Never>([])
+    private let checkoutSource: CheckoutRemoteDataSource
+    /// Dipakai ulang bila checkout gagal lalu diulang, supaya server tidak membuat pesanan ganda.
+    private var pendingIdempotencyKey: String?
+    /// Pilihan alamat/metode bayar berubah → pesanan berbeda → key baru.
+    private var pendingSelection: CheckoutSelection?
+
+    init(checkoutSource: CheckoutRemoteDataSource) {
+        self.checkoutSource = checkoutSource
+    }
 
     var itemsPublisher: AnyPublisher<[CartItem], Never> {
         items.eraseToAnyPublisher()
@@ -34,6 +43,7 @@ final class InMemoryCartRepository: CartRepository {
             current.append(item)
         }
         items.send(current)
+        pendingIdempotencyKey = nil   // isi keranjang berubah → pesanan baru
     }
 
     func updateQuantity(itemID: String, quantity: Int) async {
@@ -45,19 +55,34 @@ final class InMemoryCartRepository: CartRepository {
             current[index].quantity = min(quantity, AddToCartUseCase.quantityRange.upperBound)
         }
         items.send(current)
+        pendingIdempotencyKey = nil   // isi keranjang berubah → pesanan baru
     }
 
     func remove(itemID: String) async {
         items.send(items.value.filter { $0.id != itemID })
+        pendingIdempotencyKey = nil
     }
 
-    /// Mock checkout: jeda sebentar lalu kosongkan keranjang.
-    func checkout() async throws -> PlacedOrder {
+    func checkout(_ selection: CheckoutSelection) async throws -> PlacedOrder {
         let current = items.value
         guard !current.isEmpty else { throw CartError.emptyCart }
-        try await Task.sleep(for: .seconds(1))
-        let total = current.reduce(Decimal(0)) { $0 + $1.subtotal }
-        items.send([])
-        return PlacedOrder(orderNumber: "ORD-\(Int.random(in: 10000...99999))", total: total)
+
+        if pendingSelection != selection { pendingIdempotencyKey = nil }
+        let key = pendingIdempotencyKey ?? UUID().uuidString
+        pendingIdempotencyKey = key
+        pendingSelection = selection
+
+        let request = CheckoutMapper.request(from: current, selection: selection)
+        do {
+            let response = try await checkoutSource.createOrder(request, idempotencyKey: key)
+            // Total resmi dari server; fallback (subtotal + ongkir flat) hanya untuk mock.
+            let fallbackTotal = current.reduce(Decimal(0)) { $0 + $1.subtotal } + 10000
+            let order = try CheckoutMapper.placedOrder(from: response, fallbackTotal: fallbackTotal)
+            pendingIdempotencyKey = nil
+            items.send([])
+            return order
+        } catch {
+            throw CheckoutMapper.toDomainError(error)
+        }
     }
 }

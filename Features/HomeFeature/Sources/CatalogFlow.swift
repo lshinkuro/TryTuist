@@ -13,10 +13,14 @@ import TTUI
 final class CatalogFlow {
     private weak var router: Router?
     private let container: CatalogContainer
+    /// Navigasi ke luar feature (tab Profil), diteruskan ke AppRouter.
+    private let onExternalRoute: (CatalogExternalRoute) -> Void
 
-    init(router: Router, container: CatalogContainer = .shared) {
+    init(router: Router, container: CatalogContainer? = nil,
+         onExternalRoute: @escaping (CatalogExternalRoute) -> Void = { _ in }) {
         self.router = router
-        self.container = container
+        self.container = container ?? .shared
+        self.onExternalRoute = onExternalRoute
     }
 
     // MARK: - Root screens
@@ -76,13 +80,32 @@ final class CatalogFlow {
         router?.push(ProductDetailView(store: store))
     }
 
+    /// Dipakai shortcut Debugger.
+    func openCart() {
+        showCart()
+    }
+
     private func showCart() {
-        let store = CartStore(cart: container.cartRepository)
+        let store = CartStore(cart: container.cartRepository, options: container.checkoutOptionsRepository)
         store.onRoute = { [weak self] route in
             switch route {
-            case .close: self?.router?.dismiss()
+            case .close:
+                self?.router?.dismiss()
+            case .manageAddresses:
+                self?.leaveCart(to: .manageAddresses)
+            case .managePaymentMethods:
+                self?.leaveCart(to: .managePaymentMethods)
             }
         }
         router?.present(CartView(store: store), title: "Keranjang")
     }
+
+    /// Tutup keranjang dulu (isinya tetap tersimpan), lalu pindah ke tab Profil.
+    private func leaveCart(to route: CatalogExternalRoute) {
+        let onExternalRoute = self.onExternalRoute
+        router?.navigationController.dismiss(animated: true) {
+            onExternalRoute(route)
+        }
+    }
+
 }

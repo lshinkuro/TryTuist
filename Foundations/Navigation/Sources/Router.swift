@@ -75,8 +75,10 @@ public final class Router {
 
 /// Pembungkus SwiftUI → UIKit yang dipakai semua screen.
 /// Mengatur tampil/sembunyi navigation bar per screen.
-final class HostingController<Content: View>: UIHostingController<Content> {
+final class HostingController<Content: View>: UIHostingController<Content>, ScreenNameProviding {
     private let hidesNavigationBar: Bool
+    /// Nama screen untuk Debugger, mis. "HomeView".
+    let screenName = ScreenTracker.readableName(of: Content.self)
 
     init(rootView: Content, hidesNavigationBar: Bool) {
         self.hidesNavigationBar = hidesNavigationBar
@@ -91,5 +93,10 @@ final class HostingController<Content: View>: UIHostingController<Content> {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(hidesNavigationBar, animated: animated)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        ScreenTracker.shared.didAppear(screenName)
     }
 }

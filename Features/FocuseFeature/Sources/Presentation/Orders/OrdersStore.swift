@@ -35,7 +35,9 @@ final class OrdersStore: Store<OrdersState, OrdersAction> {
     override func reduce(state: inout OrdersState, action: OrdersAction) -> Effect<OrdersAction>? {
         switch action {
         case .onAppear:
-            guard state.orders.isIdle else { return nil }
+            // Pertama kali: tampilkan loading. Setelahnya: refresh diam-diam supaya
+            // pesanan baru dari checkout langsung muncul tanpa layar berkedip.
+            guard state.orders.isIdle else { return fetch() }
             return load(&state)
 
         case .retryTapped:
@@ -50,6 +52,8 @@ final class OrdersStore: Store<OrdersState, OrdersAction> {
             return nil
 
         case .ordersResponse(.failure(let error)):
+            // Refresh diam-diam yang gagal tidak menghapus data yang sudah tampil.
+            guard state.orders.value == nil else { return nil }
             state.orders = .failed(error.errorDescription ?? "")
             return nil
         }
@@ -57,6 +61,10 @@ final class OrdersStore: Store<OrdersState, OrdersAction> {
 
     private func load(_ state: inout OrdersState) -> Effect<OrdersAction> {
         state.orders = .loading
+        return fetch()
+    }
+
+    private func fetch() -> Effect<OrdersAction> {
         let getOrders = self.getOrders
         return .task {
             do {

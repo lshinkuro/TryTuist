@@ -29,12 +29,33 @@ public final class AuthenticationModule {
         return AuthAPIDataSource()
     }
 
+    /// Titik masuk flow Auth. Selain `.splash` dipakai Debugger untuk lompat langsung ke screen.
+    public enum Entry {
+        case splash
+        case onboarding
+        case signIn
+        case signUp
+    }
+
     /// - Parameter showSplash: `false` saat kembali dari logout (langsung ke Sign In).
     public func start(showSplash: Bool = true) {
-        guard showSplash else {
+        start(at: showSplash ? .splash : .signIn)
+    }
+
+    public func start(at entry: Entry) {
+        switch entry {
+        case .splash: showSplash()
+        case .onboarding: showOnboarding()
+        case .signIn: showSignIn(animated: false)
+        case .signUp:
             showSignIn(animated: false)
-            return
+            showSignUp()
         }
+    }
+
+    // MARK: - Routes
+
+    private func showSplash() {
         let store = SplashStore(title: String.localized("coachmark.first_title"))
         store.onRoute = { [weak self] destination in
             switch destination {
@@ -45,8 +66,6 @@ public final class AuthenticationModule {
         }
         router.setRoot(SplashScreenView(store: store), hidesNavigationBar: true)
     }
-
-    // MARK: - Routes
 
     private func showOnboarding() {
         let store = OnboardingStore()

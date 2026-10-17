@@ -32,6 +32,9 @@ struct ProfileView: View {
             .padding(Spacing.xl)
         }
         .background(Color.appBackground.ignoresSafeArea())
+        .refreshable { store.send(.onAppear) }
+        .onAppear { store.send(.onAppear) }
+        .toast(state.toast)
         .confirmationDialog("Keluar dari akun?",
                             isPresented: store.binding(\.isConfirmingLogout, send: { .logoutDialogChanged($0) }),
                             titleVisibility: .visible) {
@@ -42,22 +45,48 @@ struct ProfileView: View {
 
     // MARK: - Sections
 
+    @ViewBuilder
     private var profileCard: some View {
-        HStack(spacing: Spacing.l) {
-            AvatarView(name: state.userName, size: 64)
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(state.userName)
-                    .font(.title3.bold())
-                Label(state.memberTier, systemImage: "crown.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.orange)
+        if let message = state.profile.errorMessage {
+            HStack(spacing: Spacing.m) {
+                IconBadge(systemImage: "wifi.exclamationmark", tint: .red, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Profil gagal dimuat").font(.headline)
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Coba lagi") { store.send(.retryTapped) }
+                    .buttonStyle(CapsuleButtonStyle(.outlined))
             }
-            Spacer()
-            Button("Ubah") {}
-                .buttonStyle(CapsuleButtonStyle(.outlined))
+            .padding(Spacing.l)
+            .formCard()
+        } else {
+            let profile = state.profile.value
+            HStack(spacing: Spacing.l) {
+                AvatarView(name: state.displayName, size: 64)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(state.displayName)
+                        .font(.title3.bold())
+                        .lineLimit(1)
+                    Label(profile?.tier.title ?? "Member", systemImage: "crown.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                    if let email = profile?.email {
+                        Text(email)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                Button("Ubah") { store.send(.editTapped) }
+                    .buttonStyle(CapsuleButtonStyle(.outlined))
+                    .disabled(profile == nil)
+            }
+            .padding(Spacing.l)
+            .formCard()
+            .redacted(reason: profile == nil ? .placeholder : [])
         }
-        .padding(Spacing.l)
-        .formCard()
     }
 
     private var quickActionsCard: some View {
@@ -70,6 +99,8 @@ struct ProfileView: View {
                     IconBadge(systemImage: action.systemImage, size: 40)
                     Text(action.value)
                         .font(.subheadline.bold())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Text(action.title)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -120,25 +151,13 @@ struct ProfileView: View {
 
     private var settingsCard: some View {
         VStack(spacing: 0) {
-            ForEach(Array(state.settings.enumerated()), id: \.element.id) { index, item in
-                Button { store.send(.settingTapped(item)) } label: {
-                    HStack(spacing: 14) {
-                        IconBadge(systemImage: item.systemImage, tint: item.tint, size: 34)
-                        Text(item.title)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, Spacing.l)
-                    .frame(height: 56)
-                    .contentShape(Rectangle())
+            ForEach(Array(state.menu.enumerated()), id: \.element.id) { index, item in
+                Button { store.send(.menuTapped(item)) } label: {
+                    ProfileMenuRow(title: item.title, systemImage: item.systemImage, tint: item.tint)
                 }
                 .buttonStyle(.plain)
 
-                if index < state.settings.count - 1 {
+                if index < state.menu.count - 1 {
                     Divider().padding(.leading, 64)
                 }
             }
@@ -160,14 +179,14 @@ struct ProfileView: View {
     }
 }
 
-/// Placeholder untuk screen yang di-push dari menu pengaturan (statis, tanpa logika → tanpa Store).
-struct SettingDetailView: View {
-    let item: SettingItem
+/// Untuk menu yang belum punya screen (statis, tanpa logika → tanpa Store).
+struct ComingSoonView: View {
+    let item: ProfileMenuItem
 
     var body: some View {
         ContentUnavailableView(item.title,
                                systemImage: item.systemImage,
-                               description: Text("Halaman ini belum tersedia."))
+                               description: Text("Fitur ini segera hadir."))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.appBackground.ignoresSafeArea())
     }

@@ -561,6 +561,39 @@ Untuk toast setelah screen ditutup (contoh: tambah dari Detail lalu kembali), St
 
 ---
 
+### 8.8 Bottom sheet (TTUI) & sesi habis
+
+Komponen inti di `Foundations/TTUI/Sources/Component/BottomSheet.swift`, tinggi otomatis mengikuti isi:
+
+```swift
+// 1. Standar: ikon + judul + pesan + tombol (style: info/success/warning/error)
+let config = BottomSheetConfig(style: .error, title: "Pesanan gagal", message: "Coba lagi ya.",
+                               primaryAction: .init("Coba lagi") { store.send(.retry) },
+                               secondaryAction: .init("Nanti saja", role: .secondary))
+BottomSheetPresenter.present(config, from: controller)   // dari Module / AppRouter
+someView.bottomSheet(store.binding(\.sheet, send: { .sheetChanged($0) }))   // dari SwiftUI (State: BottomSheetConfig?)
+
+// 2. Standar + konten tambahan
+BottomSheetView(config, onAction: { ... }) { VoucherField() }
+
+// 3. Isi bebas
+BottomSheetPresenter.present(from: controller) { dismiss in MySheet(onClose: { dismiss(nil) }) }
+```
+
+Preset: `BottomSheetConfig.sessionExpired(onConfirm:)` (judul/pesan/tombol bisa diganti lewat parameter).
+
+Alur sesi habis (global, feature tidak perlu menangani navigasinya):
+
+```
+API endpoint requiresAuth → 401
+  → APIManager: SessionEvents.postExpired()          (Utility, NotificationCenter .sessionExpired)
+  → AppRouter.handleSessionExpired(): hapus token, tampilkan bottom sheet (tidak bisa di-swipe)
+  → "Mengerti": reset keranjang, tutup modal, ke Sign In
+```
+
+Store feature tetap boleh menampilkan pesan errornya sendiri (mis. `CartError.sessionExpired`); bottom sheet tampil di atasnya.
+Uji tanpa backend: Debugger ▸ Navigasi ▸ "Simulasikan sesi habis".
+
 ## 9. Module: composition root + routing
 
 Setiap feature punya satu file `<Nama>Module.swift`. Hanya tipe Module yang `public`. Kalau routing feature cukup banyak, pindahkan ke `<Nama>Flow` (contoh: `CatalogFlow`) dan simpan dependency bersama di `<Nama>Container`. Tugasnya:
@@ -596,6 +629,16 @@ public final class FocusModule: TabFeature {
 
 ---
 
+### 9.1 Navigasi antar-feature
+
+Feature **tidak boleh** meng-import feature lain. Bila satu screen perlu membuka screen milik feature lain (contoh: Keranjang di HomeFeature → "Tambah alamat" di ProfileFeature):
+
+1. Feature asal mendefinisikan route keluar yang publik: `public enum CatalogExternalRoute { case manageAddresses, managePaymentMethods }`, diterima lewat init module (`HomeModule(onExternalRoute:)`).
+2. Feature tujuan membuka pintu masuk publik yang kecil: `ProfileModule.open(.addresses)`.
+3. `AppRouter` (satu-satunya yang mengenal kedua feature) menyambungkan keduanya: pindah tab lalu panggil `open`.
+
+Data yang dibutuhkan kedua feature (alamat, metode bayar) dibaca masing-masing lewat endpoint yang sama, dengan DTO/Entity sendiri. Keranjang hanya punya versi ringkas (`CheckoutAddress`, `CheckoutPaymentMethod`), jadi tidak ada dependency ke ProfileFeature.
+
 ## 10. Error handling
 
 ```
@@ -615,6 +658,26 @@ URLError / APIError.invalidStatusCode / DecodingError     ← Data (teknis)
 | HTTP 400/401 (login) | `.invalidCredentials` |
 | HTTP 409 (register) | `.emailAlreadyRegistered` |
 | Lainnya | `.unknown` |
+
+### 10.1 Form yang butuh pesan validasi dari server: `APIManager.send`
+
+`request` hanya membawa kode status (`APIError.invalidStatusCode(400)`). Untuk form (Edit Profil, Alamat, E-Wallet) pakai `send`: status non-2xx menjadi `APIServerError` berisi `type`, `message`, dan `fieldErrors` (`["phone": "nomor HP tidak valid"]`) dari envelope error backend.
+
+```swift
+// Data
+func updateProfile(_ param: UpdateProfileParam) async throws -> UserProfileResponseDTO {
+    try await api.send(.updateProfile(param: param))
+}
+
+// Mapper
+case let server as APIServerError where server.statusCode == 400:
+    return .validation(message: server.message ?? "…", fields: server.fieldErrors)
+
+// Presentation: key = nama field backend
+InputFieldView(…, errorMessage: state.fieldErrors["phone"])
+```
+
+Validasi yang sama ditulis juga di UseCase (mis. `SaveAddressUseCase.validate`) supaya error tampil sebelum request dikirim. Server tetap sumber kebenaran: bila aturannya beda, pesan server yang tampil.
 
 ---
 
@@ -653,6 +716,25 @@ AppEnvironment.useMockData  → AppConfig.useMockData → <Feature>Module memili
 | Pesanan | `OrderMockDataSource` | `OrderAPIDataSource` → `GET /v1/orders` |
 
 ---
+
+### 11.1 Debugger (shake device)
+
+Modul `Foundations/Debugger`, aktif di build **Dev & Staging**, mati otomatis di **Prod** (`AppEnvironment.isDebugToolsEnabled`).
+Cara buka: shake device. Di Simulator pakai **Device ▸ Shake** (⌃⌘Z).
+
+| Tab | Isi | Sumber data |
+|---|---|---|
+| API | Semua request: method, status, durasi, ukuran, header, body (secret di-mask), salin cURL/URL/response, filter & cari | `NetworkInspector` (diisi `NetworkLogger`) |
+| Layar | Screen yang sedang tampil, hierarki tab → stack → modal, riwayat layar, info app (env, base URL, token, versi) | `ScreenTracker` (dipanggil `HostingController.viewDidAppear`) |
+| Navigasi | Shortcut ke Splash/Onboarding/Sign In/Sign Up, tiap tab, Keranjang, logout, reset onboarding, kosongkan keranjang, hapus cache gambar | `DebugMenu.shared.shortcutsProvider` di `AppRouter` |
+| Server | Ganti environment/base URL/API key/mock tanpa build ulang, cek `/healthz` | `APIOverride` (UserDefaults) → dibaca `AppEnvironment` |
+
+Alur ganti server: simpan `APIOverride` → `DebugMenu.onServerChanged` → `AppRouter` menghapus token, `CatalogSession.reset()`, lalu restart ke Splash.
+Pilih **Bawaan build** untuk kembali ke nilai xcconfig.
+
+Menambah shortcut fitur baru: tambahkan `DebugShortcut` di `AppRouter.debugShortcuts()`. Bila butuh masuk ke screen di dalam feature, buka method `public` kecil di Module feature itu (contoh `HomeModule.openCart()`), jangan expose Store/View.
+
+Memakai di project lain: salin `Foundations/Debugger`, `NetworkInspector.swift`, `ScreenTracker.swift`, pakai `ShakeWindow` di SceneDelegate, lalu isi `shortcutsProvider` & `onServerChanged`.
 
 ## 12. Testing
 

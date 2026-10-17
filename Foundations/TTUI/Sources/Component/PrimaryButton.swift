@@ -10,15 +10,18 @@ public struct PrimaryButton: View {
     private let title: String
     private let isLoading: Bool
     private let isEnabled: Bool
+    private let tint: Color
     private let action: () -> Void
 
     public init(_ title: String,
                 isLoading: Bool = false,
                 isEnabled: Bool = true,
+                tint: Color = .brand,
                 action: @escaping () -> Void) {
         self.title = title
         self.isLoading = isLoading
         self.isEnabled = isEnabled
+        self.tint = tint
         self.action = action
     }
 
@@ -36,7 +39,7 @@ public struct PrimaryButton: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Color.brand, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .background(tint, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             .opacity(isEnabled ? 1 : 0.4)
         }
         .buttonStyle(PressableButtonStyle())

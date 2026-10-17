@@ -55,6 +55,7 @@ let project = Project(
                     .Utility,
                     .NetworkManager,
                     .CoreDataManager,
+                    .Debugger,
                     .AuthenticationFeature,
                     .HomeFeature,
                     .FocuseFeature,
@@ -84,6 +85,13 @@ let project = Project(
                    dependencies: [
                     .Utility
                    ]),
+        // Debugger (shake device): log API, layar aktif, shortcut navigasi, ganti server. Non-Prod saja.
+        .framework(.Debugger,
+                   sources: ["Foundations/Debugger/Sources/**/*.swift"],
+                   resources: [],
+                   dependencies: [
+                    .Utility, .TTUI, .NetworkManager, .Navigation
+                   ]),
         .framework(.CoreDataManager,
                    sources: ["Foundations/CoreDataManager/**/*.swift"],
                    resources: ["Foundations/CoreDataManager/Resources/**/*.xcdatamodeld"],
@@ -105,7 +113,7 @@ let project = Project(
                    sources: ["Features/ProfileFeature/Sources/**/*.swift"],
                    resources: [],
                    dependencies: [
-                    .Utility, .TTUI, .Navigation
+                    .Utility, .TTUI, .NetworkManager, .Navigation
                    ]),
         .framework(.FocuseFeature,
                    sources: ["Features/FocuseFeature/Sources/**/*.swift"],
@@ -167,6 +175,7 @@ internal extension String {
     static let ProfileFeature = "ProfileFeature"
     static let FocuseFeature = "FocuseFeature"
     static let CoreDataManager = "CoreDataManager"
+    static let Debugger = "Debugger"
 }
 
 extension TargetDependency {
@@ -180,4 +189,5 @@ extension TargetDependency {
     static let ProfileFeature = TargetDependency.target(name: "ProfileFeature")
     static let FocuseFeature = TargetDependency.target(name: "FocuseFeature")
     static let CoreDataManager = TargetDependency.target(name: "CoreDataManager")
+    static let Debugger = TargetDependency.target(name: "Debugger")
 }

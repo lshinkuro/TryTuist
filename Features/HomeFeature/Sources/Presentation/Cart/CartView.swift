@@ -38,11 +38,48 @@ struct CartView: View {
                 Button("Tutup") { store.send(.closeTapped) }
             }
         }
+        .onAppear { store.send(.onAppear) }
+        .sheet(item: store.binding(\.activeSheet, send: { .sheetChanged($0) })) { sheet in
+            switch sheet {
+            case .address:
+                CheckoutOptionSheet(title: "Antar ke",
+                                    manageTitle: "Tambah / kelola alamat",
+                                    onManage: { store.send(.manageAddressesTapped) }) {
+                    ForEach(state.addresses) { address in
+                        OptionRow(title: address.label,
+                                  subtitle: "\(address.recipient) · \(address.phone)\n\(address.address)",
+                                  systemImage: "mappin.circle.fill",
+                                  badge: address.isDefault ? "Utama" : nil,
+                                  isSelected: address.id == state.selectedAddressID,
+                                  isEnabled: true) {
+                            store.send(.addressSelected(address.id))
+                        }
+                    }
+                }
+            case .payment:
+                CheckoutOptionSheet(title: "Metode pembayaran",
+                                    manageTitle: "Tautkan / kelola e-wallet",
+                                    onManage: { store.send(.managePaymentMethodsTapped) }) {
+                    ForEach(state.paymentMethods) { method in
+                        OptionRow(title: method.name,
+                                  subtitle: method.isEnabled ? method.detail : "Sedang tidak tersedia",
+                                  systemImage: method.systemImage,
+                                  badge: method.isDefault ? "Utama" : nil,
+                                  isSelected: method.id == state.selectedPaymentID,
+                                  isEnabled: method.isEnabled) {
+                            store.send(.paymentSelected(method.id))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private var list: some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
+                deliverySection
+
                 VStack(spacing: 0) {
                     ForEach(state.items) { item in
                         CartItemRow(
@@ -56,6 +93,8 @@ struct CartView: View {
                     }
                 }
                 .formCard()
+
+                paymentSection
 
                 VStack(spacing: Spacing.m) {
                     summaryRow("Subtotal (\(state.itemCount) item)", state.subtotal.rupiahFormatted)
@@ -83,14 +122,71 @@ struct CartView: View {
             .padding(Spacing.xl)
         }
         .safeAreaInset(edge: .bottom) {
-            PrimaryButton("Pesan Sekarang · \(state.total.rupiahFormatted)",
-                          isLoading: state.isCheckingOut,
-                          isEnabled: state.canCheckout) {
-                store.send(.checkoutTapped)
+            VStack(spacing: Spacing.s) {
+                if let hint = state.checkoutHint {
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                PrimaryButton("Pesan Sekarang · \(state.total.rupiahFormatted)",
+                              isLoading: state.isCheckingOut,
+                              isEnabled: state.canCheckout) {
+                    store.send(.checkoutTapped)
+                }
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.vertical, Spacing.m)
             .background(.bar)
+        }
+    }
+
+    // MARK: - Antar ke & Pembayaran
+
+    @ViewBuilder
+    private var deliverySection: some View {
+        switch state.options {
+        case .idle, .loading:
+            SelectionCard(title: "Antar ke", value: "Memuat alamat…", detail: nil,
+                          systemImage: "mappin.circle.fill", actionTitle: nil, isLoading: true) {}
+        case .failed:
+            SelectionCard(title: "Antar ke", value: "Gagal memuat alamat",
+                          detail: "Pesanan tetap memakai alamat utamamu.",
+                          systemImage: "exclamationmark.triangle.fill", actionTitle: "Coba lagi") {
+                store.send(.retryOptionsTapped)
+            }
+        case .loaded:
+            if let address = state.selectedAddress {
+                SelectionCard(title: "Antar ke", value: "\(address.label) · \(address.recipient)",
+                              detail: address.address, systemImage: "mappin.circle.fill", actionTitle: "Ganti") {
+                    store.send(.sheetChanged(.address))
+                }
+            } else {
+                SelectionCard(title: "Antar ke", value: "Belum ada alamat",
+                              detail: "Tambahkan alamat di Profil supaya pesanan bisa diantar.",
+                              systemImage: "mappin.slash", actionTitle: "Tambah") {
+                    store.send(.manageAddressesTapped)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var paymentSection: some View {
+        switch state.options {
+        case .idle, .loading:
+            SelectionCard(title: "Pembayaran", value: "Memuat…", detail: nil,
+                          systemImage: "creditcard.fill", actionTitle: nil, isLoading: true) {}
+        case .failed:
+            SelectionCard(title: "Pembayaran", value: "Metode utama", detail: "Dipilih otomatis oleh server.",
+                          systemImage: "creditcard.fill", actionTitle: "Coba lagi") {
+                store.send(.retryOptionsTapped)
+            }
+        case .loaded:
+            let method = state.selectedPayment
+            SelectionCard(title: "Pembayaran", value: method?.name ?? "Pilih metode", detail: method?.detail,
+                          systemImage: method?.systemImage ?? "creditcard.fill", actionTitle: "Ganti") {
+                store.send(.sheetChanged(.payment))
+            }
         }
     }
 
@@ -183,5 +279,139 @@ private struct OrderPlacedView: View {
                 .padding(.horizontal, Spacing.xl)
                 .padding(.bottom, Spacing.xl)
         }
+    }
+}
+
+/// Kartu "Antar ke" / "Pembayaran" di Keranjang.
+private struct SelectionCard: View {
+    let title: String
+    let value: String
+    let detail: String?
+    let systemImage: String
+    let actionTitle: String?
+    var isLoading = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: Spacing.m) {
+                IconBadge(systemImage: systemImage, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(value)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if let detail {
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+                Spacer(minLength: Spacing.s)
+                if isLoading {
+                    ProgressView()
+                } else if let actionTitle {
+                    Text(actionTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.brand)
+                }
+            }
+            .padding(Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading || actionTitle == nil)
+        .formCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(actionTitle.map { "Ketuk untuk \($0.lowercased())" } ?? "")
+    }
+}
+
+/// Sheet daftar pilihan (alamat / metode bayar) + tombol kelola di tab Profil.
+private struct CheckoutOptionSheet<Rows: View>: View {
+    let title: String
+    let manageTitle: String
+    let onManage: () -> Void
+    @ViewBuilder let rows: () -> Rows
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: Spacing.m) {
+                    rows()
+                    Button(action: onManage) {
+                        Label(manageTitle, systemImage: "plus.circle")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .foregroundStyle(Color.brand)
+                }
+                .padding(Spacing.xl)
+            }
+            .background(Color.appBackground.ignoresSafeArea())
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+private struct OptionRow: View {
+    let title: String
+    let subtitle: String?
+    let systemImage: String
+    let badge: String?
+    let isSelected: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: Spacing.m) {
+                IconBadge(systemImage: systemImage, tint: isEnabled ? .brand : .secondary, size: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Spacing.s) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
+                        if let badge {
+                            Text(badge)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Color.brand)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.brandSoft, in: Capsule())
+                        }
+                    }
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+                Spacer(minLength: Spacing.s)
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? Color.brand : Color.secondary.opacity(0.5))
+            }
+            .padding(Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                    .stroke(isSelected ? Color.brand : .clear, lineWidth: 1.5)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

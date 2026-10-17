@@ -9,8 +9,8 @@ APP_DISPLAY_NAME = TryTuist Dev
 BUNDLE_ID_SUFFIX = .dev
 
 // Simulator bisa akses localhost Mac langsung. Untuk device fisik, ganti dengan IP Mac di LAN.
-API_BASE_URL = http:/$()/localhost:8080
+API_BASE_URL = http:/$()/172.20.10.3:8080
 API_KEY = dev-local-api-key
 
 // YES = pakai Mock data source (tanpa backend). Ubah ke NO setelah backend Go jalan.
-USE_MOCK_DATA = YES
+USE_MOCK_DATA = NO

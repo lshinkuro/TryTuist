@@ -11,7 +11,7 @@ Rencana backend untuk aplikasi iOS **TryTuist** (pesan makanan & minuman). Dokum
 1. [Ringkasan & stack](#1-ringkasan--stack)
 2. [Environment](#2-environment)
 3. [Konvensi API](#3-konvensi-api)
-4. [Daftar endpoint](#4-daftar-endpoint)
+4. [Daftar endpoint](#4-daftar-endpoint) · [4.1 Status data per screen](#41-status-data-per-screen-dari-api-atau-masih-di-aplikasi)
 5. [Detail endpoint](#5-detail-endpoint)
 6. [Skema database (PostgreSQL)](#6-skema-database-postgresql)
 7. [Aturan bisnis](#7-aturan-bisnis)
@@ -171,15 +171,56 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 | 14 | `POST` | `/v1/orders/{id}/cancel` | 🔒 | 2 | Batalkan pesanan (status `PENDING`) |
 | 15 | `POST` | `/v1/orders/{id}/rating` | 🔒 | 3 | Pesanan → Beri Nilai |
 | 16 | `GET` | `/v1/me` | 🔒 | 3 | Profil (nama, tier, poin, voucher, saldo) |
-| 17 | `PATCH` | `/v1/me` | 🔒 | 3 | Profil → Ubah |
+| 17 | `PATCH` | `/v1/me` | 🔒 | 3 | Profil → Edit Profil (`ProfileAPIDataSource.updateProfile`) |
 | 18 | `GET`/`POST` | `/v1/me/addresses` | 🔒 | 3 | Profil → Alamat Pengiriman, header "Antar ke" |
-| 19 | `PATCH`/`DELETE` | `/v1/me/addresses/{id}` | 🔒 | 3 | |
+| 19 | `PATCH`/`DELETE` | `/v1/me/addresses/{id}` | 🔒 | 3 | Alamat → ubah, jadikan utama, hapus |
 | 20 | `GET` | `/v1/me/favorites` | 🔒 | 3 | Profil → Menu Favorit |
 | 21 | `PUT`/`DELETE` | `/v1/me/favorites/{product_id}` | 🔒 | 3 | Detail produk → ❤️ |
 | 22 | `GET` | `/v1/me/vouchers` | 🔒 | 3 | Profil → Voucher |
 | 23 | `GET` | `/v1/stores` | | 3 | Pilih outlet terdekat |
+| 24 | `GET` | `/v1/home` | 🔒* | 1b | Beranda: semua isi halaman dalam satu request (§5.18) |
+| 25 | `GET` | `/v1/app-config` | | 1b | Onboarding, ongkir, menu Profil, link bantuan, versi minimal (§5.19) |
+| 26 | `GET` | `/v1/promotions/featured` | 🔒* | 3 | Kartu promo langganan di Profil (§5.20) |
+| 27 | `POST` | `/v1/subscriptions/{plan_id}/activate` | 🔒 | 3 | Profil → tombol "Aktifkan" (§5.20) |
+| 28 | `GET`/`POST` | `/v1/me/payment-methods` | 🔒 | 3b | Profil → Metode Pembayaran; tambah e-wallet (§5.21) |
+| 29 | `PUT` | `/v1/me/payment-methods/default` | 🔒 | 3b | Metode Pembayaran → pilih metode utama (§5.21) |
+| 30 | `DELETE` | `/v1/me/payment-methods/{id}` | 🔒 | 3b | Metode Pembayaran → hapus e-wallet (§5.21) |
+| 31 | `GET` | `/v1/help` | | 3b | Profil → Pusat Bantuan (topik, FAQ, kontak, cari) (§5.22) |
+| 32 | `GET` | `/v1/legal/{slug}` | | 3b | Profil → Kebijakan Privasi, Syarat & Ketentuan (§5.23) |
 
-Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 6, 7, 8, 12, 16.
+🔒* = token **opsional**. Tanpa token, response tetap berhasil tetapi bagian yang personal (nama, poin, alamat) kosong.
+
+Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 6, 7, 8, 11, 12, 16, 17, 18, 19, 28, 29, 30, 31, 32.
+
+### 4.1 Status data per screen: dari API atau masih di aplikasi
+
+Dengan `USE_MOCK_DATA = NO`, banner, kategori, dan produk di Beranda & Menu **sudah dari API** (`/v1/banners`, `/v1/categories`, `/v1/products`). Yang masih ditulis langsung di kode iOS adalah data di bawah ini. Semuanya ditargetkan pindah ke backend:
+
+| Screen | Data | Sekarang di iOS | Pindah ke |
+|---|---|---|---|
+| Beranda | Nama user ("Ishinkuro") | `HomeState.userName` | `/v1/home` → `user.name` |
+| Beranda | Alamat "Antar ke" | `HomeState.deliveryAddress` | `/v1/home` → `delivery_address` |
+| Beranda | Isi & urutan section "Paling Laris" / "Rekomendasi" | dihitung di `GetHomeContentUseCase` (sort `sold_count` / `rating`) | `/v1/home` → `sections` (server yang menentukan) |
+| Beranda | Teks sapaan ("Selamat pagi") | `HomeState.greeting` (jam lokal) | `/v1/home` → `greeting` (opsional, boleh tetap lokal) |
+| Beranda | Placeholder kolom cari | `HomeView` | `/v1/app-config` → `search_placeholder` |
+| Menu | Daftar kategori & produk | ✅ API | — |
+| Detail produk | Varian, harga | ✅ API (bagian dari `/v1/products`) | — |
+| Detail produk | Batas jumlah (1–20) & catatan (100) | `AddToCartUseCase`, `ProductDetailState` | `/v1/app-config` → `order_rules` |
+| Detail produk | Status favorit ❤️ | lokal (`isFavorite`) | `/v1/me/favorites` (§5.17) |
+| Keranjang | Ongkir Rp 10.000 | `CartState.standardDeliveryFee` | `POST /v1/orders/quote` (§5.10) |
+| Keranjang | Alamat & metode bayar | ✅ API (`/v1/me/addresses`, `/v1/me/payment-methods`) → `address_id`, `payment_method_id` | — |
+| Keranjang | Outlet | dipilih server (outlet buka pertama) | `/v1/stores?lat=&lng=` (outlet terdekat dari alamat) |
+| Pesanan | Daftar pesanan | ✅ API | — |
+| Profil | Nama, tier member, voucher, poin, saldo | ✅ API (`/v1/me`) | — |
+| Edit Profil | Nama, nomor HP | ✅ API (`PATCH /v1/me`) | — |
+| Alamat Pengiriman | Daftar, tambah, ubah, utama, hapus | ✅ API (`/v1/me/addresses`) | — |
+| Metode Pembayaran | COD, QRIS, e-wallet tersimpan, metode utama | ✅ API (`/v1/me/payment-methods`) | — |
+| Pusat Bantuan | Topik, FAQ, kontak | ✅ API (`/v1/help`) | — |
+| Kebijakan Privasi | Isi dokumen | ✅ API (`/v1/legal/privacy-policy`) | — |
+| Profil | Kartu promo langganan | `ProfileView.promoCard` | `/v1/promotions/featured` (§5.20) |
+| Profil | Daftar menu pengaturan | `ProfileState.settings` | `/v1/app-config` → `profile_menu` |
+| Onboarding | 3 slide (foto & teks) | `OnboardingItem.defaults` | `/v1/app-config` → `onboarding` |
+| Splash | Judul sambutan | `Localizable.strings` | boleh tetap lokal (splash tampil sebelum network) |
 
 ---
 
@@ -369,7 +410,26 @@ Response:
 
 Header tambahan: `Idempotency-Key: <uuid dari iOS>`. Kalau request yang sama terkirim dua kali (misalnya jaringan putus lalu retry), server mengembalikan order yang sama dan tidak membuat order baru.
 
-Body: sama dengan quote, ditambah `"payment_method": "COD" | "QRIS" | "EWALLET"` dan `"note"` opsional.
+Body: sama dengan quote, ditambah field pembayaran dan `"note"` opsional. **Semua field selain `items` boleh kosong**: server memakai pilihan utama user.
+
+| Field | Kosong → | Diisi |
+|---|---|---|
+| `store_id` | outlet buka pertama | outlet tertentu (`422 STORE_CLOSED` bila tutup) |
+| `address_id` | alamat utama user (`addresses.is_default`); user tanpa alamat → pesanan tanpa alamat | alamat milik user, selain itu `404 NOT_FOUND` |
+| `payment_method_id` | metode utama user (`users.default_payment_method`); e-wallet utama sudah dihapus → `COD` | `"COD"`, `"QRIS"`, atau uuid e-wallet milik user (`404` bila bukan miliknya) |
+| `payment_method` | — | tipe saja (`COD`/`QRIS`/`EWALLET`), untuk app lama. Bila diisi bersama `payment_method_id` dan tidak cocok → `400` |
+
+iOS (Keranjang) selalu mengirim `address_id` & `payment_method_id` pilihan user. Default-nya = alamat & metode utama dari tab Profil, bisa diganti per pesanan tanpa mengubah utama.
+
+Contoh body iOS:
+
+```json
+{
+  "address_id": "6f0e…",
+  "payment_method_id": "8b1c…",
+  "items": [{ "product_id": "P01", "option_id": "large", "quantity": 2, "note": "less sugar" }]
+}
+```
 
 Response **201** (iOS: `PlacedOrder` → `order_number`, `total`):
 
@@ -385,12 +445,19 @@ Response **201** (iOS: `PlacedOrder` → `order_number`, `total`):
     "delivery_fee": 10000,
     "discount": 9600,
     "total": 96400,
-    "payment_method": "COD",
+    "payment_method": "EWALLET",
+    "payment_method_id": "8b1c…",
+    "payment_provider": "GOPAY",
+    "payment_account_masked": "0812••••7890",
+    "address": { "id": "6f0e…", "label": "Rumah", "recipient": "Kholis", "phone": "081234567890", "address": "Jl. …", "notes": null, "lat": null, "lng": null },
     "created_at": "2026-10-17T14:30:00+07:00",
     "items": [ ]
   }
 }
 ```
+
+- `payment_method_id`: `"COD"` / `"QRIS"` / uuid e-wallet; `null` bila e-wallet-nya sudah dihapus.
+- `payment_provider` & `payment_account_masked` disalin ke pesanan saat checkout (snapshot), jadi riwayat tetap terbaca walau e-wallet dihapus. `null` untuk COD/QRIS.
 
 ### 5.12 `GET /v1/orders` 🔒
 
@@ -458,7 +525,15 @@ Hanya untuk order `COMPLETED`, satu kali per order. Rating produk (`products.rat
 }
 ```
 
-`PATCH` menerima `name`, `phone`, `avatar_url` (sebagian saja boleh).
+`PATCH` menerima `name`, `phone`, `avatar_url` (sebagian saja boleh). Response = profil terbaru.
+
+| Field | Aturan | Error |
+|---|---|---|
+| `name` | wajib bila dikirim, maks. 100 karakter, di-trim | `400 VALIDATION_ERROR` field `name` |
+| `phone` | `""` = hapus nomor. Bila diisi: spasi/strip/titik dibuang lalu harus `08…`, `628…`, atau `+628…` (10–15 digit) | `400` field `phone` |
+| `avatar_url` | `""` = hapus. Bila diisi harus `https://` | `400` field `avatar_url` |
+
+Email tidak bisa diubah lewat endpoint ini (dipakai untuk login).
 
 ### 5.17 Alamat · Favorit · Voucher · Outlet (fase 3)
 
@@ -471,6 +546,227 @@ Hanya untuk order `COMPLETED`, satu kali per order. Rating produk (`products.rat
 | `PUT/DELETE /v1/me/favorites/{product_id}` | `data: null` (idempotent) |
 | `GET /v1/me/vouchers` | `[{ "code", "title", "description", "discount_type": "PERCENT"\|"FIXED", "discount_value", "min_subtotal", "max_discount", "ends_at" }]` |
 | `GET /v1/stores?lat=&lng=` | `[{ "id", "name", "address", "lat", "lng", "is_open", "distance_km" }]` |
+
+### 5.18 `GET /v1/home` 🔒*
+
+Semua isi Beranda dalam **satu request**, supaya urutan dan isi section diatur dari backend (tanpa update app). iOS cukup merender `sections` sesuai urutan.
+
+Query opsional: `lat`, `lng` (untuk outlet terdekat).
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "greeting": "Selamat malam 🌙",
+    "user": { "name": "Kholis", "points": 1250, "voucher_count": 3 },
+    "delivery_address": {
+      "id": "8f0f2c1e-...",
+      "label": "Rumah",
+      "address": "Jl. Sudirman No. 21, Jakarta"
+    },
+    "store": { "id": "ST01", "name": "Gandaria City", "is_open": true },
+    "sections": [
+      { "id": "promo", "type": "BANNER_CAROUSEL", "title": null,
+        "banners": [ { "id": "B1", "title": "Diskon 30% Makan Siang", "subtitle": "...", "image_url": "https://..." } ] },
+      { "id": "categories", "type": "CATEGORY_GRID", "title": "Kategori",
+        "categories": [ { "id": "coffee", "name": "Kopi", "icon": "☕️" } ] },
+      { "id": "best_seller", "type": "PRODUCT_CAROUSEL", "title": "🔥 Paling Laris", "see_all": { "sort": "popular" },
+        "products": [ { "product_id": "P01", "product_name": "Es Kopi Susu Gula Aren", "...": "bentuk sama dengan §5.8" } ] },
+      { "id": "recommended", "type": "PRODUCT_LIST", "title": "Rekomendasi Buat Kamu", "see_all": null,
+        "products": [ ] }
+    ]
+  }
+}
+```
+
+| Field | Keterangan |
+|---|---|
+| `greeting` | Dihitung server dengan zona waktu user (default `Asia/Jakarta`) |
+| `user` | `null` bila tanpa token |
+| `delivery_address` | Alamat default user (`addresses.is_default`); `null` bila belum ada → iOS menampilkan "Pilih alamat" |
+| `sections[].type` | `BANNER_CAROUSEL` \| `CATEGORY_GRID` \| `PRODUCT_CAROUSEL` \| `PRODUCT_LIST`. Tipe yang tidak dikenal iOS **dilewati** (aman menambah tipe baru) |
+| `sections[].see_all` | Filter untuk tombol "Lihat semua" → dipakai sebagai query `GET /v1/products`; `null` = tidak ada tombol |
+| Isi section produk | Diatur tabel `home_sections` (§6): `rule = BEST_SELLER` (urut `sold_count`), `TOP_RATED` (urut `rating`), atau `MANUAL` (daftar `product_ids`) |
+
+Produk habis (`is_available = false`) tidak dimasukkan ke section Beranda, tapi tetap tampil di Menu.
+
+### 5.19 `GET /v1/app-config`
+
+Konfigurasi yang sering berubah tanpa perlu update app. iOS memanggilnya saat Splash, lalu menyimpannya di cache (dipakai lagi bila offline).
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "min_supported_version": "1.0.0",
+    "latest_version": "1.2.0",
+    "search_placeholder": "Cari kopi, nasi goreng, burger…",
+    "order_rules": {
+      "min_quantity": 1,
+      "max_quantity": 20,
+      "max_note_length": 100,
+      "delivery_fee": 10000,
+      "free_delivery_min_subtotal": 50000
+    },
+    "payment_methods": [
+      { "id": "COD", "name": "Bayar di Tempat", "icon": "banknote", "is_enabled": true },
+      { "id": "QRIS", "name": "QRIS", "icon": "qrcode", "is_enabled": true },
+      { "id": "EWALLET", "name": "E-Wallet", "icon": "wallet.pass", "is_enabled": false }
+    ],
+    "onboarding": [
+      { "image_url": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&q=80&auto=format&fit=crop",
+        "title": "Semua favoritmu di sini", "subtitle": "Kopi, nasi goreng, burger, sampai dessert. Tinggal pilih." },
+      { "image_url": "https://images.unsplash.com/photo-1767471716700-2b3aa77b1ab6?w=800&q=80&auto=format&fit=crop",
+        "title": "Pesan cepat tanpa antre", "subtitle": "Atur varian, jumlah, dan catatan sesuai seleramu." },
+      { "image_url": "https://images.unsplash.com/photo-1543339469-94ba2391431f?w=800&q=80&auto=format&fit=crop",
+        "title": "Diantar hangat ke rumah", "subtitle": "Nikmati promo dan gratis ongkir setiap hari." }
+    ],
+    "profile_menu": [
+      { "id": "addresses", "title": "Alamat Pengiriman", "icon": "location.fill", "tint": "blue", "action": "trytuist://addresses" },
+      { "id": "payment", "title": "Metode Pembayaran", "icon": "creditcard.fill", "tint": "green", "action": "trytuist://payment-methods" },
+      { "id": "favorites", "title": "Menu Favorit", "icon": "heart.fill", "tint": "pink", "action": "trytuist://favorites" },
+      { "id": "help", "title": "Pusat Bantuan", "icon": "questionmark.circle.fill", "tint": "teal", "action": "https://trytuist.com/bantuan" },
+      { "id": "language", "title": "Bahasa", "icon": "globe", "tint": "indigo", "action": "trytuist://language" },
+      { "id": "privacy", "title": "Kebijakan Privasi", "icon": "lock.fill", "tint": "gray", "action": "https://trytuist.com/privasi" }
+    ]
+  }
+}
+```
+
+- `icon` = nama SF Symbol, `tint` = nama warna (`blue`, `green`, `pink`, `teal`, `indigo`, `gray`, `orange`, `red`). iOS memakai ikon fallback bila nama tidak dikenal.
+- `action` diawali `https://` → dibuka di browser in-app. Diawali `trytuist://` → navigasi ke screen di app.
+- Versi app di bawah `min_supported_version` → iOS menampilkan layar "Perbarui aplikasi".
+- Response boleh di-cache: kirim header `Cache-Control: max-age=300` dan `ETag`.
+
+### 5.20 Promo langganan (Profil)
+
+`GET /v1/promotions/featured` 🔒* → kartu promo di Profil:
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "plan_id": "daily-coffee",
+    "eyebrow": "LANGGANAN KOPI HARIAN",
+    "title": "1 cup cuma 15rb / hari",
+    "price": 15000,
+    "period": "DAILY",
+    "image_url": null,
+    "is_active": false,
+    "active_until": null
+  }
+}
+```
+
+`data: null` = tidak ada promo → iOS menyembunyikan kartu.
+
+`POST /v1/subscriptions/{plan_id}/activate` 🔒 → **201**, `data` = objek yang sama dengan `is_active: true` dan `active_until`. Bila sudah aktif → **409** `ALREADY_SUBSCRIBED`.
+
+### 5.21 Metode pembayaran 🔒
+
+Metode **bawaan** (`COD`, `QRIS`) berasal dari `app_config.payment_methods` dan tidak disimpan per user. User hanya menyimpan **akun e-wallet** (GoPay, OVO, DANA, ShopeePay). Nomor kartu kredit/debit **tidak pernah** dikirim ke atau disimpan oleh backend ini.
+
+Keempat endpoint mengembalikan bentuk `data` yang sama (overview terbaru), jadi iOS cukup mengganti state dengan response:
+
+`GET /v1/me/payment-methods`
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "default_id": "8b1c…",
+    "can_add_ewallet": true,
+    "methods": [
+      { "id": "COD", "type": "COD", "provider": null, "name": "Bayar di Tempat",
+        "description": "Bayar tunai ke kurir saat pesanan tiba", "icon": "banknote",
+        "account_masked": null, "account_name": null,
+        "is_enabled": true, "is_default": false, "is_removable": false },
+      { "id": "QRIS", "type": "QRIS", "provider": null, "name": "QRIS", "icon": "qrcode", "…": "…" },
+      { "id": "8b1c…", "type": "EWALLET", "provider": "GOPAY", "name": "GoPay", "description": null,
+        "icon": "wallet.pass.fill", "account_masked": "0812••••7890", "account_name": "Kholis",
+        "is_enabled": true, "is_default": true, "is_removable": true }
+    ],
+    "ewallet_providers": [
+      { "id": "GOPAY", "name": "GoPay", "icon": "wallet.pass.fill", "tint": "teal" },
+      { "id": "OVO", "name": "OVO", "icon": "wallet.pass.fill", "tint": "purple" },
+      { "id": "DANA", "name": "DANA", "icon": "wallet.pass.fill", "tint": "blue" },
+      { "id": "SHOPEEPAY", "name": "ShopeePay", "icon": "wallet.pass.fill", "tint": "orange" }
+    ]
+  }
+}
+```
+
+| Endpoint | Body | Sukses | Error |
+|---|---|---|---|
+| `POST /v1/me/payment-methods` | `{ "provider": "GOPAY", "account_number": "0812 3456 7890", "account_name": "Kholis", "set_default": true }` | **201** overview | `400` provider tidak dikenal / nomor tidak valid · `409 PAYMENT_METHOD_EXISTS` · `422 PAYMENT_METHOD_LIMIT` (maks. 10) · `422 PAYMENT_METHOD_UNAVAILABLE` (e-wallet dimatikan di app_config) |
+| `PUT /v1/me/payment-methods/default` | `{ "id": "QRIS" }` atau uuid e-wallet | **200** overview | `404 NOT_FOUND` (id bukan milik user) · `422 PAYMENT_METHOD_UNAVAILABLE` |
+| `DELETE /v1/me/payment-methods/{id}` | — | **200** overview | `404` · `422 PAYMENT_METHOD_BUILTIN` (COD/QRIS) |
+
+Aturan:
+- `account_number` dinormalisasi (buang spasi, strip, titik) lalu harus nomor HP Indonesia: `08…`, `628…`, atau `+628…`, 10–15 digit. Response hanya mengirim versi tersamar (`account_masked`).
+- `provider` harus ada di `app_config.ewallet_providers` (huruf besar/kecil bebas).
+- Metode utama disimpan di `users.default_payment_method`. Menghapus e-wallet yang sedang jadi utama → utama kembali ke `COD`. Bila utama menunjuk metode yang dimatikan, response mengirim `default_id: "COD"`.
+- `can_add_ewallet = false` bila e-wallet dimatikan, sudah 10 akun, atau belum ada provider.
+
+### 5.22 `GET /v1/help?q=` — Pusat Bantuan
+
+Publik (cukup API key). `q` opsional (maks. 100 karakter) untuk mencari di pertanyaan & jawaban; topik tanpa hasil tidak dikirim. Tanpa `q` → `Cache-Control: max-age=300`.
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "query": null,
+    "operating_hours": "Setiap hari, 08.00–22.00 WIB",
+    "topics": [
+      { "id": "order", "title": "Pesanan", "icon": "bag.fill",
+        "articles": [
+          { "id": "order-cancel", "question": "Bisakah saya membatalkan pesanan?",
+            "answer": "Bisa, selama status pesanan masih \"Menunggu\". …\n\nPesanan yang sudah diproses …",
+            "updated_at": "2026-10-18T01:00:00+07:00" }
+        ] }
+    ],
+    "contacts": [
+      { "type": "WHATSAPP", "label": "Chat WhatsApp", "value": "+62 812-1000-2000", "icon": "message.fill", "url": "https://wa.me/6281210002000" },
+      { "type": "EMAIL", "label": "Email", "value": "halo@trytuist.com", "icon": "envelope.fill", "url": "mailto:halo@trytuist.com" },
+      { "type": "PHONE", "label": "Telepon", "value": "1500-123", "icon": "phone.fill", "url": "tel:1500123" }
+    ]
+  }
+}
+```
+
+- `answer` teks biasa; paragraf dipisah baris kosong (`\n\n`).
+- Topik & artikel dari tabel `help_topics` / `help_articles` (`is_active`, `sort_order`). Kontak dari `app_config.help_contacts`.
+- Karakter `%` dan `_` di `q` dianggap huruf biasa.
+
+### 5.23 `GET /v1/legal/{slug}` — Kebijakan Privasi & S&K
+
+Publik. `slug`: `privacy-policy`, `terms`. Selain itu → `404 NOT_FOUND`. `Cache-Control: max-age=3600`.
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "slug": "privacy-policy",
+    "title": "Kebijakan Privasi",
+    "version": "1.0",
+    "summary": "Kami hanya mengumpulkan data yang dibutuhkan …",
+    "effective_at": "2026-10-01",
+    "updated_at": "2026-10-18T01:00:00+07:00",
+    "sections": [
+      { "heading": "1. Data yang kami kumpulkan", "body": "Nama, email, nomor HP, …" }
+    ]
+  }
+}
+```
+
+Isi diubah lewat `UPDATE legal_documents` (naikkan `version` & `effective_at`), tanpa update app.
 
 ---
 
@@ -669,6 +965,8 @@ erDiagram
     users ||--o{ addresses : has
     users ||--o{ orders : places
     users ||--o{ favorites : likes
+    users ||--o{ user_payment_methods : "menautkan"
+    help_topics ||--o{ help_articles : contains
     categories ||--o{ products : groups
     products ||--o{ product_options : has
     products ||--o{ order_items : "dipesan di"
@@ -677,6 +975,128 @@ erDiagram
     orders ||--o{ order_status_history : tracks
     orders ||--o| order_ratings : rated
     vouchers ||--o{ orders : "dipakai di"
+```
+
+`db/migrations/0002_home_config.up.sql` (untuk §5.18–5.20):
+
+```sql
+-- Isi & urutan section Beranda, diatur dari backend
+CREATE TABLE home_sections (
+    id           TEXT PRIMARY KEY,                    -- 'best_seller', 'recommended'
+    type         TEXT    NOT NULL CHECK (type IN ('BANNER_CAROUSEL','CATEGORY_GRID','PRODUCT_CAROUSEL','PRODUCT_LIST')),
+    title        TEXT,
+    rule         TEXT    CHECK (rule IN ('BEST_SELLER','TOP_RATED','MANUAL')),   -- khusus section produk
+    product_ids  TEXT[],                              -- dipakai bila rule = 'MANUAL'
+    item_limit   INTEGER NOT NULL DEFAULT 6,
+    see_all      JSONB,                               -- mis. {"sort":"popular"}
+    sort_order   INTEGER NOT NULL DEFAULT 0,
+    is_active    BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Konfigurasi app (satu baris per key, nilai JSON)
+CREATE TABLE app_config (
+    key         TEXT PRIMARY KEY,                     -- 'order_rules', 'onboarding', 'profile_menu', ...
+    value       JSONB       NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Paket langganan & langganan user
+CREATE TABLE subscription_plans (
+    id          TEXT PRIMARY KEY,                     -- 'daily-coffee'
+    eyebrow     TEXT    NOT NULL,
+    title       TEXT    NOT NULL,
+    price       BIGINT  NOT NULL,
+    period      TEXT    NOT NULL CHECK (period IN ('DAILY','WEEKLY','MONTHLY')),
+    image_url   TEXT,
+    is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE user_subscriptions (
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id       TEXT NOT NULL REFERENCES subscription_plans(id),
+    started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    active_until  TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (user_id, plan_id)
+);
+
+-- Seed (sama dengan tampilan iOS sekarang)
+INSERT INTO home_sections (id, type, title, rule, item_limit, see_all, sort_order) VALUES
+  ('promo',       'BANNER_CAROUSEL',  NULL,                     NULL,          5, NULL,                   1),
+  ('categories',  'CATEGORY_GRID',    'Kategori',               NULL,         12, NULL,                   2),
+  ('best_seller', 'PRODUCT_CAROUSEL', '🔥 Paling Laris',        'BEST_SELLER', 6, '{"sort":"popular"}',   3),
+  ('recommended', 'PRODUCT_LIST',     'Rekomendasi Buat Kamu',  'TOP_RATED',   5, NULL,                   4);
+
+INSERT INTO subscription_plans (id, eyebrow, title, price, period, is_featured) VALUES
+  ('daily-coffee', 'LANGGANAN KOPI HARIAN', '1 cup cuma 15rb / hari', 15000, 'DAILY', TRUE);
+
+-- app_config: isi `value` dengan JSON di §5.19 (order_rules, payment_methods, onboarding, profile_menu, ...)
+```
+
+`db/migrations/0003_profile_features.up.sql` (untuk §5.21–5.23):
+
+```sql
+-- E-wallet yang ditautkan user. COD & QRIS bawaan, tidak disimpan per user.
+-- Nomor kartu TIDAK pernah disimpan.
+CREATE TABLE user_payment_methods (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type            TEXT        NOT NULL DEFAULT 'EWALLET' CHECK (type IN ('EWALLET')),
+    provider        TEXT        NOT NULL,                 -- id dari app_config.ewallet_providers
+    account_number  TEXT        NOT NULL,                 -- nomor HP e-wallet (sudah dinormalisasi)
+    account_name    TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, provider, account_number)
+);
+CREATE INDEX user_payment_methods_user ON user_payment_methods (user_id, created_at);
+
+-- 'COD' | 'QRIS' | id (uuid) dari user_payment_methods
+ALTER TABLE users ADD COLUMN default_payment_method TEXT NOT NULL DEFAULT 'COD';
+
+CREATE TABLE help_topics (
+    id          TEXT PRIMARY KEY,                         -- 'order', 'payment'
+    title       TEXT    NOT NULL,
+    icon        TEXT    NOT NULL,                         -- SF Symbol
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE help_articles (
+    id          TEXT PRIMARY KEY,                         -- 'order-cancel'
+    topic_id    TEXT    NOT NULL REFERENCES help_topics(id) ON DELETE CASCADE,
+    question    TEXT    NOT NULL,
+    answer      TEXT    NOT NULL,                         -- paragraf dipisah baris kosong
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX help_articles_topic ON help_articles (topic_id, sort_order);
+
+CREATE TABLE legal_documents (
+    slug          TEXT PRIMARY KEY,                       -- 'privacy-policy', 'terms'
+    title         TEXT        NOT NULL,
+    version       TEXT        NOT NULL,
+    summary       TEXT,
+    sections      JSONB       NOT NULL,                   -- [{"heading": "...", "body": "..."}]
+    effective_at  DATE        NOT NULL,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (jsonb_typeof(sections) = 'array')
+);
+
+-- app_config: payment_methods (EWALLET aktif + description), ewallet_providers (baru),
+-- help_contacts (baru), profile_menu (action → trytuist://help, trytuist://legal/privacy-policy,
+-- trytuist://profile/edit). Isi awal 5 topik / 12 FAQ bantuan + 2 dokumen legal ikut migrasi
+-- (staging/prod juga butuh).
+```
+
+`db/migrations/0004_checkout_defaults.up.sql` (untuk §5.11, checkout memakai pilihan utama):
+
+```sql
+-- Snapshot akun e-wallet di pesanan: riwayat tetap terbaca walau e-wallet dihapus.
+ALTER TABLE orders
+    ADD COLUMN payment_account_id     UUID REFERENCES user_payment_methods(id) ON DELETE SET NULL,
+    ADD COLUMN payment_provider       TEXT,
+    ADD COLUMN payment_account_masked TEXT;
 ```
 
 ---
@@ -727,7 +1147,8 @@ trytuist-api/
 │   ├── auth/                       # handler.go · service.go · repository.go · dto.go · jwt.go
 │   ├── catalog/                    # banners, categories, products
 │   ├── order/                      # quote, create, list, detail, cancel, rating
-│   ├── user/                       # me, addresses, favorites, vouchers
+│   ├── user/                       # me, addresses, favorites, vouchers, payment-methods
+│   ├── content/                    # help (FAQ + kontak), legal (kebijakan privasi, S&K)
 │   └── db/                         # kode hasil sqlc (jangan diedit manual)
 ├── db/
 │   ├── migrations/                 # 0001_init.up.sql / .down.sql, ...
@@ -796,6 +1217,10 @@ r.Route("/v1", func(r chi.Router) {
         r.Get("/me", user.Me)
         r.Patch("/me", user.UpdateMe)
         // addresses, favorites, vouchers ...
+        r.Get("/me/payment-methods", payment.List)
+        r.Post("/me/payment-methods", payment.Add)
+        r.Put("/me/payment-methods/default", payment.SetDefault)
+        r.Delete("/me/payment-methods/{id}", payment.Remove)
     })
 })
 ```
@@ -891,6 +1316,14 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 - [ ] Test: unit service + integration test handler (Postgres via `testcontainers-go` atau DB test lokal)
 - [ ] iOS: `USE_MOCK_DATA = NO` di Dev → login & katalog jalan dari API
 
+**Fase 1b: Semua data Beranda, Menu & konfigurasi dari backend**
+
+- [ ] Migrasi `0002_home_config` + seed `home_sections` & `app_config`
+- [ ] `GET /v1/home` (section dinamis, alamat default, sapaan)
+- [ ] `GET /v1/app-config` (+ `ETag` / `Cache-Control`)
+- [ ] iOS: `HomeAPIDataSource` → `/v1/home`; Beranda merender `sections` dari server (bukan dihitung di `GetHomeContentUseCase`)
+- [ ] iOS: `AppConfigRepository` dipanggil saat Splash (onboarding, ongkir, aturan jumlah/catatan, menu Profil, cek versi)
+
 **Fase 2: Checkout & Pesanan**
 
 - [ ] `POST /v1/orders/quote`, `POST /v1/orders` (transaksi + idempotency)
@@ -900,7 +1333,21 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 **Fase 3: Profil & fitur tambahan**
 
 - [ ] `GET/PATCH /v1/me`, alamat, favorit, voucher, outlet, rating
+- [ ] `GET /v1/promotions/featured`, `POST /v1/subscriptions/{plan_id}/activate`
+- [ ] iOS: Profil dari `/v1/me` + `/v1/promotions/featured`; ❤️ di Detail ke `/v1/me/favorites`
 - [ ] Push notification status pesanan (FCM) memakai `users.fcm_token`
+
+**Fase 3b: Pengaturan Profil**
+
+- [x] Migrasi `0003_profile_features` (e-wallet tersimpan, pusat bantuan, dokumen legal)
+- [x] `GET/POST /v1/me/payment-methods`, `PUT /v1/me/payment-methods/default`, `DELETE /v1/me/payment-methods/{id}`
+- [x] `GET /v1/help?q=`, `GET /v1/legal/{slug}`
+- [x] Validasi `PATCH /v1/me` (format nomor HP, `avatar_url` https)
+- [x] Integration test `TestProfileFeatures`
+- [x] iOS: Edit Profil, Alamat Pengiriman (CRUD), Metode Pembayaran, Pusat Bantuan, Kebijakan Privasi (`ProfileFeature`)
+- [x] Checkout memakai metode utama & alamat utama user (migrasi `0004_checkout_defaults`, `TestCheckoutDefaults`)
+- [x] iOS: Keranjang → "Antar ke" & "Pembayaran" (default = utama, bisa diganti per pesanan; tombol kelola → tab Profil)
+- [ ] Hapus akun (`DELETE /v1/me`) dari Pusat Bantuan
 
 **Siap staging/prod**
 
@@ -926,6 +1373,15 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 | `.categories` | `GET /v1/categories` | `CatalogAPIDataSource` | `CategoryListResponseDTO` |
 | `.products` | `GET /v1/products` | `CatalogAPIDataSource` | `ProductListResponseDTO` |
 | `.orders` | `GET /v1/orders` | `OrderAPIDataSource` | `OrderListResponseDTO` |
-| `.profile` | `GET /v1/me` | (belum dipakai) | (fase 3) |
+| `.createOrder` | `POST /v1/orders` | `CheckoutAPIDataSource` | `PlacedOrderResponseDTO` |
+| `.profile` | `GET /v1/me` | `ProfileAPIDataSource` | `ProfileResponseDTO` |
+| `.updateProfile` | `PATCH /v1/me` | `ProfileAPIDataSource` | `ProfileResponseDTO` |
+| `.addresses` · `.createAddress` · `.updateAddress` · `.deleteAddress` | `/v1/me/addresses[/{id}]` | `ProfileAPIDataSource` | `AddressListResponseDTO` / `AddressResponseDTO` |
+| `.paymentMethods` · `.addEWallet` · `.setDefaultPaymentMethod` · `.deletePaymentMethod` | `/v1/me/payment-methods[...]` | `ProfileAPIDataSource` | `PaymentOverviewResponseDTO` |
+| `.helpCenter(query:)` | `GET /v1/help?q=` | `ProfileAPIDataSource` | `HelpCenterResponseDTO` |
+| `.legalDocument(slug:)` | `GET /v1/legal/{slug}` | `ProfileAPIDataSource` | `LegalDocumentResponseDTO` |
+| *(belum ada)* | `GET /v1/home` | `HomeAPIDataSource` (fase 1b) | `HomeResponseDTO` |
+| *(belum ada)* | `GET /v1/app-config` | `AppConfigAPIDataSource` (fase 1b) | `AppConfigResponseDTO` |
+| *(belum ada)* | `GET /v1/promotions/featured` | `ProfileAPIDataSource` (fase 3) | `FeaturedPromotionDTO` |
 
-5. Yang masih perlu ditambah di iOS saat fase 2–3 sudah ada: `EndpointAPI` case untuk `quote`, `createOrder`, `refresh`, dan `me`; refresh token otomatis saat 401 `TOKEN_EXPIRED`; dan `CartAPIRepository`.
+5. Yang masih perlu ditambah di iOS: `EndpointAPI` case untuk `home`, `appConfig`, `quote`, `refresh`, dan `featuredPromotion`; refresh token otomatis saat 401 `TOKEN_EXPIRED`; dan mengganti data hardcoded di [§4.1](#41-status-data-per-screen-dari-api-atau-masih-di-aplikasi).
