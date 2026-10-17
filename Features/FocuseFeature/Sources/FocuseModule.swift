@@ -1,22 +1,27 @@
 //
-//  FocusesModule.swift
-//  AuthenticationFeature
+//  FocuseModule.swift
+//  FocuseFeature
 //
-//  Created by Phincon on 21/08/24.
+//  Composition root + routing tab Pesanan.
 //
+import SwiftUI
+import Navigation
+import Utility
 
-import Foundation
-import UIKit
-import Dependency
-import Coordinator
+@MainActor
+public final class FocusModule: TabFeature {
+    public let tabItem = TabItem(title: "Pesanan", systemImage: "clock.arrow.circlepath", selectedSystemImage: "clock.arrow.circlepath")
 
-public class FocusModule: FocusDependency {
-    
-  public func focusCoordinator(_ navigationController: UINavigationController) -> any Coordinator {
-    FocuseCoordinator(navigationController: navigationController)
-  }
-  
-  public init() {}
-  
+    public init() {}
+
+    public func start(router: Router) {
+        let repository = DefaultOrderRepository(remote: Self.makeRemoteDataSource())
+        let store = OrdersStore(getOrders: GetOrdersUseCase(repository: repository))
+        router.setRoot(FocusesView(store: store), hidesNavigationBar: true)
+    }
+
+    private static func makeRemoteDataSource() -> OrderRemoteDataSource {
+        if AppConfig.useMockData { return OrderMockDataSource() }
+        return OrderAPIDataSource()
+    }
 }
-

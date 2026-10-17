@@ -1,22 +1,31 @@
 //
 //  ProfileModule.swift
-//  AuthenticationFeature
+//  ProfileFeature
 //
-//  Created by Phincon on 16/08/24.
+//  Composition root + routing tab Profil.
 //
+import SwiftUI
+import Navigation
 
-import Foundation
-import UIKit
-import Dependency
-import Coordinator
+@MainActor
+public final class ProfileModule: TabFeature {
+    public let tabItem = TabItem(title: "Profil", systemImage: "person", selectedSystemImage: "person.fill")
+    private let onLogout: () -> Void
 
-public class ProfileModule: ProfileDependency {
-    
-  public func profileCoordinator(_ navigationController: UINavigationController) -> any Coordinator {
-    ProfileCoordinator(navigationController: navigationController)
-  }
-  
-  public init() {}
-  
+    public init(onLogout: @escaping () -> Void) {
+        self.onLogout = onLogout
+    }
+
+    public func start(router: Router) {
+        let store = ProfileStore()
+        store.onRoute = { [weak self, weak router] route in
+            switch route {
+            case .setting(let item):
+                router?.push(SettingDetailView(item: item), title: item.title)
+            case .loggedOut:
+                self?.onLogout()
+            }
+        }
+        router.setRoot(ProfileView(store: store), hidesNavigationBar: true)
+    }
 }
-

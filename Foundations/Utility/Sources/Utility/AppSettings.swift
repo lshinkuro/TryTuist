@@ -1,24 +1,21 @@
 //
 //  AppSettings.swift
-//  TTUI
+//  Utility
 //
 //  Created by Phincon on 19/08/24.
 //
 
 import Foundation
 
-class AppSetting {
-    static let shared =  AppSetting()
-    
-    let kUserDefaults = UserDefaults.standard
+public final class AppSetting {
+    public static let shared = AppSetting()
 
-    var isFirstTime: Bool {
-        get {
-            return kUserDefaults.value(forKey: "isFirstTime") as? Bool ?? true
-        }
-        set(_isNewDevice) {
-            kUserDefaults.set(_isNewDevice, forKey: "isFirstTime")
-            kUserDefaults.synchronize()
-        }
+    private let defaults = UserDefaults.standard
+    private init() {}
+
+    /// `true` sampai user menyelesaikan onboarding.
+    public var isFirstTime: Bool {
+        get { defaults.object(forKey: "isFirstTime") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "isFirstTime") }
     }
 }

@@ -1,0 +1,15 @@
+//
+//  Staging.xcconfig
+//  Staging: server uji coba (QA / TestFlight internal). Build Release.
+//
+#include "Shared.xcconfig"
+
+APP_ENV = staging
+APP_DISPLAY_NAME = TryTuist Staging
+BUNDLE_ID_SUFFIX = .staging
+
+// TODO: ganti dengan domain staging asli.
+API_BASE_URL = https:/$()/staging-api.trytuist.com
+API_KEY = staging-api-key-change-me
+
+USE_MOCK_DATA = NO

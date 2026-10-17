@@ -5,8 +5,9 @@
 TUIST       ?= $(if $(shell command -v mise 2>/dev/null),mise exec -- tuist,tuist)
 APP_NAME    := TryTuist
 WORKSPACE   := $(APP_NAME).xcworkspace
-SCHEME      ?= $(APP_NAME)
-CONFIG      ?= Debug
+ENV         ?= Dev
+SCHEME      ?= $(APP_NAME)-$(ENV)
+CONFIG      ?= $(ENV)
 DESTINATION ?= generic/platform=iOS Simulator
 
 .DEFAULT_GOAL := help

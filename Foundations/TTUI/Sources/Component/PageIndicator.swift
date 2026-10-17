@@ -2,7 +2,7 @@
 //  PageIndicator.swift
 //  TTUI
 //
-//  Pengganti `UIPageControl` untuk carousel SwiftUI.
+//  Indikator halaman: halaman aktif berbentuk kapsul yang lebih panjang.
 //
 import SwiftUI
 
@@ -14,8 +14,8 @@ public struct PageIndicator: View {
 
     public init(numberOfPages: Int,
                 currentPage: Int,
-                pageColor: Color = .white.opacity(0.5),
-                currentPageColor: Color = .white) {
+                pageColor: Color = Color.secondary.opacity(0.3),
+                currentPageColor: Color = .brand) {
         self.numberOfPages = numberOfPages
         self.currentPage = currentPage
         self.pageColor = pageColor
@@ -23,15 +23,15 @@ public struct PageIndicator: View {
     }
 
     public var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(0..<numberOfPages, id: \.self) { index in
-                Circle()
+                Capsule()
                     .fill(index == currentPage ? currentPageColor : pageColor)
-                    .frame(width: 8, height: 8)
+                    .frame(width: index == currentPage ? 20 : 8, height: 8)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: currentPage)
+        .animation(.snappy, value: currentPage)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Page \(currentPage + 1) of \(numberOfPages)")
+        .accessibilityLabel("Halaman \(currentPage + 1) dari \(numberOfPages)")
     }
 }

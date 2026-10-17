@@ -2,7 +2,7 @@
 //  SegmentedTabBar.swift
 //  TTUI
 //
-//  Pengganti `CustomTabBar` (UIKit): tab segmen dengan indikator yang beranimasi.
+//  Tab segmen berbentuk kapsul dengan indikator yang beranimasi.
 //
 import SwiftUI
 
@@ -17,31 +17,33 @@ public struct SegmentedTabBar: View {
     }
 
     public var body: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 0) {
-                ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            selectedIndex = index
-                        }
-                    } label: {
-                        Text(title)
-                            .font(.omoBold(16))
-                            .foregroundStyle(index == selectedIndex ? .white : .gray)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background {
-                                if index == selectedIndex {
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(Color.blue)
-                                        .frame(height: proxy.size.height * 0.8)
-                                        .matchedGeometryEffect(id: "selector", in: selectorNamespace)
-                                }
+        HStack(spacing: Spacing.xs) {
+            ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
+                let isSelected = index == selectedIndex
+                Button {
+                    withAnimation(.snappy) { selectedIndex = index }
+                } label: {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(isSelected ? Color.white : Color.secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(Color.brand)
+                                    .matchedGeometryEffect(id: "selector", in: selectorNamespace)
                             }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
+                        }
+                        .contentShape(Capsule())
                 }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
+        .padding(Spacing.xs)
+        .background(Color.cardBackground, in: Capsule())
     }
 }

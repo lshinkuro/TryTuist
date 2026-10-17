@@ -12,6 +12,8 @@ import UserNotifications
 class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // Cache gambar remote (AsyncImage memakai URLSession.shared → URLCache.shared).
+        URLCache.shared = URLCache(memoryCapacity: 50 * 1024 * 1024, diskCapacity: 200 * 1024 * 1024)
         UNUserNotificationCenter.current().delegate = self
         NotificationManager.shared.requestNotificationPermission()
         // Setup window & coordinator ada di SceneDelegate.

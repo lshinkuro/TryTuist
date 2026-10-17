@@ -1,0 +1,73 @@
+//
+//  CatalogDTOs.swift
+//  HomeFeature · Data
+//
+//  DTO = cermin JSON backend (snake_case). Semua field optional;
+//  CatalogMapper yang memutuskan data mana yang valid.
+//
+import Foundation
+import NetworkManager
+
+struct ProductDTO: Decodable {
+    let id: String?
+    let name: String?
+    let description: String?
+    let categoryID: String?
+    let price: Int?
+    let imageURL: String?
+    let rating: Double?
+    let soldCount: Int?
+    let isAvailable: Bool?
+    let tags: [String]?
+    let options: [ProductOptionDTO]?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "product_id"
+        case name = "product_name"
+        case description
+        case categoryID = "category_id"
+        case price
+        case imageURL = "image_url"
+        case rating
+        case soldCount = "sold_count"
+        case isAvailable = "is_available"
+        case tags
+        case options
+    }
+}
+
+struct ProductOptionDTO: Decodable {
+    let id: String?
+    let name: String?
+    let extraPrice: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case extraPrice = "extra_price"
+    }
+}
+
+struct CategoryDTO: Decodable {
+    let id: String?
+    let name: String?
+    let icon: String?
+}
+
+struct BannerDTO: Decodable {
+    let id: String?
+    let title: String?
+    let subtitle: String?
+    let imageURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case subtitle
+        case imageURL = "image_url"
+    }
+}
+
+typealias ProductListResponseDTO = APIEnvelope<[ProductDTO]>
+typealias CategoryListResponseDTO = APIEnvelope<[CategoryDTO]>
+typealias BannerListResponseDTO = APIEnvelope<[BannerDTO]>

@@ -2,7 +2,7 @@
 //  FormCard.swift
 //  TTUI
 //
-//  Pengganti `FormView` (UIKit): card putih dengan border tipis dan shadow.
+//  Card standar: background adaptif, sudut membulat, shadow halus.
 //
 import SwiftUI
 
@@ -11,19 +11,14 @@ public struct FormCardModifier: ViewModifier {
 
     public func body(content: Content) -> some View {
         content
-            .background(Color.foodWhite100)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.black.opacity(0.05), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 4)
     }
 }
 
 public extension View {
-    /// Membungkus view dalam card bergaya `FormView`.
-    func formCard(cornerRadius: CGFloat = 16) -> some View {
+    /// Membungkus view dalam card standar aplikasi.
+    func formCard(cornerRadius: CGFloat = Radius.card) -> some View {
         modifier(FormCardModifier(cornerRadius: cornerRadius))
     }
 }

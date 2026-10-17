@@ -1,21 +1,37 @@
 //
 //  HomeModule.swift
-//  AuthenticationFeature
+//  HomeFeature
 //
-//  Created by Phincon on 16/08/24.
+//  Feature katalog F&B punya dua pintu masuk (tab): Beranda & Menu.
+//  Keduanya berbagi CatalogContainer (repository + keranjang) dan CatalogFlow (routing).
 //
+import SwiftUI
+import Navigation
 
-import Foundation
-import UIKit
-import Dependency
-import Coordinator
+@MainActor
+public final class HomeModule: TabFeature {
+    public let tabItem = TabItem(title: "Beranda", systemImage: "house", selectedSystemImage: "house.fill")
+    private var flow: CatalogFlow?
 
-public class HomeModule: HomeDependency {
-    
-  public func homeCoordinator(_ navigationController: UINavigationController) -> any Coordinator {
-    HomeCoordinator(navigationController: navigationController)
-  }
-  
-  public init() {}
-  
+    public init() {}
+
+    public func start(router: Router) {
+        let flow = CatalogFlow(router: router)
+        self.flow = flow
+        router.setRoot(flow.makeHome(), hidesNavigationBar: true)
+    }
+}
+
+@MainActor
+public final class MenuModule: TabFeature {
+    public let tabItem = TabItem(title: "Menu", systemImage: "menucard", selectedSystemImage: "menucard.fill")
+    private var flow: CatalogFlow?
+
+    public init() {}
+
+    public func start(router: Router) {
+        let flow = CatalogFlow(router: router)
+        self.flow = flow
+        router.setRoot(flow.makeMenu(isRootScreen: true), hidesNavigationBar: true)
+    }
 }

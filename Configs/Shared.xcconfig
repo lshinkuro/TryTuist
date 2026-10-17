@@ -1,0 +1,8 @@
+//
+//  Shared.xcconfig
+//  Nilai yang sama untuk semua environment. Di-include oleh Dev/Staging/Prod.xcconfig.
+//
+//  ⚠️ Di xcconfig, "//" dianggap komentar. Tulis URL sebagai  https:/$()/host  (bukan https://host).
+//
+
+APP_NAME = TryTuist

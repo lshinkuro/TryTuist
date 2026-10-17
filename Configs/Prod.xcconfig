@@ -1,0 +1,15 @@
+//
+//  Prod.xcconfig
+//  Production: App Store. Build Release.
+//
+#include "Shared.xcconfig"
+
+APP_ENV = prod
+APP_DISPLAY_NAME = TryTuist
+BUNDLE_ID_SUFFIX =
+
+// TODO: ganti dengan domain production asli.
+API_BASE_URL = https:/$()/api.trytuist.com
+API_KEY = prod-api-key-change-me
+
+USE_MOCK_DATA = NO

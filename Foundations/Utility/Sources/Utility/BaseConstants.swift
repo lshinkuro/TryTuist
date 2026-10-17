@@ -8,9 +8,10 @@
 import Foundation
 import UIKit
 
-public class BaseConstant {
-  public static let baseUrl = "https://mymarket-api.phincon.site"
-  public static let apikey = "6f8856ed-9189-488f-9011-0ff4b6c08edc"
+/// Nilai diambil dari environment aktif (Configs/<Env>.xcconfig), bukan di-hardcode.
+public enum BaseConstant {
+    public static var baseUrl: String { AppEnvironment.apiBaseURL }
+    public static var apikey: String { AppEnvironment.apiKey }
 }
 
 public enum SFSymbols {

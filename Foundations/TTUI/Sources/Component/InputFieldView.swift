@@ -2,60 +2,101 @@
 //  InputFieldView.swift
 //  TTUI
 //
-//  Pengganti `InputField` (UIKit).
-//
 import SwiftUI
+import UIKit
 
 public struct InputFieldView: View {
     private let title: String
     private let placeholder: String
+    private let systemImage: String?
     private let isSecure: Bool
+    private let keyboardType: UIKeyboardType
+    private let contentType: UITextContentType?
     private let errorMessage: String?
     @Binding private var text: String
+    @State private var isRevealed = false
+    @FocusState private var isFocused: Bool
 
     public init(title: String,
                 placeholder: String,
                 text: Binding<String>,
+                systemImage: String? = nil,
                 isSecure: Bool = false,
+                keyboardType: UIKeyboardType = .default,
+                contentType: UITextContentType? = nil,
                 errorMessage: String? = nil) {
         self.title = title
         self.placeholder = placeholder
         self._text = text
+        self.systemImage = systemImage
         self.isSecure = isSecure
+        self.keyboardType = keyboardType
+        self.contentType = contentType
         self.errorMessage = errorMessage
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.s) {
             Text(title)
-                .font(.system(size: 17))
-                .foregroundStyle(.black)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
 
-            Group {
+            HStack(spacing: Spacing.m) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(isFocused ? Color.brand : Color.secondary)
+                        .frame(width: 20)
+                        .accessibilityHidden(true)
+                }
+
+                field
+
                 if isSecure {
-                    SecureField(placeholder, text: $text)
-                } else {
-                    TextField(placeholder, text: $text)
+                    Button {
+                        isRevealed.toggle()
+                    } label: {
+                        Image(systemName: isRevealed ? "eye.slash" : "eye")
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel(isRevealed ? "Sembunyikan password" : "Tampilkan password")
                 }
             }
-            .font(.system(size: 14))
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .padding(.horizontal, 15)
-            .frame(height: 60)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: .foodBlack80.opacity(0.5), radius: 2, x: 0, y: 3)
+            .padding(.horizontal, Spacing.l)
+            .frame(height: 52)
+            .background(Color.fieldBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                    .stroke(borderColor, lineWidth: 1.5)
             )
-            .accessibilityLabel(title)
+            .animation(.easeOut(duration: 0.15), value: isFocused)
 
             if let errorMessage {
-                Text(errorMessage)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color(red: 0.702, green: 0.049, blue: 0.132))
-                    .padding(.leading, 10)
+                Label(errorMessage, systemImage: "exclamationmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         }
+    }
+
+    @ViewBuilder
+    private var field: some View {
+        Group {
+            if isSecure && !isRevealed {
+                SecureField(placeholder, text: $text)
+            } else {
+                TextField(placeholder, text: $text)
+            }
+        }
+        .focused($isFocused)
+        .keyboardType(keyboardType)
+        .textContentType(contentType)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled()
+        .accessibilityLabel(title)
+    }
+
+    private var borderColor: Color {
+        if errorMessage != nil { return .red }
+        return isFocused ? .brand : .clear
     }
 }

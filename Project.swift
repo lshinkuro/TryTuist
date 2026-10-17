@@ -5,23 +5,60 @@ let prefixBundleID = "com.lshinkuro"
 /// Minimal iOS version untuk seluruh target.
 let minimumIOSVersion = "17.0"
 
+/// ⚠️ Harus dideklarasikan SEBELUM `let project`. Manifest dijalankan sebagai script:
+/// variabel global diinisialisasi berurutan dari atas, jadi kalau ditaruh di bawah,
+/// nilainya masih kosong saat `project` dibuat (dan `merging` membuat Tuist crash).
+let baseSettings: SettingsDictionary = [
+    "OTHER_LDFLAGS": "$(inherited) -ObjC",
+    "SWIFT_VERSION": "5.0"
+]
+
+// MARK: - Environment (Dev / Staging / Prod)
+//
+// Tiap environment = 1 build configuration + 1 xcconfig (Configs/*.xcconfig) + 1 scheme.
+// Nilai seperti API_BASE_URL dibaca app lewat Info.plist → `AppEnvironment` (modul Utility).
+enum AppEnv: String, CaseIterable {
+    case dev = "Dev"
+    case staging = "Staging"
+    case prod = "Prod"
+
+    var configuration: Configuration {
+        let xcconfig: Path = .relativeToManifest("Configs/\(rawValue).xcconfig")
+        switch self {
+        case .dev: return .debug(name: .configuration(rawValue), xcconfig: xcconfig)
+        case .staging, .prod: return .release(name: .configuration(rawValue), xcconfig: xcconfig)
+        }
+    }
+
+    var scheme: Scheme {
+        let config: ConfigurationName = .configuration(rawValue)
+        return .scheme(
+            name: "\(appName)-\(rawValue)",
+            shared: true,
+            buildAction: .buildAction(targets: [.target(appName)]),
+            runAction: .runAction(configuration: config),
+            archiveAction: .archiveAction(configuration: config),
+            profileAction: .profileAction(configuration: config),
+            analyzeAction: .analyzeAction(configuration: config)
+        )
+    }
+}
+
 let project = Project(
     name: appName,
+    settings: .settings(configurations: AppEnv.allCases.map(\.configuration)),
     targets: [
         .mainApp(appName,
                  dependencies: [
-                    .Dependency,
+                    .Navigation,
                     .TTUI,
-                    .Coordinator,
+                    .Utility,
                     .NetworkManager,
-                    .TabBarFeature,
+                    .CoreDataManager,
                     .AuthenticationFeature,
                     .HomeFeature,
-                    .Utility,
-                    .ProfileFeature,
-                    .CalenderFeature,
                     .FocuseFeature,
-                    .CoreDataManager
+                    .ProfileFeature
                  ]),
         //MARK: Foundations
         .framework(.TTUI,
@@ -32,22 +69,15 @@ let project = Project(
                    dependencies: [
                     .Utility
                    ]),
-        .framework(.Coordinator,
-                   sources: ["Foundations/Coordinator/**/*.swift"],
+        // Router + tab bar: satu-satunya tempat SwiftUI dibungkus ke UIKit.
+        .framework(.Navigation,
+                   sources: ["Foundations/Navigation/Sources/**/*.swift"],
                    resources: [],
                    dependencies: []),
-        .framework(.Dependency,
-                   sources: ["Foundations/Dependency/**/*.swift"],
-                   resources: [],
-                   dependencies: [
-                    .Coordinator
-                   ]),
         .framework(.Utility,
                    sources: ["Foundations/Utility/**/*.swift"],
                    resources: [],
-                   dependencies: [
-                    .Coordinator
-                   ]),
+                   dependencies: []),
         .framework(.NetworkManager,
                    sources: ["Foundations/NetworkManager/**/*.swift"],
                    resources: [],
@@ -63,39 +93,28 @@ let project = Project(
                    sources: ["Features/AuthenticationFeature/Sources/**/*.swift"],
                    resources: ["Features/AuthenticationFeature/Resources/**/*.xcassets"],
                    dependencies: [
-                    .Utility, .TTUI, .NetworkManager, .Dependency, .Coordinator
+                    .Utility, .TTUI, .NetworkManager, .Navigation
                    ]),
         .framework(.HomeFeature,
                    sources: ["Features/HomeFeature/Sources/**/*.swift"],
                    resources: ["Features/HomeFeature/Resources/**/*.xcassets"],
                    dependencies: [
-                    .Utility, .TTUI, .Dependency, .Coordinator, .CoreDataManager
+                    .Utility, .TTUI, .NetworkManager, .Navigation
                    ]),
         .framework(.ProfileFeature,
                    sources: ["Features/ProfileFeature/Sources/**/*.swift"],
                    resources: [],
                    dependencies: [
-                    .Utility, .TTUI, .Dependency, .Coordinator
-                   ]),
-        .framework(.CalenderFeature,
-                   sources: ["Features/CalenderFeature/Sources/**/*.swift"],
-                   resources: [],
-                   dependencies: [
-                    .Utility, .TTUI, .Dependency, .Coordinator
+                    .Utility, .TTUI, .Navigation
                    ]),
         .framework(.FocuseFeature,
                    sources: ["Features/FocuseFeature/Sources/**/*.swift"],
                    resources: [],
                    dependencies: [
-                    .Utility, .TTUI, .Dependency, .Coordinator
-                   ]),
-        .framework(.TabBarFeature,
-                   sources: ["Features/TabBarFeature/Sources/**/*.swift"],
-                   resources: [],
-                   dependencies: [
-                    .Utility, .TTUI, .Dependency, .Coordinator
+                    .Utility, .TTUI, .NetworkManager, .Navigation
                    ])
-    ]
+    ],
+    schemes: AppEnv.allCases.map(\.scheme)
 )
 
 public extension ProjectDescription.Target {
@@ -112,7 +131,10 @@ public extension ProjectDescription.Target {
                         "App/Resources/**/*.ttf",
                         "App/Resources/**/*.strings"],
             dependencies: dependencies,
-            settings: .settings(base: baseSettings)
+            settings: .settings(base: baseSettings.merging([
+                // Dev & Staging bisa terpasang berdampingan dengan Prod di satu device.
+                "PRODUCT_BUNDLE_IDENTIFIER": .string("\(prefixBundleID).\(name.dashSeparator)$(BUNDLE_ID_SUFFIX)")
+            ]) { _, new in new })
         )
     }
 
@@ -131,41 +153,31 @@ public extension ProjectDescription.Target {
     }
 }
 
-private let baseSettings: SettingsDictionary = [
-    "OTHER_LDFLAGS": "$(inherited) -ObjC",
-    "SWIFT_VERSION": "5.0"
-]
 
 internal extension String {
     var dashSeparator: String {
         self.replacingOccurrences(of: " ", with: "-")
     }
-    static let TabBarFeature = "TabBarFeature"
-    static let Dependency = "Dependency"
+    static let Navigation = "Navigation"
     static let TTUI = "TTUI"
-    static let Coordinator = "Coordinator"
     static let Utility = "Utility"
     static let NetworkManager = "NetworkManager"
     static let AuthenticationFeature = "AuthenticationFeature"
     static let HomeFeature = "HomeFeature"
     static let ProfileFeature = "ProfileFeature"
-    static let CalenderFeature = "CalenderFeature"
     static let FocuseFeature = "FocuseFeature"
     static let CoreDataManager = "CoreDataManager"
 }
 
 extension TargetDependency {
     // MARK: TargetDependency Internal
-    static let Dependency = TargetDependency.target(name: "Dependency")
+    static let Navigation = TargetDependency.target(name: "Navigation")
     static let TTUI = TargetDependency.target(name: "TTUI")
-    static let Coordinator = TargetDependency.target(name: "Coordinator")
     static let Utility = TargetDependency.target(name: "Utility")
     static let NetworkManager = TargetDependency.target(name: "NetworkManager")
-    static let TabBarFeature = TargetDependency.target(name: "TabBarFeature")
     static let AuthenticationFeature = TargetDependency.target(name: "AuthenticationFeature")
     static let HomeFeature = TargetDependency.target(name: "HomeFeature")
     static let ProfileFeature = TargetDependency.target(name: "ProfileFeature")
-    static let CalenderFeature = TargetDependency.target(name: "CalenderFeature")
     static let FocuseFeature = TargetDependency.target(name: "FocuseFeature")
     static let CoreDataManager = TargetDependency.target(name: "CoreDataManager")
 }

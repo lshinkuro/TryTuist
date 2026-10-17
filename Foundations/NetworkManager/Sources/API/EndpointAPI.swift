@@ -1,52 +1,69 @@
 //
 //  EndpointAPI.swift
-//  AuthenticationFeature
+//  NetworkManager
 //
-//  Created by Phincon on 19/08/24.
+//  Daftar endpoint backend (Go + PostgreSQL). Kontrak lengkap ada di API_PLAN.md.
+//  Base URL & API key berasal dari environment aktif (Configs/<Env>.xcconfig).
 //
-
 import Foundation
 import Utility
 
 public enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
+    case patch = "PATCH"
+    case delete = "DELETE"
 }
 
 public enum EndpointAPI {
+    // Auth
     case login(param: LoginParam)
     case register(param: RegisterParam)
+    // User
     case profile
+    // Katalog
+    case banners
     case categories
     case products
+    // Pesanan
+    case orders
 
     var path: String {
         switch self {
-        case .login: return "/login"
-        case .register: return "/register"
-        case .categories: return "/categories"
-        case .products: return "/products"
-        case .profile: return "/profile"
+        case .login: return "/v1/auth/login"
+        case .register: return "/v1/auth/register"
+        case .profile: return "/v1/me"
+        case .banners: return "/v1/banners"
+        case .categories: return "/v1/categories"
+        case .products: return "/v1/products"
+        case .orders: return "/v1/orders"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .categories, .products: return .get
-        case .login, .register, .profile: return .post
+        case .login, .register: return .post
+        case .profile, .banners, .categories, .products, .orders: return .get
+        }
+    }
+
+    /// Endpoint yang butuh login → kirim `Authorization: Bearer <access_token>`.
+    var requiresAuth: Bool {
+        switch self {
+        case .profile, .orders: return true
+        case .login, .register, .banners, .categories, .products: return false
         }
     }
 
     var headers: [String: String] {
-        switch self {
-        case .login, .register:
-            return [
-                "API_KEY": BaseConstant.apikey,
-                "Content-Type": "application/json"
-            ]
-        default:
-            return [:]
+        var headers = [
+            "X-API-Key": BaseConstant.apikey,
+            "Accept": "application/json"
+        ]
+        if requiresAuth, let token = TokenStorage.token {
+            headers["Authorization"] = "Bearer \(token)"
         }
+        return headers
     }
 
     var parameters: [String: Any]? {
@@ -55,14 +72,12 @@ public enum EndpointAPI {
             var params: [String: Any] = [:]
             if let email = param.email { params["email"] = email }
             if let password = param.password { params["password"] = password }
-            if let firebaseToken = param.firebaseToken { params["firebaseToken"] = firebaseToken }
+            if let fcmToken = param.firebaseToken, !fcmToken.isEmpty { params["fcm_token"] = fcmToken }
             return params
         case .login(let param):
-            return [
-                "email": param.email,
-                "password": param.password,
-                "firebaseToken": param.firebaseToken
-            ]
+            var params: [String: Any] = ["email": param.email, "password": param.password]
+            if !param.firebaseToken.isEmpty { params["fcm_token"] = param.firebaseToken }
+            return params
         default:
             return nil
         }
@@ -86,6 +101,7 @@ public enum EndpointAPI {
 
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
+        request.timeoutInterval = 30
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
         if method != .get, let parameters {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)

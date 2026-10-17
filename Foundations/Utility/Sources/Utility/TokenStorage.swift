@@ -26,6 +26,17 @@ public enum TokenStorage {
         return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
     }
 
+    /// Access token untuk header `Authorization: Bearer <token>`.
+    public static var token: String? {
+        var query = baseQuery
+        query[kSecReturnData] = kCFBooleanTrue
+        query[kSecMatchLimit] = kSecMatchLimitOne
+        var tokenData: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &tokenData) == errSecSuccess,
+              let data = tokenData as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
     public static var hasToken: Bool {
         var query = baseQuery
         query[kSecReturnData] = kCFBooleanTrue
