@@ -13,3 +13,9 @@ API_BASE_URL = https:/$()/staging-api.trytuist.com
 API_KEY = staging-api-key-change-me
 
 USE_MOCK_DATA = NO
+
+// Google Sign-In: OAuth client ID tipe iOS untuk bundle ID com.lshinkuro.TryTuist.staging
+// (Google Cloud Console → Credentials). Kosong = tombol Google menampilkan pesan "belum dikonfigurasi".
+// REVERSED = urutan dibalik, mis. 1234-abc.apps.googleusercontent.com → com.googleusercontent.apps.1234-abc
+GOOGLE_CLIENT_ID =
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.not-configured

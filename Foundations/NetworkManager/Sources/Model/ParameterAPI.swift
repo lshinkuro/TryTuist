@@ -35,6 +35,18 @@ public struct LoginParam {
 }
 
 
+// MARK: - GoogleSignInParam
+/// `POST /v1/auth/google` — ID token dari Google Sign-In (API_PLAN.md §5.3b).
+public struct GoogleSignInParam {
+    public let idToken: String
+    public let firebaseToken: String
+
+    public init(idToken: String, firebaseToken: String = "") {
+        self.idToken = idToken
+        self.firebaseToken = firebaseToken
+    }
+}
+
 // MARK: - BaseResponse
 public struct BaseResponse: Codable {
     public let code: Int

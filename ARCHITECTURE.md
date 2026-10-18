@@ -736,6 +736,23 @@ Menambah shortcut fitur baru: tambahkan `DebugShortcut` di `AppRouter.debugShort
 
 Memakai di project lain: salin `Foundations/Debugger`, `NetworkInspector.swift`, `ScreenTracker.swift`, pakai `ShakeWindow` di SceneDelegate, lalu isi `shortcutsProvider` & `onServerChanged`.
 
+### 11.2 Login dengan Google (GoogleSignIn-iOS)
+
+Dependency SPM di `Tuist/Package.swift` (`GoogleSignIn`), dipakai hanya oleh `AuthenticationFeature` (`.external(name: "GoogleSignIn")`).
+
+```
+Tombol "Masuk/Daftar dengan Google"
+  → GoogleSignInUseCase
+      → GoogleSignInClient.signIn()      SDK (GoogleSDKSignInClient) atau Mock (USE_MOCK_DATA = YES)
+      → AuthRepository.signInWithGoogle  POST /v1/auth/google { id_token }  (API_PLAN.md §5.3b)
+      → TokenStorage.save
+```
+
+- Satu tombol untuk daftar & masuk: backend membuat akun baru bila belum ada (`is_new_user`).
+- Konfigurasi per environment di `Configs/<Env>.xcconfig`: `GOOGLE_CLIENT_ID` → `Info.plist` `GIDClientID`, dan `GOOGLE_REVERSED_CLIENT_ID` → URL scheme callback. Kosong = tombol menampilkan "belum tersedia" (SDK tidak dipanggil, jadi tidak crash).
+- Callback URL ditangani `SceneDelegate` → `GoogleSignInURLHandler.handle(url)`; App tidak meng-import GoogleSignIn langsung.
+- User menutup sheet Google → `AuthError.googleCancelled` → tanpa pesan error.
+
 ## 12. Testing
 
 Karena tiap layer terpisah, test ditulis tanpa network dan tanpa UI.

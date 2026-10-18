@@ -26,7 +26,7 @@ public enum NetworkLogger {
     nonisolated(unsafe) public static var maxBodyLength = 4_000
 
     private static let sensitiveHeaders: Set<String> = ["authorization", "x-api-key", "cookie"]
-    private static let sensitiveBodyKeys: Set<String> = ["password", "access_token", "refresh_token"]
+    private static let sensitiveBodyKeys: Set<String> = ["password", "access_token", "refresh_token", "id_token"]
 
     // MARK: - Request
 

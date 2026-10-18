@@ -10,6 +10,7 @@ struct SignUpState: Equatable {
     var password = ""
     var confirmPassword = ""
     var isLoading = false
+    var isGoogleLoading = false
     var errorMessage: String?
 
     // Pesan validasi baru muncul setelah user mulai mengetik.
@@ -43,6 +44,8 @@ enum SignUpAction {
     case submitTapped
     case signInTapped
     case registerResponse(Result<UserSession, AuthError>)
+    case googleTapped
+    case googleResponse(Result<UserSession, AuthError>)
 }
 
 enum SignUpRoute {
@@ -52,10 +55,12 @@ enum SignUpRoute {
 
 final class SignUpStore: Store<SignUpState, SignUpAction> {
     private let register: RegisterUseCase
+    private let google: GoogleSignInUseCase
     var onRoute: ((SignUpRoute) -> Void)?
 
-    init(register: RegisterUseCase) {
+    init(register: RegisterUseCase, google: GoogleSignInUseCase) {
         self.register = register
+        self.google = google
         super.init(initialState: SignUpState())
     }
 
@@ -76,7 +81,7 @@ final class SignUpStore: Store<SignUpState, SignUpAction> {
             return nil
 
         case .submitTapped:
-            guard state.canSubmit else { return nil }
+            guard state.canSubmit, !state.isGoogleLoading else { return nil }
             state.isLoading = true
             state.errorMessage = nil
             let (email, password, register) = (state.email, state.password, self.register)
@@ -99,6 +104,29 @@ final class SignUpStore: Store<SignUpState, SignUpAction> {
         case .registerResponse(.failure(let error)):
             state.isLoading = false
             state.errorMessage = error.errorDescription
+            return nil
+
+        case .googleTapped:
+            guard !state.isLoading, !state.isGoogleLoading else { return nil }
+            state.isGoogleLoading = true
+            state.errorMessage = nil
+            let google = self.google
+            return .task { @MainActor in
+                do {
+                    return .googleResponse(.success(try await google.execute()))
+                } catch {
+                    return .googleResponse(.failure(error as? AuthError ?? .googleFailed))
+                }
+            }
+
+        case .googleResponse(.success(let session)):
+            state.isGoogleLoading = false
+            return .run { [weak self] in self?.onRoute?(.authenticated(session)) }
+
+        case .googleResponse(.failure(let error)):
+            state.isGoogleLoading = false
+            // Sheet ditutup user → diam saja.
+            state.errorMessage = error == .googleCancelled ? nil : error.errorDescription
             return nil
         }
     }

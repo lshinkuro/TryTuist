@@ -5,6 +5,7 @@
 
 import UIKit
 import Debugger
+import AuthenticationFeature
 
 /// Window harus dibuat dari `UIWindowScene` (scene lifecycle wajib sejak SDK iOS 26).
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -24,5 +25,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let router = AppRouter(window: window)
         appRouter = router
         router.start()
+    }
+
+    /// Callback dari halaman login Google (URL scheme `GOOGLE_REVERSED_CLIENT_ID`).
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts {
+            GoogleSignInURLHandler.handle(context.url)
+        }
     }
 }

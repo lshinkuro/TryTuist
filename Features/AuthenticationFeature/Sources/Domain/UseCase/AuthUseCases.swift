@@ -56,3 +56,27 @@ struct RegisterUseCase {
         return session
     }
 }
+
+/// Daftar & masuk dengan Google dalam satu langkah: sheet Google → ID token → backend → simpan sesi.
+/// Akun baru otomatis dibuat backend, jadi tombol yang sama dipakai di Sign In & Sign Up.
+struct GoogleSignInUseCase {
+    private let client: GoogleSignInClient
+    private let repository: AuthRepository
+    private let saveToken: (String) -> Void
+
+    init(client: GoogleSignInClient,
+         repository: AuthRepository,
+         saveToken: @escaping (String) -> Void = { _ = TokenStorage.save($0) }) {
+        self.client = client
+        self.repository = repository
+        self.saveToken = saveToken
+    }
+
+    @MainActor
+    func execute() async throws -> UserSession {
+        let account = try await client.signIn()
+        let session = try await repository.signInWithGoogle(idToken: account.idToken)
+        saveToken(session.accessToken)
+        return session
+    }
+}

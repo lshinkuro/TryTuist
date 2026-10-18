@@ -26,4 +26,13 @@ struct DefaultAuthRepository: AuthRepository {
             throw AuthMapper.toDomainError(error)
         }
     }
+
+    func signInWithGoogle(idToken: String) async throws -> UserSession {
+        do {
+            let response = try await remote.google(idToken: idToken)
+            return try AuthMapper.toEntity(response)
+        } catch {
+            throw AuthMapper.toDomainError(error)
+        }
+    }
 }

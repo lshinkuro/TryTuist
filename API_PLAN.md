@@ -63,6 +63,7 @@ JWT_SECRET=ganti-dengan-random-64-byte
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=720h              # 30 hari
 LOG_LEVEL=debug                   # debug (dev) | info (staging/prod)
+GOOGLE_CLIENT_IDS=                # client ID iOS Google (dipisah koma per env); kosong = login Google nonaktif
 ```
 
 `docker-compose.yml` untuk dev:
@@ -160,6 +161,7 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 | 3 | `POST` | `/v1/auth/login` | | 1 | Sign In → `AuthAPIDataSource.login` |
 | 4 | `POST` | `/v1/auth/refresh` | | 1 | (auto refresh token) |
 | 5 | `POST` | `/v1/auth/logout` | 🔒 | 1 | Profil → Keluar |
+| 5b | `POST` | `/v1/auth/google` | | 1 | Sign In & Sign Up → "Lanjutkan dengan Google" → `AuthAPIDataSource.google` (§5.3b) |
 | 6 | `GET` | `/v1/banners` | | 1 | Beranda → carousel promo |
 | 7 | `GET` | `/v1/categories` | | 1 | Beranda (grid), Menu (chip) |
 | 8 | `GET` | `/v1/products` | | 1 | Beranda (Paling Laris, Rekomendasi), Menu |
@@ -270,6 +272,73 @@ Response **200** (iOS: `SessionDTO`):
 - `expires_at` = waktu kedaluwarsa **access token** (unix seconds).
 - Error **401** `INVALID_CREDENTIALS`. Pesan selalu sama untuk email tidak terdaftar maupun password salah (jangan bocorkan email mana yang terdaftar).
 - Rate limit: 5 percobaan / menit / IP + email.
+- Akun yang dibuat lewat Google (tanpa password) → **401** `USE_GOOGLE_SIGN_IN` ("Akun ini terdaftar dengan Google…"), supaya iOS bisa mengarahkan ke tombol Google.
+
+### 5.3b `POST /v1/auth/google` — daftar & masuk dengan Google
+
+Satu endpoint untuk **daftar dan masuk**. iOS memakai SDK [GoogleSignIn-iOS](https://github.com/google/GoogleSignIn-iOS) untuk mendapat **ID token**, lalu mengirimnya ke backend. Backend tidak pernah menerima password Google.
+
+```
+iOS: GIDSignIn.signIn → idToken (JWT dari Google)
+  → POST /v1/auth/google { id_token }
+  → backend verifikasi token → cari / tautkan / buat user → SessionDTO (sama dengan login)
+```
+
+Request:
+
+```json
+{ "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6...", "fcm_token": "optional" }
+```
+
+Response **201** (akun baru) / **200** (akun sudah ada) — `SessionDTO` + `is_new_user`:
+
+```json
+{
+  "code": 201,
+  "message": "success",
+  "data": {
+    "user_name": "Budi Santoso",
+    "user_image": "https://lh3.googleusercontent.com/a/…",
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "rt_6f1c0e...",
+    "expires_at": 1792218000,
+    "is_new_user": true
+  }
+}
+```
+
+Verifikasi token di backend (tanpa library tambahan, `internal/auth/google.go`):
+
+| Cek | Aturan |
+|---|---|
+| Tanda tangan | RS256 dengan kunci `kid` dari `GOOGLE_JWKS_URL` (`https://www.googleapis.com/oauth2/v3/certs`), di-cache sesuai `Cache-Control` |
+| `iss` | `accounts.google.com` atau `https://accounts.google.com` |
+| `aud` | salah satu `GOOGLE_CLIENT_IDS` (client ID iOS per environment) |
+| `exp` | belum lewat (toleransi 1 menit) |
+| `email` / `email_verified` | wajib ada / `true` |
+
+Mencari akun:
+
+1. `users.google_sub = sub` → masuk.
+2. Email sudah terdaftar dengan password (belum tertaut) → **tautkan** Google ke akun itu (email sudah diverifikasi Google), lalu masuk. Password lama tetap berlaku. Foto Google dipakai bila user belum punya foto.
+3. Belum ada → buat akun baru tanpa password (nama & foto dari Google, nama kosong → bagian depan email), `is_new_user: true`.
+
+| Error | Kapan |
+|---|---|
+| `400 VALIDATION_ERROR` | `id_token` kosong |
+| `401 INVALID_GOOGLE_TOKEN` | token palsu / kedaluwarsa / bukan untuk app ini / email belum diverifikasi |
+| `409 EMAIL_ALREADY_REGISTERED` | email sudah tertaut ke akun Google **lain** |
+| `429 RATE_LIMITED` | > `LOGIN_RATE_LIMIT` percobaan / menit / IP |
+| `503 GOOGLE_SIGN_IN_DISABLED` | `GOOGLE_CLIENT_IDS` belum diisi |
+
+`POST /v1/auth/register` & `/login` juga mengirim `is_new_user` (register = `true`).
+
+#### Setup Google Cloud & iOS
+
+1. Google Cloud Console → **Credentials → Create OAuth client ID → iOS**, satu per bundle ID: `com.lshinkuro.TryTuist.dev`, `com.lshinkuro.TryTuist.staging`, `com.lshinkuro.TryTuist`.
+2. Backend `.env`: `GOOGLE_CLIENT_IDS=<dev>,<staging>,<prod>`.
+3. iOS `Configs/<Env>.xcconfig`: `GOOGLE_CLIENT_ID` dan `GOOGLE_REVERSED_CLIENT_ID` (dipakai `Info.plist` → `GIDClientID` & URL scheme callback).
+4. Dependency iOS: `https://github.com/google/GoogleSignIn-iOS` (`GoogleSignIn`) di `Tuist/Package.swift`, dipakai `AuthenticationFeature`.
 
 ### 5.4 `POST /v1/auth/refresh`
 
@@ -782,7 +851,7 @@ CREATE TABLE users (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name           TEXT        NOT NULL,
     email          TEXT        NOT NULL,
-    password_hash  TEXT        NOT NULL,
+    password_hash  TEXT,                                 -- NULL = akun Google tanpa password (migrasi 0005)
     phone          TEXT,
     avatar_url     TEXT,
     member_tier    TEXT        NOT NULL DEFAULT 'SILVER' CHECK (member_tier IN ('SILVER','GOLD','PLATINUM')),
@@ -1099,6 +1168,16 @@ ALTER TABLE orders
     ADD COLUMN payment_account_masked TEXT;
 ```
 
+`db/migrations/0005_google_auth.up.sql` (untuk §5.3b):
+
+```sql
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE users ADD COLUMN google_sub TEXT;                 -- claim `sub` dari Google
+CREATE UNIQUE INDEX users_google_sub_key ON users (google_sub) WHERE google_sub IS NOT NULL;
+ALTER TABLE users ADD CONSTRAINT users_has_login_method
+    CHECK (password_hash IS NOT NULL OR google_sub IS NOT NULL);
+```
+
 ---
 
 ## 7. Aturan bisnis
@@ -1315,6 +1394,8 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 - [ ] `GET /v1/banners`, `/v1/categories`, `/v1/products`, `/v1/products/{id}`
 - [ ] Test: unit service + integration test handler (Postgres via `testcontainers-go` atau DB test lokal)
 - [ ] iOS: `USE_MOCK_DATA = NO` di Dev → login & katalog jalan dari API
+- [x] `POST /v1/auth/google` (daftar & masuk dengan Google, migrasi `0005_google_auth`, `TestGoogleSignIn`)
+- [x] iOS: tombol "Lanjutkan dengan Google" di Sign In & Sign Up (GoogleSignIn-iOS)
 
 **Fase 1b: Semua data Beranda, Menu & konfigurasi dari backend**
 
@@ -1369,6 +1450,7 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 |---|---|---|---|
 | `.login` | `POST /v1/auth/login` | `AuthAPIDataSource` | `SessionResponseDTO` |
 | `.register` | `POST /v1/auth/register` | `AuthAPIDataSource` | `SessionResponseDTO` |
+| `.googleSignIn` | `POST /v1/auth/google` | `AuthAPIDataSource` | `SessionResponseDTO` |
 | `.banners` | `GET /v1/banners` | `CatalogAPIDataSource` | `BannerListResponseDTO` |
 | `.categories` | `GET /v1/categories` | `CatalogAPIDataSource` | `CategoryListResponseDTO` |
 | `.products` | `GET /v1/products` | `CatalogAPIDataSource` | `ProductListResponseDTO` |

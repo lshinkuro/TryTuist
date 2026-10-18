@@ -49,12 +49,21 @@ final class AuthMockDataSource: AuthRemoteDataSource {
         let name = email.split(separator: "@").first.map { String($0).capitalized } ?? "User"
         let account = Account(name: name, email: email, password: password)
         registeredAccounts.append(account)
+        return try successResponse(for: account, isNewUser: true)
+    }
+
+    /// Meniru `/v1/auth/google`: token dari `MockGoogleSignInClient` → akun Kholis (sudah ada).
+    func google(idToken: String) async throws -> SessionResponseDTO {
+        try await Task.sleep(for: latency)
+        guard idToken == MockGoogleSignInClient.token, let account = Self.defaultAccounts.first else {
+            throw APIServerError(statusCode: 401, type: "INVALID_GOOGLE_TOKEN", message: "Login Google gagal diverifikasi.")
+        }
         return try successResponse(for: account)
     }
 
     // MARK: - Fixture
 
-    private func successResponse(for account: Account) throws -> SessionResponseDTO {
+    private func successResponse(for account: Account, isNewUser: Bool = false) throws -> SessionResponseDTO {
         let expiresAt = Int(Date().addingTimeInterval(7 * 24 * 60 * 60).timeIntervalSince1970)
         let json: [String: Any] = [
             "code": 200,
@@ -64,7 +73,8 @@ final class AuthMockDataSource: AuthRemoteDataSource {
                 "user_image": "",
                 "access_token": "mock-access-\(UUID().uuidString)",
                 "refresh_token": "mock-refresh-\(UUID().uuidString)",
-                "expires_at": expiresAt
+                "expires_at": expiresAt,
+                "is_new_user": isNewUser
             ]
         ]
         let data = try JSONSerialization.data(withJSONObject: json)

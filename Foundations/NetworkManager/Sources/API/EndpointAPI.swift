@@ -20,6 +20,8 @@ public enum EndpointAPI {
     // Auth
     case login(param: LoginParam)
     case register(param: RegisterParam)
+    /// Daftar & masuk dengan Google (satu endpoint).
+    case googleSignIn(param: GoogleSignInParam)
     // User / Profil
     case profile
     case updateProfile(param: UpdateProfileParam)
@@ -46,6 +48,7 @@ public enum EndpointAPI {
         switch self {
         case .login: return "/v1/auth/login"
         case .register: return "/v1/auth/register"
+        case .googleSignIn: return "/v1/auth/google"
         case .profile, .updateProfile: return "/v1/me"
         case .addresses, .createAddress: return "/v1/me/addresses"
         case .updateAddress(let id, _), .deleteAddress(let id): return "/v1/me/addresses/\(Self.escape(id))"
@@ -63,7 +66,7 @@ public enum EndpointAPI {
 
     var method: HTTPMethod {
         switch self {
-        case .login, .register, .createOrder, .createAddress, .addEWallet: return .post
+        case .login, .register, .googleSignIn, .createOrder, .createAddress, .addEWallet: return .post
         case .setDefaultPaymentMethod: return .put
         case .updateProfile, .updateAddress: return .patch
         case .deleteAddress, .deletePaymentMethod: return .delete
@@ -78,7 +81,7 @@ public enum EndpointAPI {
         case .profile, .orders, .createOrder,
              .updateProfile, .addresses, .createAddress, .updateAddress, .deleteAddress,
              .paymentMethods, .addEWallet, .setDefaultPaymentMethod, .deletePaymentMethod: return true
-        case .login, .register, .banners, .categories, .products, .helpCenter, .legalDocument: return false
+        case .login, .register, .googleSignIn, .banners, .categories, .products, .helpCenter, .legalDocument: return false
         }
     }
 
@@ -107,6 +110,10 @@ public enum EndpointAPI {
             return params
         case .login(let param):
             var params: [String: Any] = ["email": param.email, "password": param.password]
+            if !param.firebaseToken.isEmpty { params["fcm_token"] = param.firebaseToken }
+            return params
+        case .googleSignIn(let param):
+            var params: [String: Any] = ["id_token": param.idToken]
             if !param.firebaseToken.isEmpty { params["fcm_token"] = param.firebaseToken }
             return params
         case .createOrder(let param, _):

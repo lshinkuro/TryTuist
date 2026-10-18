@@ -46,6 +46,11 @@ enum AppEnv: String, CaseIterable {
 
 let project = Project(
     name: appName,
+    // Package SPM diintegrasikan langsung oleh Xcode (bukan dikonversi Tuist ke .xcodeproj),
+    // supaya versi iOS minimum package diatur Xcode sendiri. Tuist/Package.swift dibiarkan kosong.
+    packages: [
+        .remote(url: "https://github.com/google/GoogleSignIn-iOS", requirement: .upToNextMajor(from: "8.0.0"))
+    ],
     settings: .settings(configurations: AppEnv.allCases.map(\.configuration)),
     targets: [
         .mainApp(appName,
@@ -101,7 +106,9 @@ let project = Project(
                    sources: ["Features/AuthenticationFeature/Sources/**/*.swift"],
                    resources: ["Features/AuthenticationFeature/Resources/**/*.xcassets"],
                    dependencies: [
-                    .Utility, .TTUI, .NetworkManager, .Navigation
+                    .Utility, .TTUI, .NetworkManager, .Navigation,
+                    // Google Sign-In (SPM, lihat Tuist/Package.swift)
+                    .GoogleSignIn
                    ]),
         .framework(.HomeFeature,
                    sources: ["Features/HomeFeature/Sources/**/*.swift"],
@@ -190,4 +197,7 @@ extension TargetDependency {
     static let FocuseFeature = TargetDependency.target(name: "FocuseFeature")
     static let CoreDataManager = TargetDependency.target(name: "CoreDataManager")
     static let Debugger = TargetDependency.target(name: "Debugger")
+
+    /// Google Sign-In (SPM bawaan Xcode, lihat `packages:` di atas).
+    static let GoogleSignIn = TargetDependency.package(product: "GoogleSignIn")
 }

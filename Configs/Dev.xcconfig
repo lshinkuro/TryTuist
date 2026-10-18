@@ -14,3 +14,9 @@ API_KEY = dev-local-api-key
 
 // YES = pakai Mock data source (tanpa backend). Ubah ke NO setelah backend Go jalan.
 USE_MOCK_DATA = NO
+
+// Google Sign-In: OAuth client ID tipe iOS untuk bundle ID com.lshinkuro.TryTuist.dev
+// (Google Cloud Console → Credentials). Kosong = tombol Google menampilkan pesan "belum dikonfigurasi".
+// REVERSED = urutan dibalik, mis. 1234-abc.apps.googleusercontent.com → com.googleusercontent.apps.1234-abc
+GOOGLE_CLIENT_ID = 290281020033-c59c3koehi40cs77jpsu36oj69cic70e.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.290281020033-c59c3koehi40cs77jpsu36oj69cic70e

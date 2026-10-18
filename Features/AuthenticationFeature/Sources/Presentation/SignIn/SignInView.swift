@@ -25,7 +25,10 @@ struct SignInView: View {
             isSubmitEnabled: store.state.canSubmit,
             errorMessage: store.state.errorMessage,
             onSubmit: { store.send(.submitTapped) },
-            onFooterTap: { store.send(.signUpTapped) }
+            onFooterTap: { store.send(.signUpTapped) },
+            googleTitle: "Masuk dengan Google",
+            isGoogleLoading: store.state.isGoogleLoading,
+            onGoogleTap: { store.send(.googleTapped) }
         ) {
             InputFieldView(title: "Email",
                            placeholder: "nama@email.com",
