@@ -58,7 +58,7 @@ public struct InputFieldView: View {
                         Image(systemName: isRevealed ? "eye.slash" : "eye")
                             .foregroundStyle(.secondary)
                     }
-                    .accessibilityLabel(isRevealed ? "Sembunyikan password" : "Tampilkan password")
+                    .accessibilityLabel(isRevealed ? String(localized: "Sembunyikan password") : String(localized: "Tampilkan password"))
                 }
             }
             .padding(.horizontal, Spacing.l)

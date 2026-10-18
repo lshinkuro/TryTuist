@@ -95,7 +95,7 @@ struct OrderMockDataSource: OrderRemoteDataSource {
         { "order_id": "ORD-002", "store_name": "Gandaria City", "product_name": "Choco Oat Latte",
           "created_at": "2024-08-20T12:44:00+07:00", "total_price": 15000, "qty": 1, "status": "COMPLETED", "can_rate": true },
         { "order_id": "ORD-003", "store_name": "Gandaria City", "product_name": "Breve Latte",
-          "created_at": "2024-08-07T12:21:00+07:00", "total_price": 9000, "qty": 1, "status": "COMPLETED" },
+          "created_at": "2024-08-07T12:21:00+07:00", "total_price": 9000, "qty": 1, "status": "COMPLETED", "rating": 5 },
         { "order_id": "ORD-004", "store_name": "Kemang Utara", "product_name": "TOMORO Oat Latte",
           "created_at": "2024-08-05T09:10:00+07:00", "total_price": 30000, "qty": 2, "status": "FAILED" },
         { "order_id": "ORD-005", "store_name": "Kemang Utara", "product_name": "Americano",

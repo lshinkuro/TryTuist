@@ -128,9 +128,10 @@ private struct AddressCard: View {
 
     private var icon: String {
         switch address.label.lowercased() {
-        case "rumah": return "house.fill"
-        case "kantor": return "building.2.fill"
-        case "kos", "apartemen": return "building.fill"
+        // Label tersimpan bisa bahasa Indonesia atau Inggris (saran label ikut bahasa app).
+        case "rumah", "home": return "house.fill"
+        case "kantor", "office": return "building.2.fill"
+        case "kos", "apartemen", String(localized: "boarding house"), "apartment": return "building.fill"
         default: return "mappin.circle.fill"
         }
     }

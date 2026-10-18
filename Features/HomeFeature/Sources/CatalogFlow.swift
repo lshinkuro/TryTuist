@@ -49,7 +49,7 @@ final class CatalogFlow {
             case .category(let category):
                 self?.showMenu(categoryID: category.id, title: category.name)
             case .allMenu:
-                self?.showMenu(categoryID: nil, title: "Semua Menu")
+                self?.showMenu(categoryID: nil, title: String(localized: "Semua Menu"))
             case .cart:
                 self?.showCart()
             case .showPromoPopup(let popup):
@@ -95,6 +95,18 @@ final class CatalogFlow {
         return MenuView(store: store)
     }
 
+    /// Menu Favorit. Store memegang flow ini (lewat `onRoute`) karena dibuka dari tab lain tanpa HomeModule.
+    func makeFavorites() -> some View {
+        let store = FavoritesStore(getFavorites: container.getFavorites, setFavorite: container.setFavorite)
+        store.onRoute = { [self, weak store] route in
+            switch route {
+            case .productDetail(let product):
+                showProductDetail(product) { store?.send(.toastRequested($0)) }
+            }
+        }
+        return FavoritesView(store: store)
+    }
+
     // MARK: - Pushed / presented screens
 
     private func showMenu(categoryID: String?, title: String) {
@@ -103,7 +115,8 @@ final class CatalogFlow {
 
     /// - Parameter onAdded: dipanggil setelah detail ditutup, untuk menampilkan toast di screen sebelumnya.
     private func showProductDetail(_ product: Product, onAdded: @escaping (ToastMessage) -> Void) {
-        let store = ProductDetailStore(product: product, addToCart: container.addToCart)
+        let store = ProductDetailStore(product: product, addToCart: container.addToCart,
+                                       getFavorites: container.getFavorites, setFavorite: container.setFavorite)
         store.onRoute = { [weak self] route in
             switch route {
             case .addedToCart(let toast):
@@ -150,11 +163,11 @@ final class CatalogFlow {
             do {
                 let result = try await reorder.execute(items)
                 if !result.skipped.isEmpty {
-                    self?.homeStore?.send(.toastRequested(.error("Sedang tidak tersedia: \(result.skipped.joined(separator: ", "))")))
+                    self?.homeStore?.send(.toastRequested(.error(String(localized: "Sedang tidak tersedia: \(result.skipped.joined(separator: ", "))"))))
                 }
                 if result.added > 0 { self?.showCart() }
             } catch {
-                self?.homeStore?.send(.toastRequested(.error("Gagal memuat menu. Coba lagi.")))
+                self?.homeStore?.send(.toastRequested(.error(String(localized: "Gagal memuat menu. Coba lagi."))))
             }
         }
     }
@@ -175,7 +188,7 @@ final class CatalogFlow {
                 self?.leaveCart(to: .managePaymentMethods)
             }
         }
-        router?.present(CartView(store: store), title: "Keranjang")
+        router?.present(CartView(store: store), title: String(localized: "Keranjang"))
     }
 
     // MARK: - Pembayaran online (§5.27)

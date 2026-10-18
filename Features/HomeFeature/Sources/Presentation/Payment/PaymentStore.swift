@@ -36,8 +36,8 @@ struct PaymentState: Equatable {
 
     var title: String {
         switch phase {
-        case .notPaid: return "Pembayaran tidak berhasil"
-        default: return "Pembayaran"
+        case .notPaid: return String(localized: "Pembayaran tidak berhasil")
+        default: return String(localized: "Pembayaran")
         }
     }
 }
@@ -162,7 +162,7 @@ final class PaymentStore: Store<PaymentState, PaymentAction> {
             state.isCancelling = false
             state.session = session
             if session.status == .paid { return handleFinal(&state, session) }
-            return finish(.notPaid(message: "Pembayaran dibatalkan. Isi keranjang masih tersimpan."))
+            return finish(.notPaid(message: String(localized: "Pembayaran dibatalkan. Isi keranjang masih tersimpan.")))
 
         case .cancelResponse(.failure(let error)):
             state.isCancelling = false
@@ -197,9 +197,9 @@ final class PaymentStore: Store<PaymentState, PaymentAction> {
         }
         let message: String
         switch session.status {
-        case .expired: message = session.statusMessage ?? "Batas waktu pembayaran habis."
-        case .cancelled: message = session.statusMessage ?? "Pembayaran dibatalkan."
-        default: message = session.statusMessage ?? "Pembayaran ditolak. Coba metode lain."
+        case .expired: message = session.statusMessage ?? String(localized: "Batas waktu pembayaran habis.")
+        case .cancelled: message = session.statusMessage ?? String(localized: "Pembayaran dibatalkan.")
+        default: message = session.statusMessage ?? String(localized: "Pembayaran ditolak. Coba metode lain.")
         }
         state.phase = .notPaid(message)
         return nil

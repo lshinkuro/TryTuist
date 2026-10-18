@@ -27,8 +27,8 @@ struct Outlet: Identifiable, Equatable {
     var detailText: String {
         var parts: [String] = []
         if let distanceKM { parts.append(Self.formatKM(distanceKM)) }
-        parts.append(isOpenNow ? hoursLabel : "Tutup")
-        if isDeliverable == false { parts.append("di luar jangkauan antar") }
+        parts.append(isOpenNow ? hoursLabel : String(localized: "outlet.closed", defaultValue: "Tutup"))
+        if isDeliverable == false { parts.append(String(localized: "di luar jangkauan antar")) }
         return parts.joined(separator: " · ")
     }
 

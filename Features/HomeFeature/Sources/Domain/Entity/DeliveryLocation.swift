@@ -54,8 +54,8 @@ enum LocationError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .denied: return "Izin lokasi belum diberikan. Aktifkan di Pengaturan → TryTuist → Lokasi."
-        case .unavailable: return "Lokasi tidak bisa didapat. Coba lagi di tempat terbuka."
+        case .denied: return String(localized: "Izin lokasi belum diberikan. Aktifkan di Pengaturan → TryTuist → Lokasi.")
+        case .unavailable: return String(localized: "Lokasi tidak bisa didapat. Coba lagi di tempat terbuka.")
         }
     }
 }

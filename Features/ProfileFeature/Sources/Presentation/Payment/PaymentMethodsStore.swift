@@ -68,14 +68,14 @@ final class PaymentMethodsStore: Store<PaymentMethodsState, PaymentMethodsAction
         case .methodTapped(let method):
             guard state.busyID == nil, !method.isDefault else { return nil }
             guard method.isEnabled else {
-                return showToast(&state, .error("\(method.name) sedang tidak tersedia"))
+                return showToast(&state, .error(String(localized: "\(method.name) sedang tidak tersedia")))
             }
             state.busyID = method.id
             let repository = self.repository
             return .task {
                 do {
                     return .mutationResponse(.success(try await repository.setDefaultPaymentMethod(id: method.id)),
-                                             successMessage: "\(method.name) jadi metode utama")
+                                             successMessage: String(localized: "\(method.name) jadi metode utama"))
                 } catch {
                     return .mutationResponse(.failure(error as? ProfileError ?? .unknown), successMessage: "")
                 }
@@ -119,7 +119,7 @@ final class PaymentMethodsStore: Store<PaymentMethodsState, PaymentMethodsAction
 
         case .eWalletAdded(let overview):
             state.overview = .loaded(overview)
-            return showToast(&state, ToastMessage("E-wallet berhasil ditautkan"))
+            return showToast(&state, ToastMessage(String(localized: "E-wallet berhasil ditautkan")))
 
         case .toastDismissed(let id):
             if state.toast?.id == id { state.toast = nil }

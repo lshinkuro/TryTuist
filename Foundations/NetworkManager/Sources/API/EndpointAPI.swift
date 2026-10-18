@@ -47,6 +47,9 @@ public enum EndpointAPI {
     case stores(lat: Double?, lng: Double?)
     /// Popup promo harga produk di Beranda (`data: null` bila tidak ada).
     case popupPromotion
+    // Favorit (§5.17)
+    case favorites
+    case setFavorite(productID: String, isFavorite: Bool)
     // Pesanan
     /// `GET /v1/orders` (§5.12). `statuses` kosong = semua; `from`/`to` = rentang [from, to).
     case orders(statuses: [String], from: Date?, to: Date?, oldestFirst: Bool, page: Int, limit: Int)
@@ -83,6 +86,8 @@ public enum EndpointAPI {
         case .products: return "/v1/products"
         case .stores: return "/v1/stores"
         case .popupPromotion: return "/v1/promotions/popup"
+        case .favorites: return "/v1/me/favorites"
+        case .setFavorite(let productID, _): return "/v1/me/favorites/\(Self.escape(productID))"
         case .orders, .createOrder: return "/v1/orders"
         case .orderDetail(let id): return "/v1/orders/\(Self.escape(id))"
         case .rateOrder(let id, _, _): return "/v1/orders/\(Self.escape(id))/rating"
@@ -100,9 +105,10 @@ public enum EndpointAPI {
         case .login, .register, .googleSignIn, .refreshToken, .createOrder, .createAddress, .addEWallet,
              .checkout, .cancelPayment, .unregisterDevice, .rateOrder: return .post
         case .setDefaultPaymentMethod, .registerDevice: return .put
+        case .setFavorite(_, let isFavorite): return isFavorite ? .put : .delete
         case .updateProfile, .updateAddress: return .patch
         case .deleteAddress, .deletePaymentMethod: return .delete
-        case .profile, .banners, .categories, .products, .stores, .popupPromotion, .orders, .orderDetail, .payment, .payments,
+        case .profile, .banners, .categories, .products, .stores, .popupPromotion, .favorites, .orders, .orderDetail, .payment, .payments,
              .addresses, .paymentMethods, .helpCenter, .legalDocument: return .get
         }
     }
@@ -110,7 +116,7 @@ public enum EndpointAPI {
     /// Endpoint yang butuh login → kirim `Authorization: Bearer <access_token>`.
     var requiresAuth: Bool {
         switch self {
-        case .profile, .orders, .orderDetail, .rateOrder, .createOrder, .checkout, .payment, .payments, .cancelPayment, .registerDevice,
+        case .profile, .favorites, .setFavorite, .orders, .orderDetail, .rateOrder, .createOrder, .checkout, .payment, .payments, .cancelPayment, .registerDevice,
              .updateProfile, .addresses, .createAddress, .updateAddress, .deleteAddress,
              .paymentMethods, .addEWallet, .setDefaultPaymentMethod, .deletePaymentMethod: return true
         case .login, .register, .googleSignIn, .refreshToken, .banners, .categories, .products, .stores, .popupPromotion,

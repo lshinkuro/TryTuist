@@ -5,8 +5,15 @@
 import Foundation
 import Utility
 
+/// Pesanan yang dinilai; dibuka dari list maupun Detail.
+struct RatingTarget: Equatable {
+    let orderID: String
+    let title: String
+    let createdAt: Date
+}
+
 struct RateOrderState: Equatable {
-    let order: Order
+    let target: RatingTarget
     /// 0 = belum dipilih.
     var rating = 0
     var comment = ""
@@ -22,16 +29,16 @@ enum RateOrderAction {
 }
 
 enum RateOrderRoute {
-    case submitted(orderID: String)
+    case submitted(orderID: String, rating: Int)
 }
 
 final class RateOrderStore: Store<RateOrderState, RateOrderAction> {
     private let rateOrder: RateOrderUseCase
     var onRoute: ((RateOrderRoute) -> Void)?
 
-    init(order: Order, rateOrder: RateOrderUseCase) {
+    init(target: RatingTarget, rateOrder: RateOrderUseCase) {
         self.rateOrder = rateOrder
-        super.init(initialState: RateOrderState(order: order))
+        super.init(initialState: RateOrderState(target: target))
     }
 
     override func reduce(state: inout RateOrderState, action: RateOrderAction) -> Effect<RateOrderAction>? {
@@ -50,7 +57,7 @@ final class RateOrderStore: Store<RateOrderState, RateOrderAction> {
             state.isSubmitting = true
             state.errorMessage = nil
             let rateOrder = self.rateOrder
-            let (id, rating, comment) = (state.order.id, state.rating, state.comment)
+            let (id, rating, comment) = (state.target.orderID, state.rating, state.comment)
             return .task {
                 do {
                     try await rateOrder.execute(orderID: id, rating: rating, comment: comment)
@@ -62,8 +69,8 @@ final class RateOrderStore: Store<RateOrderState, RateOrderAction> {
 
         case .submitResponse(.success):
             state.isSubmitting = false
-            let id = state.order.id
-            return .run { [weak self] in self?.onRoute?(.submitted(orderID: id)) }
+            let (id, rating) = (state.target.orderID, state.rating)
+            return .run { [weak self] in self?.onRoute?(.submitted(orderID: id, rating: rating)) }
 
         case .submitResponse(.failure(let error)):
             state.isSubmitting = false

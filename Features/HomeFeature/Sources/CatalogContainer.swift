@@ -77,6 +77,8 @@ final class CatalogContainer {
     }
     var getMenu: GetMenuUseCase { GetMenuUseCase(repository: catalogRepository) }
     var addToCart: AddToCartUseCase { AddToCartUseCase(cart: cartRepository) }
+    var getFavorites: GetFavoritesUseCase { GetFavoritesUseCase(repository: catalogRepository) }
+    var setFavorite: SetFavoriteUseCase { SetFavoriteUseCase(repository: catalogRepository) }
     var reorder: ReorderUseCase {
         ReorderUseCase(repository: catalogRepository, selection: outletSelection, addToCart: addToCart)
     }

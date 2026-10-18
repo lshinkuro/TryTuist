@@ -97,7 +97,7 @@ struct HelpCenterView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityHint(isExpanded ? "Sembunyikan jawaban" : "Tampilkan jawaban")
+            .accessibilityHint(isExpanded ? String(localized: "Sembunyikan jawaban") : String(localized: "Tampilkan jawaban"))
 
             if isExpanded {
                 Text(article.answer)

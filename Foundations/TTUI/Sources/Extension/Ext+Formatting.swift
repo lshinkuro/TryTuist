@@ -8,6 +8,9 @@ import Foundation
 
 private let indonesianLocale = Locale(identifier: "id_ID")
 
+/// Bahasa app yang aktif (iOS Settings → TryTuist → Bahasa). Rupiah tetap format Indonesia.
+public let appLocale = Locale(identifier: Bundle.main.preferredLocalizations.first ?? "id")
+
 public extension Decimal {
     /// 15000 → "Rp 15.000"
     var rupiahFormatted: String {
@@ -18,6 +21,6 @@ public extension Decimal {
 public extension Date {
     /// "20 Agu 2024, 12.46"
     var shortDateTimeFormatted: String {
-        formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(indonesianLocale))
+        formatted(.dateTime.day().month(.abbreviated).year().hour().minute().locale(appLocale))
     }
 }

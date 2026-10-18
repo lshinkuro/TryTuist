@@ -51,8 +51,8 @@ struct CartState: Equatable {
     }
 
     var checkoutHint: String? {
-        if needsAddress { return "Tambahkan alamat pengiriman dulu ya." }
-        if selectedPayment?.isOnline == true { return "Pesanan dibuat setelah pembayaran berhasil." }
+        if needsAddress { return String(localized: "Tambahkan alamat pengiriman dulu ya.") }
+        if selectedPayment?.isOnline == true { return String(localized: "Pesanan dibuat setelah pembayaran berhasil.") }
         return nil
     }
 
@@ -222,7 +222,7 @@ final class CartStore: Store<CartState, CartAction> {
             return nil
 
         case .paymentFinished(.later):
-            state.errorMessage = "Pembayaran masih menunggu. Tekan Bayar lagi untuk melanjutkan."
+            state.errorMessage = String(localized: "Pembayaran masih menunggu. Tekan Bayar lagi untuk melanjutkan.")
             return nil
 
         case .checkoutResponse(.failure(let error)):

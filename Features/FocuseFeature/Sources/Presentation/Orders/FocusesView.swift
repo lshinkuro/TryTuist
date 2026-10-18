@@ -18,9 +18,9 @@ struct FocusesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
-                ScreenHeader(title: "Pesanan", subtitle: "Riwayat pesananmu")
+                ScreenHeader(title: String(localized: "Pesanan"), subtitle: String(localized: "Riwayat pesananmu"))
 
-                SegmentedTabBar(titles: filters.map { $0?.title ?? "Semua" }, selectedIndex: selectedIndex)
+                SegmentedTabBar(titles: filters.map { $0?.title ?? String(localized: "Semua") }, selectedIndex: selectedIndex)
 
                 HStack {
                     Menu {
@@ -32,7 +32,7 @@ struct FocusesView: View {
                     }
                     Spacer()
                     Button { store.send(.sortToggled) } label: {
-                        Label(store.state.newestFirst ? "Terbaru" : "Terlama",
+                        Label(store.state.newestFirst ? String(localized: "Terbaru") : String(localized: "Terlama"),
                               systemImage: store.state.newestFirst ? "arrow.down" : "arrow.up")
                     }
                     .accessibilityHint("Ubah urutan berdasarkan jam & tanggal pesanan")
@@ -125,6 +125,9 @@ struct OrderRowView: View {
                         .font(.headline)
                 }
                 Spacer()
+                if let rating = order.rating {
+                    RatingStars(rating: rating, size: .caption)
+                }
                 if order.canRate {
                     Button("Beri Nilai", action: onRate)
                         .buttonStyle(CapsuleButtonStyle(.outlined))
@@ -172,9 +175,9 @@ struct OrderRowView: View {
 extension OrderStatus {
     var title: String {
         switch self {
-        case .pending: return "Diproses"
-        case .completed: return "Selesai"
-        case .failed: return "Gagal"
+        case .pending: return String(localized: "Diproses")
+        case .completed: return String(localized: "Selesai")
+        case .failed: return String(localized: "Gagal")
         }
     }
 

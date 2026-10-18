@@ -19,14 +19,14 @@ struct AddressFormView: View {
             VStack(alignment: .leading, spacing: Spacing.l) {
                 labelSection
 
-                InputFieldView(title: "Nama penerima",
-                               placeholder: "Nama yang menerima pesanan",
+                InputFieldView(title: String(localized: "Nama penerima"),
+                               placeholder: String(localized: "Nama yang menerima pesanan"),
                                text: store.binding(\.draft.recipient, send: { .textChanged(.recipient, $0) }),
                                systemImage: "person",
                                contentType: .name,
                                errorMessage: state.fieldErrors["recipient"])
 
-                InputFieldView(title: "Nomor HP penerima",
+                InputFieldView(title: String(localized: "Nomor HP penerima"),
                                placeholder: "081234567890",
                                text: store.binding(\.draft.phone, send: { .textChanged(.phone, $0) }),
                                systemImage: "phone",
@@ -34,13 +34,13 @@ struct AddressFormView: View {
                                contentType: .telephoneNumber,
                                errorMessage: state.fieldErrors["phone"])
 
-                MultilineField(title: "Alamat lengkap",
-                               placeholder: "Nama jalan, nomor rumah, RT/RW, kelurahan, kota",
+                MultilineField(title: String(localized: "Alamat lengkap"),
+                               placeholder: String(localized: "Nama jalan, nomor rumah, RT/RW, kelurahan, kota"),
                                text: store.binding(\.draft.address, send: { .textChanged(.address, $0) }),
                                errorMessage: state.fieldErrors["address"])
 
-                MultilineField(title: "Catatan untuk kurir (opsional)",
-                               placeholder: "Mis. pagar hitam, titip ke satpam",
+                MultilineField(title: String(localized: "Catatan untuk kurir (opsional)"),
+                               placeholder: String(localized: "Mis. pagar hitam, titip ke satpam"),
                                text: store.binding(\.draft.notes, send: { .textChanged(.notes, $0) }),
                                errorMessage: state.fieldErrors["notes"])
 
@@ -61,7 +61,7 @@ struct AddressFormView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(Color.appBackground.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
-            BottomActionBar(title: "Simpan Alamat", isLoading: state.isSaving, isEnabled: true) {
+            BottomActionBar(title: String(localized: "Simpan Alamat"), isLoading: state.isSaving, isEnabled: true) {
                 store.send(.saveTapped)
             }
         }
@@ -75,8 +75,8 @@ struct AddressFormView: View {
 
     private var labelSection: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            InputFieldView(title: "Label alamat",
-                           placeholder: "Rumah, Kantor, …",
+            InputFieldView(title: String(localized: "Label alamat"),
+                           placeholder: String(localized: "Rumah, Kantor, …"),
                            text: store.binding(\.draft.label, send: { .textChanged(.label, $0) }),
                            systemImage: "tag",
                            errorMessage: state.fieldErrors["label"])

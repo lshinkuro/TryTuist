@@ -87,7 +87,7 @@ final class AddressListStore: Store<AddressListState, AddressListAction> {
             return .task {
                 do {
                     _ = try await repository.updateAddress(id: address.id, draft)
-                    return .mutationFinished(.success("\(address.label) jadi alamat utama"))
+                    return .mutationFinished(.success(String(localized: "\(address.label) jadi alamat utama")))
                 } catch {
                     return .mutationFinished(.failure(error as? ProfileError ?? .unknown))
                 }
@@ -109,7 +109,7 @@ final class AddressListStore: Store<AddressListState, AddressListAction> {
             return .task {
                 do {
                     try await repository.deleteAddress(id: address.id)
-                    return .mutationFinished(.success("Alamat \(address.label) dihapus"))
+                    return .mutationFinished(.success(String(localized: "Alamat \(address.label) dihapus")))
                 } catch {
                     return .mutationFinished(.failure(error as? ProfileError ?? .unknown))
                 }
@@ -127,7 +127,7 @@ final class AddressListStore: Store<AddressListState, AddressListAction> {
             }
 
         case .addressSaved(let isNew):
-            state.toast = ToastMessage(isNew ? "Alamat ditambahkan" : "Alamat diperbarui")
+            state.toast = ToastMessage(isNew ? String(localized: "Alamat ditambahkan") : String(localized: "Alamat diperbarui"))
             return fetch()
 
         case .toastDismissed(let id):

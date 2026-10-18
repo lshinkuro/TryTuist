@@ -27,13 +27,13 @@ enum ProfileMenuItem: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .editProfile: return "Edit Profil"
-        case .addresses: return "Alamat Pengiriman"
-        case .paymentMethods: return "Metode Pembayaran"
-        case .favorites: return "Menu Favorit"
-        case .helpCenter: return "Pusat Bantuan"
-        case .language: return "Bahasa"
-        case .privacyPolicy: return "Kebijakan Privasi"
+        case .editProfile: return String(localized: "Edit Profil")
+        case .addresses: return String(localized: "Alamat Pengiriman")
+        case .paymentMethods: return String(localized: "Metode Pembayaran")
+        case .favorites: return String(localized: "Menu Favorit")
+        case .helpCenter: return String(localized: "Pusat Bantuan")
+        case .language: return String(localized: "Bahasa")
+        case .privacyPolicy: return String(localized: "Kebijakan Privasi")
         }
     }
 
@@ -76,15 +76,15 @@ struct ProfileState: Equatable {
         return env.isProduction ? version : "\(version) · \(env.displayName)"
     }()
 
-    var displayName: String { profile.value?.name ?? "Memuat…" }
+    var displayName: String { profile.value?.name ?? String(localized: "Memuat…") }
 
     var quickActions: [QuickAction] {
         let profile = profile.value
         return [
-            QuickAction(title: "Voucher", value: profile.map { "\($0.voucherCount)" } ?? "–", systemImage: "ticket.fill"),
-            QuickAction(title: "Poin", value: profile.map { $0.points.formatted(.number.locale(Locale(identifier: "id_ID"))) } ?? "–",
+            QuickAction(title: String(localized: "Voucher"), value: profile.map { "\($0.voucherCount)" } ?? "–", systemImage: "ticket.fill"),
+            QuickAction(title: String(localized: "Poin"), value: profile.map { $0.points.formatted(.number.locale(Locale(identifier: "id_ID"))) } ?? "–",
                         systemImage: "star.fill"),
-            QuickAction(title: "Saldo", value: profile.map { $0.balance.rupiahFormatted } ?? "–", systemImage: "wallet.pass.fill")
+            QuickAction(title: String(localized: "Saldo"), value: profile.map { $0.balance.rupiahFormatted } ?? "–", systemImage: "wallet.pass.fill")
         ]
     }
 }
@@ -110,8 +110,9 @@ enum ProfileRoute {
     case paymentMethods
     case helpCenter
     case legal(LegalDocumentKind)
-    /// Fitur yang belum ada screen-nya (Favorit, Bahasa).
-    case comingSoon(ProfileMenuItem)
+    case favorites
+    /// Bahasa app diatur iOS (Settings → TryTuist → Bahasa); app dimulai ulang otomatis oleh iOS.
+    case languageSettings
     case loggedOut
 }
 
@@ -149,7 +150,7 @@ final class ProfileStore: Store<ProfileState, ProfileAction> {
         case .profileUpdated(let profile):
             state.profile = .loaded(profile)
             return .run { [weak self] in
-                self?.send(.toastRequested(ToastMessage("Profil disimpan")))
+                self?.send(.toastRequested(ToastMessage(String(localized: "Profil disimpan"))))
             }
 
         case .editTapped:
@@ -160,7 +161,7 @@ final class ProfileStore: Store<ProfileState, ProfileAction> {
             switch item {
             case .editProfile:
                 guard let profile = state.profile.value else {
-                    let toast = ToastMessage.error("Profil belum termuat. Coba lagi sebentar.")
+                    let toast = ToastMessage.error(String(localized: "Profil belum termuat. Coba lagi sebentar."))
                     state.toast = toast
                     return dismissToast(id: toast.id) { .toastDismissed($0) }
                 }
@@ -169,7 +170,8 @@ final class ProfileStore: Store<ProfileState, ProfileAction> {
             case .paymentMethods: return route(.paymentMethods)
             case .helpCenter: return route(.helpCenter)
             case .privacyPolicy: return route(.legal(.privacyPolicy))
-            case .favorites, .language: return route(.comingSoon(item))
+            case .favorites: return route(.favorites)
+            case .language: return route(.languageSettings)
             }
 
         case .promoToggled:

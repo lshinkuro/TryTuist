@@ -44,6 +44,7 @@ struct OrderDetailView: View {
                 itemsCard(detail)
                 summaryCard(detail)
                 infoCard(detail)
+                if detail.canRate || detail.rating != nil { ratingCard(detail) }
                 if !detail.history.isEmpty { historyCard(detail) }
             }
         }
@@ -96,10 +97,10 @@ struct OrderDetailView: View {
 
     private func summaryCard(_ detail: OrderDetail) -> some View {
         VStack(spacing: Spacing.s) {
-            row("Subtotal", detail.subtotal.rupiahFormatted)
-            row("Ongkir", detail.deliveryFee.rupiahFormatted)
+            row(String(localized: "Subtotal"), detail.subtotal.rupiahFormatted)
+            row(String(localized: "Ongkir"), detail.deliveryFee.rupiahFormatted)
             if detail.discount > 0 {
-                row(detail.voucherCode.map { "Diskon (\($0))" } ?? "Diskon", "-\(detail.discount.rupiahFormatted)")
+                row(detail.voucherCode.map { String(localized: "Diskon (\($0))") } ?? String(localized: "Diskon"), "-\(detail.discount.rupiahFormatted)")
             }
             Divider()
             HStack {
@@ -121,6 +122,27 @@ struct OrderDetailView: View {
             Label(detail.paymentMethod, systemImage: "creditcard")
         }
         .font(.subheadline)
+        .padding(Spacing.l)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .formCard()
+    }
+
+    private func ratingCard(_ detail: OrderDetail) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            Text("Penilaianmu").font(.headline)
+            if let rating = detail.rating {
+                RatingStars(rating: rating)
+                if let comment = detail.ratingComment {
+                    Text(comment).font(.subheadline).foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Bagaimana pesananmu? Nilaimu membantu outlet jadi lebih baik.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Button("Beri Nilai") { store.send(.rateTapped) }
+                    .buttonStyle(CapsuleButtonStyle(.filled))
+            }
+        }
         .padding(Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
         .formCard()
@@ -157,17 +179,35 @@ struct OrderDetailView: View {
     }
 }
 
+/// Bintang 1–5 yang sudah diberikan (hanya tampil).
+struct RatingStars: View {
+    let rating: Int
+    var size: Font = .title3
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(RateOrderUseCase.ratingRange, id: \.self) { star in
+                Image(systemName: star <= rating ? "star.fill" : "star")
+                    .foregroundStyle(star <= rating ? Color.orange : Color.secondary)
+            }
+        }
+        .font(size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Dinilai \(rating) dari 5 bintang")
+    }
+}
+
 /// Status mentah backend → teks. Daftar resmi: API_PLAN.md §5.12.
 enum OrderStatusText {
     static func title(for raw: String) -> String {
         switch raw {
-        case "PENDING": return "Menunggu"
-        case "PAID": return "Dibayar"
-        case "PROCESSING": return "Diproses"
-        case "DELIVERING": return "Diantar"
-        case "COMPLETED": return "Selesai"
-        case "CANCELLED": return "Dibatalkan"
-        case "FAILED": return "Gagal"
+        case "PENDING": return String(localized: "Menunggu")
+        case "PAID": return String(localized: "Dibayar")
+        case "PROCESSING": return String(localized: "Diproses")
+        case "DELIVERING": return String(localized: "Diantar")
+        case "COMPLETED": return String(localized: "Selesai")
+        case "CANCELLED": return String(localized: "Dibatalkan")
+        case "FAILED": return String(localized: "Gagal")
         default: return raw.capitalized
         }
     }

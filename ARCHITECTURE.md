@@ -859,6 +859,16 @@ Keranjang: alamat tersimpan yang dipilih di Beranda jadi default "Antar ke".
 - Lokasi saat ini hanya untuk mencari outlet terdekat. Checkout tetap memakai alamat tersimpan (kurir butuh alamat lengkap).
 - Info.plist: `NSLocationWhenInUseUsageDescription`.
 
+### 11.8 Bahasa (Indonesia / English)
+
+- **Key = teks bahasa Indonesia.** `Text("Memuat…")`, `Button("Simpan")`, `Label("…")` sudah otomatis dicari di `Localizable.strings`. Teks yang lewat tipe `String` (judul `ScreenHeader`, `PrimaryButton`, `ToastMessage`, `errorDescription`, title router) wajib `String(localized: "…")`.
+- Terjemahan hanya di `App/Resources/Localizable/en.lproj/Localizable.strings` (bundle utama; framework feature ikut membaca bundle utama). `id.lproj` tidak perlu entri: key yang tidak ada dipakai apa adanya.
+- Interpolasi jadi format: `"\(n) item"` → key `"%lld item"`, `"\(nama) masuk keranjang"` → `"%@ masuk keranjang"`. Daftar key pasti tepat: build dengan `SWIFT_EMIT_LOC_STRINGS=YES` lalu baca `*.stringsdata` di DerivedData.
+- Satu kata Indonesia dengan dua arti di English pakai key eksplisit: `String(localized: "action.done", defaultValue: "Selesai")`.
+- Pilihan bahasa: Profil → Bahasa membuka iOS Settings → TryTuist → Bahasa (iOS memulai ulang app). Tanggal ikut `appLocale`; Rupiah tetap format Indonesia.
+- Synthesizer strings Tuist dimatikan (`resourceSynthesizers` di `Project.swift`) karena key seperti `%lld item` bukan nama Swift yang valid.
+- Teks dari server (pesan error backend, Pusat Bantuan, dokumen legal) tetap bahasa Indonesia.
+
 ## 12. Testing
 
 Karena tiap layer terpisah, test ditulis tanpa network dan tanpa UI.

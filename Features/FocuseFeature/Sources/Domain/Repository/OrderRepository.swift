@@ -20,11 +20,11 @@ enum OrderError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .network: return "Tidak ada koneksi internet."
-        case .invalidResponse: return "Data pesanan tidak valid."
-        case .invalidRating: return "Pilih 1–5 bintang dulu ya."
+        case .network: return String(localized: "Tidak ada koneksi internet.")
+        case .invalidResponse: return String(localized: "Data pesanan tidak valid.")
+        case .invalidRating: return String(localized: "Pilih 1–5 bintang dulu ya.")
         case .rejected(let message): return message
-        case .unknown: return "Gagal memuat pesanan. Coba lagi."
+        case .unknown: return String(localized: "Gagal memuat pesanan. Coba lagi.")
         }
     }
 }

@@ -17,7 +17,7 @@ struct ProfileView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
-                ScreenHeader(title: "Profil")
+                ScreenHeader(title: String(localized: "Profil"))
                 profileCard
                 quickActionsCard
                 promoCard
@@ -68,7 +68,7 @@ struct ProfileView: View {
                     Text(state.displayName)
                         .font(.title3.bold())
                         .lineLimit(1)
-                    Label(profile?.tier.title ?? "Member", systemImage: "crown.fill")
+                    Label(profile?.tier.title ?? String(localized: "Member"), systemImage: "crown.fill")
                         .font(.subheadline)
                         .foregroundStyle(.orange)
                     if let email = profile?.email {
@@ -127,7 +127,7 @@ struct ProfileView: View {
             Button {
                 withAnimation(.snappy) { store.send(.promoToggled) }
             } label: {
-                Label(state.isPromoActive ? "Aktif" : "Aktifkan",
+                Label(state.isPromoActive ? String(localized: "Aktif") : String(localized: "Aktifkan"),
                       systemImage: state.isPromoActive ? "checkmark.circle.fill" : "bolt.fill")
             }
             .buttonStyle(CapsuleButtonStyle(.filled, tint: state.isPromoActive ? .green : Color.white.opacity(0.25)))
@@ -176,18 +176,5 @@ struct ProfileView: View {
         }
         .foregroundStyle(.red)
         .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-    }
-}
-
-/// Untuk menu yang belum punya screen (statis, tanpa logika → tanpa Store).
-struct ComingSoonView: View {
-    let item: ProfileMenuItem
-
-    var body: some View {
-        ContentUnavailableView(item.title,
-                               systemImage: item.systemImage,
-                               description: Text("Fitur ini segera hadir."))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.appBackground.ignoresSafeArea())
     }
 }

@@ -45,11 +45,14 @@ struct ProductDetailState: Equatable {
     var canAddToCart: Bool { product.isAvailable && !isAdding }
 
     var addButtonTitle: String {
-        product.isAvailable ? "Tambah · \(totalPrice.rupiahFormatted)" : "Sedang Habis"
+        product.isAvailable ? String(localized: "Tambah · \(totalPrice.rupiahFormatted)") : String(localized: "Sedang Habis")
     }
 }
 
 enum ProductDetailAction {
+    case onAppear
+    case favoriteStatusLoaded(Bool)
+    case favoriteResponse(Result<Void, CatalogError>)
     case optionSelected(String)
     case incrementTapped
     case decrementTapped
@@ -66,15 +69,41 @@ enum ProductDetailRoute {
 
 final class ProductDetailStore: Store<ProductDetailState, ProductDetailAction> {
     private let addToCart: AddToCartUseCase
+    private let getFavorites: GetFavoritesUseCase
+    private let setFavorite: SetFavoriteUseCase
     var onRoute: ((ProductDetailRoute) -> Void)?
 
-    init(product: Product, addToCart: AddToCartUseCase) {
+    init(product: Product, addToCart: AddToCartUseCase,
+         getFavorites: GetFavoritesUseCase, setFavorite: SetFavoriteUseCase) {
         self.addToCart = addToCart
+        self.getFavorites = getFavorites
+        self.setFavorite = setFavorite
         super.init(initialState: ProductDetailState(product: product, selectedOptionID: product.defaultOption?.id))
     }
 
     override func reduce(state: inout ProductDetailState, action: ProductDetailAction) -> Effect<ProductDetailAction>? {
         switch action {
+        case .onAppear:
+            let (getFavorites, id) = (self.getFavorites, state.product.id)
+            return .task {
+                // Gagal (mis. belum login) → ❤️ tetap kosong, tidak perlu pesan.
+                guard let favorites = try? await getFavorites.execute() else { return nil }
+                return .favoriteStatusLoaded(favorites.contains { $0.id == id })
+            }
+
+        case .favoriteStatusLoaded(let isFavorite):
+            state.isFavorite = isFavorite
+            return nil
+
+        case .favoriteResponse(.success):
+            return nil
+
+        case .favoriteResponse(.failure(let error)):
+            // Kembalikan ❤️ ke status sebelum di-tap.
+            state.isFavorite.toggle()
+            state.errorMessage = error == .network ? error.errorDescription : String(localized: "Gagal menyimpan favorit. Coba lagi.")
+            return nil
+
         case .optionSelected(let id):
             guard state.product.options.contains(where: { $0.id == id }) else { return nil }
             state.selectedOptionID = id
@@ -96,7 +125,16 @@ final class ProductDetailStore: Store<ProductDetailState, ProductDetailAction> {
 
         case .favoriteToggled:
             state.isFavorite.toggle()
-            return nil
+            state.errorMessage = nil
+            let (setFavorite, id, isFavorite) = (self.setFavorite, state.product.id, state.isFavorite)
+            return .task {
+                do {
+                    try await setFavorite.execute(productID: id, isFavorite: isFavorite)
+                    return .favoriteResponse(.success(()))
+                } catch {
+                    return .favoriteResponse(.failure(error as? CatalogError ?? .unknown))
+                }
+            }
 
         case .addToCartTapped:
             guard state.canAddToCart else { return nil }
@@ -115,7 +153,7 @@ final class ProductDetailStore: Store<ProductDetailState, ProductDetailAction> {
 
         case .addToCartResponse(.success):
             state.isAdding = false
-            let toast = ToastMessage("\(state.quantity)× \(state.product.name) masuk keranjang")
+            let toast = ToastMessage(String(localized: "\(state.quantity)× \(state.product.name) masuk keranjang"))
             return .run { [weak self] in self?.onRoute?(.addedToCart(toast)) }
 
         case .addToCartResponse(.failure(let error)):

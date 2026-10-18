@@ -16,8 +16,8 @@ struct RateOrderView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(store.state.order.productName).font(.headline)
-                    Text(store.state.order.createdAt.shortDateTimeFormatted)
+                    Text(store.state.target.title).font(.headline)
+                    Text(store.state.target.createdAt.shortDateTimeFormatted)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -36,12 +36,12 @@ struct RateOrderView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                InputFieldView(title: "Komentar (opsional)",
-                               placeholder: "Ceritakan pesananmu",
+                InputFieldView(title: String(localized: "Komentar (opsional)"),
+                               placeholder: String(localized: "Ceritakan pesananmu"),
                                text: store.binding(\.comment, send: RateOrderAction.commentChanged),
                                errorMessage: store.state.errorMessage)
 
-                PrimaryButton("Kirim Penilaian",
+                PrimaryButton(String(localized: "Kirim Penilaian"),
                               isLoading: store.state.isSubmitting,
                               isEnabled: store.state.rating > 0) {
                     store.send(.submitTapped)

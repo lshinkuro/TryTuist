@@ -41,6 +41,7 @@ struct ProductDetailView: View {
             .padding(.bottom, 100)
         }
         .ignoresSafeArea(edges: .top)
+        .task { @MainActor in store.send(.onAppear) }
         .scrollDismissesKeyboard(.interactively)
         .background(Color.appBackground.ignoresSafeArea())
         .toolbar {
@@ -50,7 +51,7 @@ struct ProductDetailView: View {
                         .foregroundStyle(state.isFavorite ? Color.red : Color.primary)
                         .contentTransition(.symbolEffect(.replace))
                 }
-                .accessibilityLabel(state.isFavorite ? "Hapus dari favorit" : "Tambah ke favorit")
+                .accessibilityLabel(state.isFavorite ? String(localized: "Hapus dari favorit") : String(localized: "Tambah ke favorit"))
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -110,7 +111,7 @@ struct ProductDetailView: View {
                             Text(option.name)
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Text(option.extraPrice == 0 ? "Gratis" : "+\(option.extraPrice.rupiahFormatted)")
+                            Text(option.extraPrice == 0 ? String(localized: "Gratis") : "+\(option.extraPrice.rupiahFormatted)")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }

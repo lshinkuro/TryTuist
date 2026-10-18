@@ -42,14 +42,14 @@ struct CartView: View {
         .sheet(item: store.binding(\.activeSheet, send: { .sheetChanged($0) })) { sheet in
             switch sheet {
             case .address:
-                CheckoutOptionSheet(title: "Antar ke",
-                                    manageTitle: "Tambah / kelola alamat",
+                CheckoutOptionSheet(title: String(localized: "Antar ke"),
+                                    manageTitle: String(localized: "Tambah / kelola alamat"),
                                     onManage: { store.send(.manageAddressesTapped) }) {
                     ForEach(state.addresses) { address in
                         OptionRow(title: address.label,
                                   subtitle: "\(address.recipient) · \(address.phone)\n\(address.address)",
                                   systemImage: "mappin.circle.fill",
-                                  badge: address.isDefault ? "Utama" : nil,
+                                  badge: address.isDefault ? String(localized: "Utama") : nil,
                                   isSelected: address.id == state.selectedAddressID,
                                   isEnabled: true) {
                             store.send(.addressSelected(address.id))
@@ -57,14 +57,14 @@ struct CartView: View {
                     }
                 }
             case .payment:
-                CheckoutOptionSheet(title: "Metode pembayaran",
-                                    manageTitle: "Kelola metode pembayaran",
+                CheckoutOptionSheet(title: String(localized: "Metode pembayaran"),
+                                    manageTitle: String(localized: "Kelola metode pembayaran"),
                                     onManage: { store.send(.managePaymentMethodsTapped) }) {
                     ForEach(state.paymentMethods) { method in
                         OptionRow(title: method.name,
-                                  subtitle: method.isEnabled ? method.detail : "Sedang tidak tersedia",
+                                  subtitle: method.isEnabled ? method.detail : String(localized: "Sedang tidak tersedia"),
                                   systemImage: method.systemImage,
-                                  badge: method.isDefault ? "Utama" : nil,
+                                  badge: method.isDefault ? String(localized: "Utama") : nil,
                                   isSelected: method.id == state.selectedPaymentID,
                                   isEnabled: method.isEnabled) {
                             store.send(.paymentSelected(method.id))
@@ -81,7 +81,7 @@ struct CartView: View {
                 deliverySection
 
                 if let outlet = state.outlet {
-                    SelectionCard(title: "Dikirim dari", value: outlet.name, detail: outlet.detailText,
+                    SelectionCard(title: String(localized: "Dikirim dari"), value: outlet.name, detail: outlet.detailText,
                                   systemImage: outlet.canOrder ? "storefront.fill" : "exclamationmark.triangle.fill",
                                   actionTitle: nil) {}
                 }
@@ -103,8 +103,8 @@ struct CartView: View {
                 paymentSection
 
                 VStack(spacing: Spacing.m) {
-                    summaryRow("Subtotal (\(state.itemCount) item)", state.subtotal.rupiahFormatted)
-                    summaryRow("Ongkos kirim", state.deliveryFee.rupiahFormatted)
+                    summaryRow(String(localized: "Subtotal (\(state.itemCount) item)"), state.subtotal.rupiahFormatted)
+                    summaryRow(String(localized: "Ongkos kirim"), state.deliveryFee.rupiahFormatted)
                     Divider()
                     HStack {
                         Text("Total").font(.headline)
@@ -152,24 +152,24 @@ struct CartView: View {
     private var deliverySection: some View {
         switch state.options {
         case .idle, .loading:
-            SelectionCard(title: "Antar ke", value: "Memuat alamat…", detail: nil,
+            SelectionCard(title: String(localized: "Antar ke"), value: String(localized: "Memuat alamat…"), detail: nil,
                           systemImage: "mappin.circle.fill", actionTitle: nil, isLoading: true) {}
         case .failed:
-            SelectionCard(title: "Antar ke", value: "Gagal memuat alamat",
-                          detail: "Pesanan tetap memakai alamat utamamu.",
-                          systemImage: "exclamationmark.triangle.fill", actionTitle: "Coba lagi") {
+            SelectionCard(title: String(localized: "Antar ke"), value: String(localized: "Gagal memuat alamat"),
+                          detail: String(localized: "Pesanan tetap memakai alamat utamamu."),
+                          systemImage: "exclamationmark.triangle.fill", actionTitle: String(localized: "Coba lagi")) {
                 store.send(.retryOptionsTapped)
             }
         case .loaded:
             if let address = state.selectedAddress {
-                SelectionCard(title: "Antar ke", value: "\(address.label) · \(address.recipient)",
-                              detail: address.address, systemImage: "mappin.circle.fill", actionTitle: "Ganti") {
+                SelectionCard(title: String(localized: "Antar ke"), value: "\(address.label) · \(address.recipient)",
+                              detail: address.address, systemImage: "mappin.circle.fill", actionTitle: String(localized: "Ganti")) {
                     store.send(.sheetChanged(.address))
                 }
             } else {
-                SelectionCard(title: "Antar ke", value: "Belum ada alamat",
-                              detail: "Tambahkan alamat di Profil supaya pesanan bisa diantar.",
-                              systemImage: "mappin.slash", actionTitle: "Tambah") {
+                SelectionCard(title: String(localized: "Antar ke"), value: String(localized: "Belum ada alamat"),
+                              detail: String(localized: "Tambahkan alamat di Profil supaya pesanan bisa diantar."),
+                              systemImage: "mappin.slash", actionTitle: String(localized: "Tambah")) {
                     store.send(.manageAddressesTapped)
                 }
             }
@@ -180,17 +180,17 @@ struct CartView: View {
     private var paymentSection: some View {
         switch state.options {
         case .idle, .loading:
-            SelectionCard(title: "Pembayaran", value: "Memuat…", detail: nil,
+            SelectionCard(title: String(localized: "Pembayaran"), value: String(localized: "Memuat…"), detail: nil,
                           systemImage: "creditcard.fill", actionTitle: nil, isLoading: true) {}
         case .failed:
-            SelectionCard(title: "Pembayaran", value: "Metode utama", detail: "Dipilih otomatis oleh server.",
-                          systemImage: "creditcard.fill", actionTitle: "Coba lagi") {
+            SelectionCard(title: String(localized: "Pembayaran"), value: String(localized: "Metode utama"), detail: String(localized: "Dipilih otomatis oleh server."),
+                          systemImage: "creditcard.fill", actionTitle: String(localized: "Coba lagi")) {
                 store.send(.retryOptionsTapped)
             }
         case .loaded:
             let method = state.selectedPayment
-            SelectionCard(title: "Pembayaran", value: method?.name ?? "Pilih metode", detail: method?.detail,
-                          systemImage: method?.systemImage ?? "creditcard.fill", actionTitle: "Ganti") {
+            SelectionCard(title: String(localized: "Pembayaran"), value: method?.name ?? String(localized: "Pilih metode"), detail: method?.detail,
+                          systemImage: method?.systemImage ?? "creditcard.fill", actionTitle: String(localized: "Ganti")) {
                 store.send(.sheetChanged(.payment))
             }
         }
@@ -243,7 +243,7 @@ private struct CartItemRow: View {
                         .frame(width: 30, height: 30)
                         .background(Color.brandSoft, in: Circle())
                 }
-                .accessibilityLabel(item.quantity == 1 ? "Hapus" : "Kurangi")
+                .accessibilityLabel(item.quantity == 1 ? String(localized: "Hapus") : String(localized: "Kurangi"))
                 Text("\(item.quantity)")
                     .font(.subheadline.bold())
                     .frame(minWidth: 18)
@@ -274,14 +274,14 @@ private struct OrderPlacedView: View {
                 .foregroundStyle(.green)
                 .symbolEffect(.bounce, value: order.orderNumber)
             VStack(spacing: Spacing.s) {
-                Text(order.paidVia == nil ? "Pesanan diterima! 🎉" : "Pembayaran berhasil! 🎉")
+                Text(order.paidVia == nil ? String(localized: "Pesanan diterima! 🎉") : String(localized: "Pembayaran berhasil! 🎉"))
                     .font(.title2.bold())
                 Text("No. pesanan \(order.orderNumber)\nTotal \(order.total.rupiahFormatted)" + (order.paidVia.map { "\n\($0)" } ?? ""))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            PrimaryButton("Selesai", action: onDone)
+            PrimaryButton(String(localized: "action.done", defaultValue: "Selesai"), action: onDone)
                 .padding(.horizontal, Spacing.xl)
                 .padding(.bottom, Spacing.xl)
         }
@@ -334,7 +334,7 @@ private struct SelectionCard: View {
         .disabled(isLoading || actionTitle == nil)
         .formCard()
         .accessibilityElement(children: .combine)
-        .accessibilityHint(actionTitle.map { "Ketuk untuk \($0.lowercased())" } ?? "")
+        .accessibilityHint(actionTitle.map { String(localized: "Ketuk untuk \($0.lowercased())") } ?? "")
     }
 }
 

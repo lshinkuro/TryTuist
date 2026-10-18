@@ -21,14 +21,14 @@ struct EditProfileView: View {
                     .padding(.top, Spacing.l)
 
                 VStack(spacing: Spacing.l) {
-                    InputFieldView(title: "Nama",
-                                   placeholder: "Nama lengkap",
+                    InputFieldView(title: String(localized: "Nama"),
+                                   placeholder: String(localized: "Nama lengkap"),
                                    text: store.binding(\.name, send: { .nameChanged($0) }),
                                    systemImage: "person",
                                    contentType: .name,
                                    errorMessage: state.fieldErrors["name"])
 
-                    InputFieldView(title: "Nomor HP",
+                    InputFieldView(title: String(localized: "Nomor HP"),
                                    placeholder: "081234567890",
                                    text: store.binding(\.phone, send: { .phoneChanged($0) }),
                                    systemImage: "phone",
@@ -70,7 +70,7 @@ struct EditProfileView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(Color.appBackground.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
-            BottomActionBar(title: "Simpan", isLoading: state.isSaving, isEnabled: store.hasChanges) {
+            BottomActionBar(title: String(localized: "Simpan"), isLoading: state.isSaving, isEnabled: store.hasChanges) {
                 store.send(.saveTapped)
             }
         }

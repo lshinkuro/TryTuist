@@ -14,10 +14,18 @@ enum OrderDetailAction {
     case onAppear
     case retryTapped
     case detailResponse(Result<OrderDetail, OrderError>)
+    case rateTapped
+    /// Rating terkirim → muat ulang supaya nilai tampil.
+    case ratingSubmitted
+}
+
+enum OrderDetailRoute {
+    case rate(RatingTarget)
 }
 
 final class OrderDetailStore: Store<OrderDetailState, OrderDetailAction> {
     private let getDetail: GetOrderDetailUseCase
+    var onRoute: ((OrderDetailRoute) -> Void)?
 
     init(orderID: String, getDetail: GetOrderDetailUseCase) {
         self.getDetail = getDetail
@@ -30,8 +38,13 @@ final class OrderDetailStore: Store<OrderDetailState, OrderDetailAction> {
             guard state.detail.isIdle else { return nil }
             return load(&state)
 
-        case .retryTapped:
+        case .retryTapped, .ratingSubmitted:
             return load(&state)
+
+        case .rateTapped:
+            guard let detail = state.detail.value else { return nil }
+            let target = RatingTarget(orderID: detail.id, title: detail.orderNumber, createdAt: detail.createdAt)
+            return .run { [weak self] in self?.onRoute?(.rate(target)) }
 
         case .detailResponse(.success(let detail)):
             state.detail = .loaded(detail)

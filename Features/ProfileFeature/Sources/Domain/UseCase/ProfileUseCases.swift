@@ -19,11 +19,11 @@ enum PhoneNumber {
         normalized(text).range(of: #"^(?:\+?62|0)8[0-9]{7,12}$"#, options: .regularExpression) != nil
     }
 
-    static let invalidMessage = "Nomor HP tidak valid, contoh 081234567890"
+    static let invalidMessage = String(localized: "Nomor HP tidak valid, contoh 081234567890")
 }
 
 private func validationError(_ fields: [String: String]) -> ProfileError? {
-    fields.isEmpty ? nil : .validation(message: "Periksa lagi data yang kamu isi.", fields: fields)
+    fields.isEmpty ? nil : .validation(message: String(localized: "Periksa lagi data yang kamu isi."), fields: fields)
 }
 
 private func trimmed(_ text: String) -> String {
@@ -56,8 +56,8 @@ struct UpdateProfileUseCase {
     func validate(_ changes: ProfileChanges) -> ProfileError? {
         var fields: [String: String] = [:]
         if let name = changes.name {
-            if name.isEmpty { fields["name"] = "Nama wajib diisi" }
-            else if name.count > Self.maxNameLength { fields["name"] = "Maksimal \(Self.maxNameLength) karakter" }
+            if name.isEmpty { fields["name"] = String(localized: "Nama wajib diisi") }
+            else if name.count > Self.maxNameLength { fields["name"] = String(localized: "Maksimal \(Self.maxNameLength) karakter") }
         }
         if let phone = changes.phone, !phone.isEmpty, !PhoneNumber.isValid(phone) {
             fields["phone"] = PhoneNumber.invalidMessage
@@ -76,20 +76,20 @@ struct UpdateProfileUseCase {
 struct SaveAddressUseCase {
     let repository: AddressRepository
 
-    static let labelSuggestions = ["Rumah", "Kantor", "Kos", "Apartemen"]
+    static let labelSuggestions = [String(localized: "Rumah"), String(localized: "Kantor"), String(localized: "Kos"), String(localized: "Apartemen")]
 
     func validate(_ draft: AddressDraft) -> ProfileError? {
         var fields: [String: String] = [:]
         func check(_ key: String, _ value: String, required: Bool = true, max: Int) {
             let value = trimmed(value)
-            if required, value.isEmpty { fields[key] = "Wajib diisi" }
-            else if value.count > max { fields[key] = "Maksimal \(max) karakter" }
+            if required, value.isEmpty { fields[key] = String(localized: "Wajib diisi") }
+            else if value.count > max { fields[key] = String(localized: "Maksimal \(max) karakter") }
         }
         check("label", draft.label, max: 50)
         check("recipient", draft.recipient, max: 100)
         check("address", draft.address, max: 500)
         check("notes", draft.notes, required: false, max: 500)
-        if trimmed(draft.phone).isEmpty { fields["phone"] = "Wajib diisi" }
+        if trimmed(draft.phone).isEmpty { fields["phone"] = String(localized: "Wajib diisi") }
         else if !PhoneNumber.isValid(draft.phone) { fields["phone"] = PhoneNumber.invalidMessage }
         return validationError(fields)
     }
@@ -115,10 +115,10 @@ struct AddEWalletUseCase {
 
     func validate(_ wallet: NewEWallet) -> ProfileError? {
         var fields: [String: String] = [:]
-        if wallet.providerID.isEmpty { fields["provider"] = "Pilih penyedia e-wallet" }
-        if trimmed(wallet.accountNumber).isEmpty { fields["account_number"] = "Wajib diisi" }
+        if wallet.providerID.isEmpty { fields["provider"] = String(localized: "Pilih penyedia e-wallet") }
+        if trimmed(wallet.accountNumber).isEmpty { fields["account_number"] = String(localized: "Wajib diisi") }
         else if !PhoneNumber.isValid(wallet.accountNumber) { fields["account_number"] = PhoneNumber.invalidMessage }
-        if wallet.accountName.count > 100 { fields["account_name"] = "Maksimal 100 karakter" }
+        if wallet.accountName.count > 100 { fields["account_name"] = String(localized: "Maksimal 100 karakter") }
         return validationError(fields)
     }
 

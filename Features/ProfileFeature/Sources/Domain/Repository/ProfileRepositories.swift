@@ -47,10 +47,10 @@ enum ProfileError: Error, Equatable, LocalizedError {
         switch self {
         case .validation(let message, _): return message
         case .conflict(let message), .rejected(let message): return message
-        case .notFound: return "Data tidak ditemukan. Coba muat ulang."
-        case .sessionExpired: return "Sesi kamu sudah habis. Silakan masuk lagi."
-        case .network: return "Tidak bisa terhubung. Periksa koneksi internetmu."
-        case .unknown: return "Terjadi kesalahan. Coba lagi nanti."
+        case .notFound: return String(localized: "Data tidak ditemukan. Coba muat ulang.")
+        case .sessionExpired: return String(localized: "Sesi kamu sudah habis. Silakan masuk lagi.")
+        case .network: return String(localized: "Tidak bisa terhubung. Periksa koneksi internetmu.")
+        case .unknown: return String(localized: "Terjadi kesalahan. Coba lagi nanti.")
         }
     }
 

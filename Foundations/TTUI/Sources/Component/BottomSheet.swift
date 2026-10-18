@@ -96,9 +96,9 @@ public struct BottomSheetConfig: Identifiable {
 
 public extension BottomSheetConfig {
     /// Sesi login habis (API 401). Tidak bisa di-swipe: user harus menekan "Mengerti".
-    static func sessionExpired(title: String = "Sesi kamu sudah habis",
-                               message: String = "Demi keamanan akun, silakan masuk lagi untuk melanjutkan.",
-                               buttonTitle: String = "Mengerti",
+    static func sessionExpired(title: String = String(localized: "Sesi kamu sudah habis"),
+                               message: String = String(localized: "Demi keamanan akun, silakan masuk lagi untuk melanjutkan."),
+                               buttonTitle: String = String(localized: "Mengerti"),
                                onConfirm: @escaping () -> Void) -> BottomSheetConfig {
         BottomSheetConfig(style: .warning,
                           systemImage: "clock.badge.exclamationmark.fill",

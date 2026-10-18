@@ -46,18 +46,18 @@ enum AuthError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .invalidEmail: return "Format email belum benar."
-        case .weakPassword: return "Password minimal 8 karakter."
-        case .invalidCredentials: return "Email atau password salah."
-        case .emailAlreadyRegistered: return "Email ini sudah terdaftar. Silakan masuk."
-        case .invalidResponse: return "Data dari server tidak valid. Coba lagi."
-        case .network: return "Tidak ada koneksi internet."
-        case .unknown: return "Terjadi kesalahan. Coba lagi beberapa saat lagi."
+        case .invalidEmail: return String(localized: "Format email belum benar.")
+        case .weakPassword: return String(localized: "Password minimal 8 karakter.")
+        case .invalidCredentials: return String(localized: "Email atau password salah.")
+        case .emailAlreadyRegistered: return String(localized: "Email ini sudah terdaftar. Silakan masuk.")
+        case .invalidResponse: return String(localized: "Data dari server tidak valid. Coba lagi.")
+        case .network: return String(localized: "Tidak ada koneksi internet.")
+        case .unknown: return String(localized: "Terjadi kesalahan. Coba lagi beberapa saat lagi.")
         case .googleCancelled: return nil
-        case .googleNotConfigured: return "Masuk dengan Google belum tersedia. Gunakan email dan password."
-        case .googleFailed: return "Login Google gagal. Coba lagi."
-        case .useGoogleSignIn: return "Akun ini terdaftar dengan Google. Silakan pakai tombol Google."
-        case .rateLimited: return "Terlalu banyak percobaan. Coba lagi dalam 1 menit."
+        case .googleNotConfigured: return String(localized: "Masuk dengan Google belum tersedia. Gunakan email dan password.")
+        case .googleFailed: return String(localized: "Login Google gagal. Coba lagi.")
+        case .useGoogleSignIn: return String(localized: "Akun ini terdaftar dengan Google. Silakan pakai tombol Google.")
+        case .rateLimited: return String(localized: "Terlalu banyak percobaan. Coba lagi dalam 1 menit.")
         }
     }
 }

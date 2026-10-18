@@ -222,7 +222,7 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 
 🔒* = token **opsional**. Tanpa token, response tetap berhasil tetapi bagian yang personal (nama, poin, alamat) kosong.
 
-Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 4, 5b, 6, 7, 8 (`store_id`), 11, 12 (filter + paginasi), 13, 15, 16, 17, 18, 19, 23, 28, 29, 30, 31, 32, 33, 43, 44, 45, 48, 49.
+Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 4, 5b, 6, 7, 8 (`store_id`), 11, 12 (filter + paginasi), 13, 15, 16, 20, 21, 17, 18, 19, 23, 28, 29, 30, 31, 32, 33, 43, 44, 45, 48, 49.
 
 ### 4.1 Status data per screen: dari API atau masih di aplikasi
 
@@ -238,7 +238,7 @@ Dengan `USE_MOCK_DATA = NO`, banner, kategori, dan produk di Beranda & Menu **su
 | Menu | Daftar kategori & produk | ✅ API | — |
 | Detail produk | Varian, harga | ✅ API (bagian dari `/v1/products`) | — |
 | Detail produk | Batas jumlah (1–20) & catatan (100) | `AddToCartUseCase`, `ProductDetailState` | `/v1/app-config` → `order_rules` |
-| Detail produk | Status favorit ❤️ | lokal (`isFavorite`) | `/v1/me/favorites` (§5.17) |
+| Detail produk, Profil → Menu Favorit | Status favorit ❤️ | ✅ API (`/v1/me/favorites`) | — |
 | Keranjang | Ongkir Rp 10.000 | `CartState.standardDeliveryFee` | `POST /v1/orders/quote` (§5.10) |
 | Keranjang | Bayar online sebelum pesanan dibuat | ✅ API (`POST /v1/checkout` + Midtrans Snap, §5.27) | — |
 | Keranjang | Alamat & metode bayar | ✅ API (`/v1/me/addresses`, `/v1/me/payment-methods`) → `address_id`, `payment_method_id` | — |
@@ -2073,7 +2073,8 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] `GET/PATCH /v1/me`, alamat, favorit, voucher, outlet, rating
 - [x] `GET /v1/promotions/featured`, `POST /v1/subscriptions/{plan_id}/activate`
 - [x] iOS: Profil dari `/v1/me`
-- [ ] iOS: kartu promo dari `/v1/promotions/featured`; ❤️ di Detail & Menu Favorit ke `/v1/me/favorites`
+- [x] iOS: ❤️ di Detail & Menu Favorit ke `/v1/me/favorites`
+- [ ] iOS: kartu promo dari `/v1/promotions/featured`
 - [x] Push notification status pesanan → APNs langsung (§5.28), bukan FCM
 
 **Fase 3b: Pengaturan Profil**

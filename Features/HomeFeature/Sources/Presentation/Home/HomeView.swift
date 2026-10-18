@@ -133,7 +133,7 @@ struct HomeView: View {
     /// "Rumah · Jl. Kebayoran Lama No. 12" / "Lokasi saat ini · Jl. …" / ajakan memilih.
     private var deliveryText: String {
         guard let delivery = state.delivery else {
-            return state.content.isLoading ? "Mencari lokasimu…" : "Pilih lokasi antar"
+            return state.content.isLoading ? String(localized: "Mencari lokasimu…") : String(localized: "Pilih lokasi antar")
         }
         return delivery.subtitle.isEmpty ? delivery.title : "\(delivery.title) · \(delivery.subtitle)"
     }
@@ -153,7 +153,7 @@ struct HomeView: View {
                         let remaining = Int(payment.remaining(at: context.date))
                         Text(remaining > 0
                              ? String(format: "Selesaikan dalam %02d:%02d", remaining / 60, remaining % 60)
-                             : "Mengecek status pembayaran…")
+                             : String(localized: "Mengecek status pembayaran…"))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
@@ -213,7 +213,7 @@ struct HomeView: View {
 
         if !content.categories.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.m) {
-                SectionHeader(title: "Kategori")
+                SectionHeader(title: String(localized: "Kategori"))
                     .padding(.horizontal, Spacing.xl)
                 CategoryGridView(categories: content.categories) { store.send(.categoryTapped($0)) }
                     .padding(.horizontal, Spacing.xl)
@@ -222,7 +222,7 @@ struct HomeView: View {
 
         if !content.deals.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.m) {
-                SectionHeader(title: "💸 Promo Hemat")
+                SectionHeader(title: String(localized: "💸 Promo Hemat"))
                     .padding(.horizontal, Spacing.xl)
                 ScrollView(.horizontal) {
                     HStack(spacing: Spacing.m) {
@@ -240,7 +240,7 @@ struct HomeView: View {
 
         if !content.bestSellers.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.m) {
-                SectionHeader(title: "🔥 Paling Laris", actionTitle: "Lihat semua") { store.send(.seeAllTapped) }
+                SectionHeader(title: String(localized: "🔥 Paling Laris"), actionTitle: String(localized: "Lihat semua")) { store.send(.seeAllTapped) }
                     .padding(.horizontal, Spacing.xl)
                 ScrollView(.horizontal) {
                     HStack(spacing: Spacing.m) {
@@ -258,7 +258,7 @@ struct HomeView: View {
 
         if !content.recommended.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.m) {
-                SectionHeader(title: "Rekomendasi Buat Kamu")
+                SectionHeader(title: String(localized: "Rekomendasi Buat Kamu"))
                 LazyVStack(spacing: Spacing.m) {
                     ForEach(content.recommended) { product in
                         ProductRowView(product: product) { store.send(.quickAddTapped(product)) }

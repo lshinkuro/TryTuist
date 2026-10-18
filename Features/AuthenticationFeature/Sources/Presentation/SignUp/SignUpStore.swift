@@ -26,7 +26,7 @@ struct SignUpState: Equatable {
 
     var confirmError: String? {
         guard !confirmPassword.isEmpty, confirmPassword != password else { return nil }
-        return "Password tidak sama."
+        return String(localized: "Password tidak sama.")
     }
 
     var canSubmit: Bool {

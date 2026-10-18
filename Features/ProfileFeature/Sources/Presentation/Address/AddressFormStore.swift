@@ -17,7 +17,7 @@ struct AddressFormState: Equatable {
     let labelSuggestions = SaveAddressUseCase.labelSuggestions
 
     var isEditing: Bool { addressID != nil }
-    var title: String { isEditing ? "Ubah Alamat" : "Tambah Alamat" }
+    var title: String { isEditing ? String(localized: "Ubah Alamat") : String(localized: "Tambah Alamat") }
     var isShowingError: Bool { errorMessage != nil }
 }
 

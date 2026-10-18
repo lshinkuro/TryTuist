@@ -10,7 +10,7 @@ import Utility
 
 @MainActor
 public final class FocusModule: TabFeature {
-    public let tabItem = TabItem(title: "Pesanan", systemImage: "clock.arrow.circlepath", selectedSystemImage: "clock.arrow.circlepath")
+    public let tabItem = TabItem(title: String(localized: "Pesanan"), systemImage: "clock.arrow.circlepath", selectedSystemImage: "clock.arrow.circlepath")
     private let onReorder: ([OrderReorderItem]) -> Void
 
     /// - Parameter onReorder: "Pesan Lagi" → AppRouter memasukkan item ke keranjang Beranda.
@@ -23,21 +23,36 @@ public final class FocusModule: TabFeature {
         let getDetail = GetOrderDetailUseCase(repository: repository)
         let store = OrdersStore(getOrders: GetOrdersUseCase(repository: repository), getDetail: getDetail)
         let onReorder = self.onReorder
+        let rateOrder = RateOrderUseCase(repository: repository)
+        let presentRating = { [weak router] (target: RatingTarget, onSubmitted: @escaping (String, Int) -> Void) in
+            let rateStore = RateOrderStore(target: target, rateOrder: rateOrder)
+            rateStore.onRoute = { route in
+                switch route {
+                case .submitted(let orderID, let rating):
+                    router?.dismiss()
+                    onSubmitted(orderID, rating)
+                }
+            }
+            router?.present(RateOrderView(store: rateStore), title: String(localized: "Beri Nilai"))
+        }
         store.onRoute = { [weak router, weak store] route in
             switch route {
             case .detail(let id):
                 let detailStore = OrderDetailStore(orderID: id, getDetail: getDetail)
-                router?.push(OrderDetailView(store: detailStore), title: "Detail Pesanan")
-            case .rate(let order):
-                let rateStore = RateOrderStore(order: order, rateOrder: RateOrderUseCase(repository: repository))
-                rateStore.onRoute = { route in
+                detailStore.onRoute = { [weak detailStore] route in
                     switch route {
-                    case .submitted(let orderID):
-                        router?.dismiss()
-                        store?.send(.ratingSubmitted(orderID: orderID))
+                    case .rate(let target):
+                        presentRating(target) { orderID, rating in
+                            detailStore?.send(.ratingSubmitted)
+                            store?.send(.ratingSubmitted(orderID: orderID, rating: rating))
+                        }
                     }
                 }
-                router?.present(RateOrderView(store: rateStore), title: "Beri Nilai")
+                router?.push(OrderDetailView(store: detailStore), title: String(localized: "Detail Pesanan"))
+            case .rate(let target):
+                presentRating(target) { orderID, rating in
+                    store?.send(.ratingSubmitted(orderID: orderID, rating: rating))
+                }
             case .reorder(let items):
                 onReorder(items.map {
                     OrderReorderItem(productID: $0.productID, optionID: $0.optionID, name: $0.name,

@@ -18,14 +18,14 @@ extension OnboardingItem {
 
     static let defaults: [OnboardingItem] = [
         .init(imageURL: unsplash("1512058564366-18510be2db19"),
-              title: "Semua favoritmu di sini",
-              subtitle: "Kopi, nasi goreng, burger, sampai dessert. Tinggal pilih."),
+              title: String(localized: "Semua favoritmu di sini"),
+              subtitle: String(localized: "Kopi, nasi goreng, burger, sampai dessert. Tinggal pilih.")),
         .init(imageURL: unsplash("1767471716700-2b3aa77b1ab6"),
-              title: "Pesan cepat tanpa antre",
-              subtitle: "Atur varian, jumlah, dan catatan sesuai seleramu."),
+              title: String(localized: "Pesan cepat tanpa antre"),
+              subtitle: String(localized: "Atur varian, jumlah, dan catatan sesuai seleramu.")),
         .init(imageURL: unsplash("1543339469-94ba2391431f"),
-              title: "Diantar hangat ke rumah",
-              subtitle: "Nikmati promo dan gratis ongkir setiap hari.")
+              title: String(localized: "Diantar hangat ke rumah"),
+              subtitle: String(localized: "Nikmati promo dan gratis ongkir setiap hari."))
     ]
 }
 
@@ -34,7 +34,7 @@ struct OnboardingState: Equatable {
     var currentPage = 0
 
     var isLastPage: Bool { currentPage >= items.count - 1 }
-    var primaryButtonTitle: String { isLastPage ? "Mulai Sekarang" : "Lanjut" }
+    var primaryButtonTitle: String { isLastPage ? String(localized: "Mulai Sekarang") : String(localized: "Lanjut") }
 }
 
 enum OnboardingAction {

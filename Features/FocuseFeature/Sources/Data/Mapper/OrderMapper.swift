@@ -29,7 +29,8 @@ enum OrderMapper {
             totalPrice: Decimal(totalPrice),
             quantity: max(dto.qty ?? 1, 1),
             status: status,
-            canRate: dto.canRate ?? false
+            canRate: dto.canRate ?? false,
+            rating: dto.rating
         )
     }
 
@@ -77,7 +78,10 @@ enum OrderMapper {
             discount: Decimal(dto.discount ?? 0),
             total: Decimal(total),
             voucherCode: dto.voucherCode?.nonEmpty,
-            history: history.sorted { $0.at < $1.at }
+            history: history.sorted { $0.at < $1.at },
+            canRate: dto.canRate ?? false,
+            rating: dto.rating?.rating,
+            ratingComment: dto.rating?.comment?.nonEmpty
         )
     }
 

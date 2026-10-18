@@ -128,7 +128,7 @@ struct RatingLabel: View {
         HStack(spacing: 4) {
             Image(systemName: "star.fill")
                 .foregroundStyle(.yellow)
-            Text(String(format: "%.1f", rating))
+            Text(rating > 0 ? String(format: "%.1f", rating) : String(localized: "Baru"))
                 .foregroundStyle(.primary)
             Text("· \(soldCount.compactFormatted) terjual")
                 .foregroundStyle(.secondary)
@@ -160,7 +160,7 @@ struct DiscountBadge: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(Color.red, in: Capsule())
-            .accessibilityLabel(percent > 0 ? "Diskon \(percent) persen" : "Promo")
+            .accessibilityLabel(percent > 0 ? String(localized: "Diskon \(percent) persen") : String(localized: "Promo"))
     }
 }
 
@@ -205,7 +205,7 @@ struct PriceLabel: View {
 
     private var accessibilityText: String {
         guard showsOriginal, let originalPrice else { return price.rupiahFormatted }
-        return "\(price.rupiahFormatted), dari \(originalPrice.rupiahFormatted)"
+        return String(localized: "\(price.rupiahFormatted), dari \(originalPrice.rupiahFormatted)")
     }
 }
 

@@ -127,7 +127,7 @@ final class MenuStore: Store<MenuState, MenuAction> {
             }
 
         case .quickAddResponse(.success(let product)):
-            return showToast(&state, ToastMessage("\(product.name) masuk keranjang"))
+            return showToast(&state, ToastMessage(String(localized: "\(product.name) masuk keranjang")))
 
         case .quickAddResponse(.failure(let error)):
             return showToast(&state, .error(error.errorDescription ?? ""))

@@ -168,3 +168,20 @@ struct ReorderUseCase {
         return (added, skipped)
     }
 }
+
+/// Menu Favorit (`/v1/me/favorites`). Butuh login.
+struct GetFavoritesUseCase {
+    let repository: CatalogRepository
+
+    func execute() async throws -> [Product] {
+        try await repository.fetchFavorites()
+    }
+}
+
+struct SetFavoriteUseCase {
+    let repository: CatalogRepository
+
+    func execute(productID: String, isFavorite: Bool) async throws {
+        try await repository.setFavorite(productID: productID, isFavorite: isFavorite)
+    }
+}

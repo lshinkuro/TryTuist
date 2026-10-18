@@ -35,7 +35,7 @@ struct AddEWalletView: View {
                     }
                 }
 
-                InputFieldView(title: "Nomor HP terdaftar di \(state.selectedProvider?.name ?? "e-wallet")",
+                InputFieldView(title: String(localized: "Nomor HP terdaftar di \(state.selectedProvider?.name ?? "e-wallet")"),
                                placeholder: "081234567890",
                                text: store.binding(\.wallet.accountNumber, send: { .accountNumberChanged($0) }),
                                systemImage: "phone",
@@ -43,8 +43,8 @@ struct AddEWalletView: View {
                                contentType: .telephoneNumber,
                                errorMessage: state.fieldErrors["account_number"])
 
-                InputFieldView(title: "Nama pemilik akun (opsional)",
-                               placeholder: "Sesuai nama di e-wallet",
+                InputFieldView(title: String(localized: "Nama pemilik akun (opsional)"),
+                               placeholder: String(localized: "Sesuai nama di e-wallet"),
                                text: store.binding(\.wallet.accountName, send: { .accountNameChanged($0) }),
                                systemImage: "person",
                                contentType: .name,
@@ -66,7 +66,7 @@ struct AddEWalletView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(Color.appBackground.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
-            BottomActionBar(title: "Tautkan", isLoading: state.isSaving, isEnabled: true) {
+            BottomActionBar(title: String(localized: "Tautkan"), isLoading: state.isSaving, isEnabled: true) {
                 store.send(.saveTapped)
             }
         }

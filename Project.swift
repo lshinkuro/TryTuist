@@ -134,7 +134,10 @@ let project = Project(
                     .Utility, .TTUI, .NetworkManager, .Navigation
                    ])
     ],
-    schemes: AppEnv.allCases.map(\.scheme)
+    schemes: AppEnv.allCases.map(\.scheme),
+    // Tanpa synthesizer strings: key Localizable = teks Indonesia (mis. "%lld item"), bukan nama Swift yang valid.
+    // Teks dibaca lewat Text("…") / String(localized:), bukan accessor TryTuistStrings.
+    resourceSynthesizers: [.assets(), .fonts()]
 )
 
 public extension ProjectDescription.Target {

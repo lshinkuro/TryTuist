@@ -35,7 +35,7 @@ struct MenuView: View {
     private var topBar: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             if state.isRootScreen {
-                ScreenHeader(title: "Menu", subtitle: "Makanan & minuman")
+                ScreenHeader(title: String(localized: "Menu"), subtitle: String(localized: "Makanan & minuman"))
                     .padding(.horizontal, Spacing.xl)
             }
 
@@ -61,7 +61,7 @@ struct MenuView: View {
             if let categories = state.content.value?.categories {
                 ScrollView(.horizontal) {
                     HStack(spacing: Spacing.s) {
-                        CategoryChip(icon: "🍽️", title: "Semua", isSelected: state.selectedCategoryID == nil) {
+                        CategoryChip(icon: "🍽️", title: String(localized: "Semua"), isSelected: state.selectedCategoryID == nil) {
                             store.send(.categorySelected(nil))
                         }
                         ForEach(categories) { category in

@@ -34,10 +34,10 @@ final class AppRouter {
 
         var title: String {
             switch self {
-            case .home: return "Beranda"
-            case .menu: return "Menu"
-            case .orders: return "Pesanan"
-            case .profile: return "Profil"
+            case .home: return String(localized: "Beranda")
+            case .menu: return String(localized: "Menu")
+            case .orders: return String(localized: "Pesanan")
+            case .profile: return String(localized: "Profil")
             }
         }
 
@@ -90,7 +90,7 @@ final class AppRouter {
         let profile = ProfileModule(onLogout: { [weak self] in
             PushRegistrar.shared.sessionEnded()
             self?.showAuth(at: .signIn)
-        })
+        }, onOpenFavorites: { CatalogFavorites.open(on: $0) })
         let tabBar = MainTabBarController(features: [
             home,
             MenuModule(onExternalRoute: catalogRoute),

@@ -14,9 +14,9 @@ struct UserProfile: Equatable {
 
         var title: String {
             switch self {
-            case .silver: return "Member Silver"
-            case .gold: return "Member Gold"
-            case .platinum: return "Member Platinum"
+            case .silver: return String(localized: "Member Silver")
+            case .gold: return String(localized: "Member Gold")
+            case .platinum: return String(localized: "Member Platinum")
             }
         }
     }
@@ -167,8 +167,8 @@ enum LegalDocumentKind: String, Equatable {
 
     var title: String {
         switch self {
-        case .privacyPolicy: return "Kebijakan Privasi"
-        case .terms: return "Syarat & Ketentuan"
+        case .privacyPolicy: return String(localized: "Kebijakan Privasi")
+        case .terms: return String(localized: "Syarat & Ketentuan")
         }
     }
 }

@@ -44,7 +44,7 @@ public struct PrimaryButton: View {
         }
         .buttonStyle(PressableButtonStyle())
         .disabled(isLoading || !isEnabled)
-        .accessibilityLabel(isLoading ? "\(title), memuat" : title)
+        .accessibilityLabel(isLoading ? String(localized: "\(title), memuat") : title)
     }
 }
 

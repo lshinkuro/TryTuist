@@ -87,7 +87,7 @@ struct PromoPopupView: View {
                 }
                 .padding(.top, Spacing.xs)
 
-                PrimaryButton("Lihat Promo", action: onOpen)
+                PrimaryButton(String(localized: "Lihat Promo"), action: onOpen)
                     .padding(.top, Spacing.s)
             }
             .padding(Spacing.l)

@@ -46,7 +46,7 @@ struct LegalDocumentView: View {
                     Text("Versi \(document.version)")
                 }
                 if let date = document.effectiveDate {
-                    Text("· Berlaku \(date.formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "id_ID"))))")
+                    Text("· Berlaku \(date.formatted(.dateTime.day().month(.wide).year().locale(appLocale)))")
                 }
             }
             .font(.caption)

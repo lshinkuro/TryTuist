@@ -62,11 +62,11 @@ enum PaymentError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .network: return "Tidak ada koneksi ke server. Coba lagi."
-        case .notFound: return "Pembayaran tidak ditemukan."
-        case .alreadyFinal: return "Pembayaran ini sudah selesai diproses."
+        case .network: return String(localized: "Tidak ada koneksi ke server. Coba lagi.")
+        case .notFound: return String(localized: "Pembayaran tidak ditemukan.")
+        case .alreadyFinal: return String(localized: "Pembayaran ini sudah selesai diproses.")
         case .gateway(let message): return message
-        case .sessionExpired: return "Sesi kamu berakhir. Silakan masuk lagi."
+        case .sessionExpired: return String(localized: "Sesi kamu berakhir. Silakan masuk lagi.")
         }
     }
 }

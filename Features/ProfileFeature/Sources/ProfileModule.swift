@@ -13,13 +13,16 @@ import Utility
 
 @MainActor
 public final class ProfileModule: TabFeature {
-    public let tabItem = TabItem(title: "Profil", systemImage: "person", selectedSystemImage: "person.fill")
+    public let tabItem = TabItem(title: String(localized: "Profil"), systemImage: "person", selectedSystemImage: "person.fill")
     private let onLogout: () -> Void
+    private let onOpenFavorites: (Router) -> Void
     private let repository: DefaultProfileRepository
     private weak var router: Router?
 
-    public init(onLogout: @escaping () -> Void) {
+    /// - Parameter onOpenFavorites: Menu Favorit milik feature katalog, di-push ke router tab Profil.
+    public init(onLogout: @escaping () -> Void, onOpenFavorites: @escaping (Router) -> Void = { _ in }) {
         self.onLogout = onLogout
+        self.onOpenFavorites = onOpenFavorites
         self.repository = DefaultProfileRepository(remote: Self.makeRemoteDataSource())
     }
 
@@ -44,8 +47,10 @@ public final class ProfileModule: TabFeature {
                 self.showHelpCenter()
             case .legal(let kind):
                 self.showLegal(kind)
-            case .comingSoon(let item):
-                self.router?.push(ComingSoonView(item: item), title: item.title)
+            case .favorites:
+                if let router = self.router { self.onOpenFavorites(router) }
+            case .languageSettings:
+                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
             case .loggedOut:
                 self.onLogout()
             }
@@ -79,7 +84,7 @@ public final class ProfileModule: TabFeature {
                 if updated != profile { onSaved(updated) }
             }
         }
-        router?.push(EditProfileView(store: store), title: "Edit Profil")
+        router?.push(EditProfileView(store: store), title: String(localized: "Edit Profil"))
     }
 
     // MARK: - Alamat
@@ -95,7 +100,7 @@ public final class ProfileModule: TabFeature {
                 }
             }
         }
-        router?.push(AddressListView(store: store), title: "Alamat Pengiriman")
+        router?.push(AddressListView(store: store), title: String(localized: "Alamat Pengiriman"))
     }
 
     private func showAddressForm(_ address: Address?, isFirstAddress: Bool, onSaved: @escaping (Bool) -> Void) {
@@ -121,7 +126,7 @@ public final class ProfileModule: TabFeature {
                 self?.showAddEWallet(providers) { store?.send(.eWalletAdded($0)) }
             }
         }
-        router?.push(PaymentMethodsView(store: store), title: "Metode Pembayaran")
+        router?.push(PaymentMethodsView(store: store), title: String(localized: "Metode Pembayaran"))
     }
 
     private func showAddEWallet(_ providers: [EWalletProvider], onAdded: @escaping (PaymentOverview) -> Void) {
@@ -135,7 +140,7 @@ public final class ProfileModule: TabFeature {
                 self?.router?.dismiss()
             }
         }
-        router?.present(AddEWalletView(store: store), title: "Tambah E-Wallet")
+        router?.present(AddEWalletView(store: store), title: String(localized: "Tambah E-Wallet"))
     }
 
     // MARK: - Bantuan & legal
@@ -149,7 +154,7 @@ public final class ProfileModule: TabFeature {
                 UIApplication.shared.open(url)
             }
         }
-        router?.push(HelpCenterView(store: store), title: "Pusat Bantuan")
+        router?.push(HelpCenterView(store: store), title: String(localized: "Pusat Bantuan"))
     }
 
     private func showLegal(_ kind: LegalDocumentKind) {

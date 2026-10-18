@@ -7,7 +7,7 @@ import TTUI
 import Utility
 
 struct HomeState: Equatable {
-    var userName = "Ishinkuro"
+    var userName = "Ishinkuro"  // placeholder nama, bukan teks UI
     var content: Loadable<HomeContent> = .idle
     var bannerPage = 0
     var cart: CartSummary = .empty
@@ -39,10 +39,10 @@ struct HomeState: Equatable {
 
     var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
-        case 4..<11: return "Selamat pagi ☀️"
-        case 11..<15: return "Selamat siang 🌤️"
-        case 15..<18: return "Selamat sore 🌇"
-        default: return "Selamat malam 🌙"
+        case 4..<11: return String(localized: "Selamat pagi ☀️")
+        case 11..<15: return String(localized: "Selamat siang 🌤️")
+        case 15..<18: return String(localized: "Selamat sore 🌇")
+        default: return String(localized: "Selamat malam 🌙")
         }
     }
 }
@@ -191,7 +191,7 @@ final class HomeStore: Store<HomeState, HomeAction> {
             }
 
         case .quickAddResponse(.success(let product)):
-            return showToast(&state, ToastMessage("\(product.name) masuk keranjang"))
+            return showToast(&state, ToastMessage(String(localized: "\(product.name) masuk keranjang")))
 
         case .quickAddResponse(.failure(let error)):
             return showToast(&state, .error(error.errorDescription ?? ""))
@@ -265,10 +265,10 @@ final class HomeStore: Store<HomeState, HomeAction> {
             if let outlet {
                 state.outletChoice = OutletChoice(outlets: state.outletChoice.outlets, selected: outlet)
             }
-            let name = outlet?.name ?? "outlet baru"
+            let name = outlet?.name ?? String(localized: "outlet baru")
             let toast: ToastMessage = removedNames.isEmpty
-                ? ToastMessage("Sekarang pesan dari \(name)")
-                : .error("\(removedNames.joined(separator: ", ")) habis di \(name), dikeluarkan dari keranjang")
+                ? ToastMessage(String(localized: "Sekarang pesan dari \(name)"))
+                : .error(String(localized: "\(removedNames.joined(separator: ", ")) habis di \(name), dikeluarkan dari keranjang"))
             state.toast = toast
             state.toastAwaitingReload = toast.id
             // Stok berbeda per outlet → muat ulang Beranda; toast ditutup setelah selesai.
@@ -288,7 +288,7 @@ final class HomeStore: Store<HomeState, HomeAction> {
 
         case .paymentFinished(.paid(let order)):
             state.pendingPayment = nil
-            return showToast(&state, ToastMessage("Pembayaran berhasil · pesanan \(order.orderNumber)"))
+            return showToast(&state, ToastMessage(String(localized: "Pembayaran berhasil · pesanan \(order.orderNumber)")))
 
         case .paymentFinished(.notPaid(let message)):
             state.pendingPayment = nil
@@ -354,10 +354,10 @@ final class HomeStore: Store<HomeState, HomeAction> {
         case .deliveryChangeResponse(.success(let removedNames)):
             state.isUpdatingDelivery = false
             state.isDeliverySheetPresented = false
-            let title = state.delivery?.title ?? "alamat baru"
+            let title = state.delivery?.title ?? String(localized: "alamat baru")
             let toast: ToastMessage = removedNames.isEmpty
-                ? ToastMessage("Antar ke \(title)")
-                : .error("\(removedNames.joined(separator: ", ")) habis di outlet terdekat, dikeluarkan dari keranjang")
+                ? ToastMessage(String(localized: "Antar ke \(title)"))
+                : .error(String(localized: "\(removedNames.joined(separator: ", ")) habis di outlet terdekat, dikeluarkan dari keranjang"))
             state.toast = toast
             state.toastAwaitingReload = toast.id
             // Outlet terdekat & stok bisa berubah → muat ulang Beranda.
@@ -365,7 +365,7 @@ final class HomeStore: Store<HomeState, HomeAction> {
 
         case .deliveryChangeResponse(.failure(let error)):
             state.isUpdatingDelivery = false
-            return showToast(&state, .error(error.errorDescription ?? "Gagal mengganti alamat."))
+            return showToast(&state, .error(error.errorDescription ?? String(localized: "Gagal mengganti alamat.")))
 
         case .manageAddressesTapped:
             state.isDeliverySheetPresented = false
@@ -395,7 +395,7 @@ final class HomeStore: Store<HomeState, HomeAction> {
 
         case .outletChangeResponse(.failure(let error)):
             state.switchingOutletID = nil
-            return showToast(&state, .error(error.errorDescription ?? "Gagal mengganti outlet."))
+            return showToast(&state, .error(error.errorDescription ?? String(localized: "Gagal mengganti outlet.")))
         }
     }
 

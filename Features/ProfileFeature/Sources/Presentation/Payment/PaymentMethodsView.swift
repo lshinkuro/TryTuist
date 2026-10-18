@@ -22,7 +22,7 @@ struct PaymentMethodsView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    section(title: "Metode Pembayaran", methods: overview.builtins)
+                    section(title: String(localized: "Metode Pembayaran"), methods: overview.builtins)
                     eWalletSection(overview)
 
                     Label("TryTuist tidak pernah menyimpan nomor kartu kredit/debit kamu.", systemImage: "lock.shield.fill")
@@ -80,8 +80,8 @@ struct PaymentMethodsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Belum ada e-wallet").font(.subheadline.weight(.semibold))
                         Text(overview.canAddEWallet
-                             ? "Tautkan GoPay, OVO, DANA, atau ShopeePay untuk bayar lebih cepat."
-                             : "E-wallet sedang tidak tersedia.")
+                             ? String(localized: "Tautkan GoPay, OVO, DANA, atau ShopeePay untuk bayar lebih cepat.")
+                             : String(localized: "E-wallet sedang tidak tersedia."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -155,7 +155,7 @@ private struct PaymentMethodRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(method.isDefault ? .isSelected : [])
-            .accessibilityHint(method.isDefault ? "Metode utama" : "Ketuk untuk jadikan metode utama")
+            .accessibilityHint(method.isDefault ? String(localized: "Metode utama") : String(localized: "Ketuk untuk jadikan metode utama"))
 
             if method.isRemovable {
                 Menu {

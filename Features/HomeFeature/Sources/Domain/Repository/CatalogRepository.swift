@@ -13,6 +13,8 @@ protocol CatalogRepository {
     func fetchOutlets(near point: GeoPoint?) async throws -> [Outlet]
     /// `nil` = tidak ada promo popup yang berlaku.
     func fetchPromoPopup() async throws -> PromoPopup?
+    func fetchFavorites() async throws -> [Product]
+    func setFavorite(productID: String, isFavorite: Bool) async throws
 }
 
 /// Mengingat popup yang sudah ditutup supaya tidak muncul terus (sekali per hari per promo).
@@ -28,9 +30,9 @@ enum CatalogError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .network: return "Tidak ada koneksi internet."
-        case .invalidResponse: return "Data menu dari server tidak valid."
-        case .unknown: return "Gagal memuat menu. Coba lagi."
+        case .network: return String(localized: "Tidak ada koneksi internet.")
+        case .invalidResponse: return String(localized: "Data menu dari server tidak valid.")
+        case .unknown: return String(localized: "Gagal memuat menu. Coba lagi.")
         }
     }
 }

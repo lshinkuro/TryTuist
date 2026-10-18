@@ -20,6 +20,8 @@ struct Order: Identifiable, Equatable {
     let status: OrderStatus
     /// Selesai & belum dinilai.
     var canRate = false
+    /// Bintang 1–5 yang sudah diberikan; nil = belum.
+    var rating: Int?
 }
 
 /// Filter + halaman riwayat pesanan; filter & urutan dikerjakan server.
@@ -70,4 +72,7 @@ struct OrderDetail: Equatable {
     let total: Decimal
     let voucherCode: String?
     let history: [StatusEvent]
+    let canRate: Bool
+    let rating: Int?
+    let ratingComment: String?
 }

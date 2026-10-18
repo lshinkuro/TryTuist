@@ -50,8 +50,8 @@ enum CurrentDeliveryLocation {
         if !prompt, location.permission != .authorized { throw LocationError.denied }
         let point = try await location.currentLocation()
         let name = await location.describe(point)
-        return DeliveryLocation(source: .currentLocation, title: "Lokasi saat ini",
-                                subtitle: name ?? "Sekitar lokasimu", point: point)
+        return DeliveryLocation(source: .currentLocation, title: String(localized: "Lokasi saat ini"),
+                                subtitle: name ?? String(localized: "Sekitar lokasimu"), point: point)
     }
 }
 

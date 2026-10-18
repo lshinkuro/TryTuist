@@ -16,28 +16,28 @@ struct SignInView: View {
 
     var body: some View {
         AuthFormView(
-            title: "Selamat datang 👋",
-            subtitle: "Masuk untuk melanjutkan ke akunmu.",
-            submitTitle: "Masuk",
-            footerText: "Belum punya akun?",
-            footerButtonTitle: "Daftar",
+            title: String(localized: "Selamat datang 👋"),
+            subtitle: String(localized: "Masuk untuk melanjutkan ke akunmu."),
+            submitTitle: String(localized: "Masuk"),
+            footerText: String(localized: "Belum punya akun?"),
+            footerButtonTitle: String(localized: "Daftar"),
             isLoading: store.state.isLoading,
             isSubmitEnabled: store.state.canSubmit,
             errorMessage: store.state.errorMessage,
             onSubmit: { store.send(.submitTapped) },
             onFooterTap: { store.send(.signUpTapped) },
-            googleTitle: "Masuk dengan Google",
+            googleTitle: String(localized: "Masuk dengan Google"),
             isGoogleLoading: store.state.isGoogleLoading,
             onGoogleTap: { store.send(.googleTapped) }
         ) {
-            InputFieldView(title: "Email",
+            InputFieldView(title: String(localized: "Email"),
                            placeholder: "nama@email.com",
                            text: store.binding(\.email, send: { .emailChanged($0) }),
                            systemImage: "envelope",
                            keyboardType: .emailAddress,
                            contentType: .emailAddress)
-            InputFieldView(title: "Password",
-                           placeholder: "Masukkan password",
+            InputFieldView(title: String(localized: "Password"),
+                           placeholder: String(localized: "Masukkan password"),
                            text: store.binding(\.password, send: { .passwordChanged($0) }),
                            systemImage: "lock",
                            isSecure: true,

@@ -35,10 +35,10 @@ enum OrderDateRange: CaseIterable, Equatable {
 
     var title: String {
         switch self {
-        case .all: return "Semua waktu"
-        case .today: return "Hari ini"
-        case .last7Days: return "7 hari terakhir"
-        case .last30Days: return "30 hari terakhir"
+        case .all: return String(localized: "Semua waktu")
+        case .today: return String(localized: "Hari ini")
+        case .last7Days: return String(localized: "7 hari terakhir")
+        case .last30Days: return String(localized: "30 hari terakhir")
         }
     }
 
@@ -57,7 +57,7 @@ enum OrderDateRange: CaseIterable, Equatable {
 
 enum OrdersRoute {
     case detail(id: String)
-    case rate(Order)
+    case rate(RatingTarget)
     case reorder([OrderDetail.Item])
 }
 
@@ -73,7 +73,7 @@ enum OrdersAction {
     case orderTapped(Order)
     case rateTapped(Order)
     /// Rating terkirim dari layar Beri Nilai.
-    case ratingSubmitted(orderID: String)
+    case ratingSubmitted(orderID: String, rating: Int)
     case reorderTapped(Order)
     case reorderResponse(Result<OrderDetail, OrderError>)
     case toastDismissed(UUID)
@@ -138,15 +138,17 @@ final class OrdersStore: Store<OrdersState, OrdersAction> {
             return .run { [weak self] in self?.onRoute?(.detail(id: order.id)) }
 
         case .rateTapped(let order):
-            return .run { [weak self] in self?.onRoute?(.rate(order)) }
+            let target = RatingTarget(orderID: order.id, title: order.productName, createdAt: order.createdAt)
+            return .run { [weak self] in self?.onRoute?(.rate(target)) }
 
-        case .ratingSubmitted(let orderID):
+        case .ratingSubmitted(let orderID, let rating):
             // Cukup ubah lokal: server sudah menyimpan, can_rate pesanan ini pasti false.
             if var orders = state.orders.value, let index = orders.firstIndex(where: { $0.id == orderID }) {
                 orders[index].canRate = false
+                orders[index].rating = rating
                 state.orders = .loaded(orders)
             }
-            return showToast(&state, ToastMessage("Terima kasih atas penilaianmu!", systemImage: "star.fill"))
+            return showToast(&state, ToastMessage(String(localized: "Terima kasih atas penilaianmu!"), systemImage: "star.fill"))
 
         case .reorderTapped(let order):
             guard state.reorderingID == nil else { return nil }

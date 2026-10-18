@@ -16,10 +16,12 @@ struct OrderDTO: Decodable {
     /// "PENDING" | "COMPLETED" | "FAILED"
     let status: String?
     let canRate: Bool?
+    let rating: Int?
 
     enum CodingKeys: String, CodingKey {
         case orderID = "order_id"
         case canRate = "can_rate"
+        case rating
         case storeName = "store_name"
         case productName = "product_name"
         case createdAt = "created_at"
@@ -48,6 +50,13 @@ struct OrderDetailDTO: Decodable {
     let store: StoreDTO?
     let address: AddressDTO?
     let statusHistory: [StatusEventDTO]?
+    let canRate: Bool?
+    let rating: RatingDTO?
+
+    struct RatingDTO: Decodable {
+        let rating: Int?
+        let comment: String?
+    }
 
     struct ItemDTO: Decodable {
         let productID: String?
@@ -97,6 +106,8 @@ struct OrderDetailDTO: Decodable {
         case voucherCode = "voucher_code"
         case items, store, address
         case statusHistory = "status_history"
+        case canRate = "can_rate"
+        case rating
     }
 }
 

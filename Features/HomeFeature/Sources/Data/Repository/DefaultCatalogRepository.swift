@@ -46,4 +46,20 @@ struct DefaultCatalogRepository: CatalogRepository {
             throw CatalogMapper.toDomainError(error)
         }
     }
+
+    func fetchFavorites() async throws -> [Product] {
+        do {
+            return CatalogMapper.products(from: try await remote.fetchFavorites())
+        } catch {
+            throw CatalogMapper.toDomainError(error)
+        }
+    }
+
+    func setFavorite(productID: String, isFavorite: Bool) async throws {
+        do {
+            try await remote.setFavorite(productID: productID, isFavorite: isFavorite)
+        } catch {
+            throw CatalogMapper.toDomainError(error)
+        }
+    }
 }

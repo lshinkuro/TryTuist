@@ -10,7 +10,7 @@ import Navigation
 
 @MainActor
 public final class HomeModule: TabFeature {
-    public let tabItem = TabItem(title: "Beranda", systemImage: "house", selectedSystemImage: "house.fill")
+    public let tabItem = TabItem(title: String(localized: "Beranda"), systemImage: "house", selectedSystemImage: "house.fill")
     private var flow: CatalogFlow?
     private let onExternalRoute: (CatalogExternalRoute) -> Void
 
@@ -38,7 +38,7 @@ public final class HomeModule: TabFeature {
 
 @MainActor
 public final class MenuModule: TabFeature {
-    public let tabItem = TabItem(title: "Menu", systemImage: "menucard", selectedSystemImage: "menucard.fill")
+    public let tabItem = TabItem(title: String(localized: "Menu"), systemImage: "menucard", selectedSystemImage: "menucard.fill")
     private var flow: CatalogFlow?
     private let onExternalRoute: (CatalogExternalRoute) -> Void
 
@@ -50,6 +50,14 @@ public final class MenuModule: TabFeature {
         let flow = CatalogFlow(router: router, onExternalRoute: onExternalRoute)
         self.flow = flow
         router.setRoot(flow.makeMenu(isRootScreen: true), hidesNavigationBar: true)
+    }
+}
+
+/// Menu Favorit sebagai pintu masuk dari feature lain (tab Profil). Keranjang tetap sama dengan Beranda.
+@MainActor
+public enum CatalogFavorites {
+    public static func open(on router: Router) {
+        router.push(CatalogFlow(router: router).makeFavorites(), title: String(localized: "Menu Favorit"))
     }
 }
 

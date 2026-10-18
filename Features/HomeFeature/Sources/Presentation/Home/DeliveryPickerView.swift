@@ -23,7 +23,7 @@ struct DeliveryPickerView: View {
                 Section {
                     Button(action: onUseCurrentLocation) {
                         row(systemImage: "location.fill",
-                            title: "Gunakan lokasi saat ini",
+                            title: String(localized: "Gunakan lokasi saat ini"),
                             subtitle: currentLocationSubtitle,
                             isSelected: choice.selected?.source == .currentLocation,
                             showsProgress: isUpdating)
@@ -48,7 +48,7 @@ struct DeliveryPickerView: View {
                     ForEach(choice.addresses) { address in
                         Button { onSelectAddress(address) } label: {
                             row(systemImage: "mappin.circle.fill",
-                                title: address.label + (address.isDefault ? " · Utama" : ""),
+                                title: address.label + (address.isDefault ? String(localized: " · Utama") : ""),
                                 subtitle: address.address,
                                 isSelected: address.id == choice.selected?.savedAddressID,
                                 showsProgress: false)
@@ -72,8 +72,8 @@ struct DeliveryPickerView: View {
             return subtitle
         }
         switch permission {
-        case .denied?: return "Izin lokasi dimatikan"
-        default: return "Cari outlet terdekat dari posisimu"
+        case .denied?: return String(localized: "Izin lokasi dimatikan")
+        default: return String(localized: "Cari outlet terdekat dari posisimu")
         }
     }
 

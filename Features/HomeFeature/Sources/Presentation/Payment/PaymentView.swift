@@ -129,11 +129,11 @@ struct PaymentView: View {
         VStack(spacing: Spacing.l) {
             ProgressView()
                 .controlSize(.large)
-            Text(state.isMock ? "Simulasi pembayaran…" : "Mengecek pembayaran…")
+            Text(state.isMock ? String(localized: "Simulasi pembayaran…") : String(localized: "Mengecek pembayaran…"))
                 .font(.headline)
             Text(state.isMock
-                 ? "Mode mock: pembayaran otomatis berhasil dalam beberapa detik."
-                 : "Biasanya hanya beberapa detik setelah kamu membayar.")
+                 ? String(localized: "Mode mock: pembayaran otomatis berhasil dalam beberapa detik.")
+                 : String(localized: "Biasanya hanya beberapa detik setelah kamu membayar."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -158,7 +158,7 @@ struct PaymentView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            PrimaryButton("Cek lagi") { store.send(.checkAgainTapped) }
+            PrimaryButton(String(localized: "Cek lagi")) { store.send(.checkAgainTapped) }
             Button("Tutup, cek nanti") { store.send(.continueLaterTapped) }
                 .font(.subheadline.weight(.semibold))
         }
@@ -177,7 +177,7 @@ struct PaymentView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            PrimaryButton("Kembali ke keranjang") { store.send(.backToCartTapped) }
+            PrimaryButton(String(localized: "Kembali ke keranjang")) { store.send(.backToCartTapped) }
         }
         .padding(Spacing.xl)
     }
