@@ -18,4 +18,9 @@ public final class AppSetting {
         get { defaults.object(forKey: "isFirstTime") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "isFirstTime") }
     }
+
+    /// `true` selama proses app aktif (in-memory, tidak persisten).
+    /// Otomatis `false` ketika app di-kill karena nilai ini tidak disimpan ke disk.
+    /// Di-set ke `true` setelah login / register berhasil.
+    public var isSessionActive: Bool = false
 }

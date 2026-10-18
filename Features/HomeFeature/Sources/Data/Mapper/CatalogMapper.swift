@@ -31,7 +31,31 @@ enum CatalogMapper {
             soldCount: max(dto.soldCount ?? 0, 0),
             isAvailable: dto.isAvailable ?? true,
             isBestSeller: dto.tags?.contains("best_seller") ?? false,
-            options: (dto.options ?? []).compactMap { option(from: $0) }
+            options: (dto.options ?? []).compactMap { option(from: $0) },
+            // Harga normal yang tidak lebih mahal dari harga sekarang = bukan promo.
+            originalPrice: dto.originalPrice.flatMap { $0 > price ? Decimal($0) : nil }
+        )
+    }
+
+    // MARK: Promo popup
+
+    /// `nil` bila server mengirim `data: null` atau datanya tidak lengkap.
+    static func promoPopup(from response: PromoPopupResponseDTO) -> PromoPopup? {
+        guard let dto = response.data,
+              let id = dto.id, !id.isEmpty,
+              let title = dto.title?.trimmingCharacters(in: .whitespaces), !title.isEmpty,
+              let productDTO = dto.product, let product = product(from: productDTO) else {
+            return nil
+        }
+        let badge = dto.badge?.trimmingCharacters(in: .whitespaces) ?? ""
+        return PromoPopup(
+            id: id,
+            title: title,
+            subtitle: dto.subtitle ?? "",
+            badge: badge.isEmpty && product.isOnDeal ? "HEMAT \(product.discountPercent)%" : badge,
+            imageURL: url(from: dto.imageURL) ?? product.imageURL,
+            endsAt: dto.endsAt.flatMap { ISO8601DateFormatter().date(from: $0) },
+            product: product
         )
     }
 

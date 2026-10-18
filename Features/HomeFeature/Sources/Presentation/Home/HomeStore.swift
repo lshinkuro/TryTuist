@@ -13,6 +13,10 @@ struct HomeState: Equatable {
     var bannerPage = 0
     var cart: CartSummary = .empty
     var toast: ToastMessage?
+    /// Popup promo yang sedang tampil.
+    var promoPopup: PromoPopup?
+    /// Popup hanya dicek sekali per sesi Beranda (bukan setiap retry / kembali ke tab).
+    var didCheckPromoPopup = false
 
     var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
@@ -38,6 +42,9 @@ enum HomeAction {
     case cartChanged(CartSummary)
     case toastRequested(ToastMessage)
     case toastDismissed(UUID)
+    case promoPopupResponse(PromoPopup?)
+    case promoPopupClosed
+    case promoPopupTapped
 }
 
 enum HomeRoute {
@@ -45,16 +52,26 @@ enum HomeRoute {
     case category(MenuCategory)
     case allMenu
     case cart
+    case showPromoPopup(PromoPopup)
+    /// Popup ditutup (tombol X / tap di luar kartu).
+    case hidePromoPopup
+    /// Popup di-tap → tutup popup lalu buka detail produk promo.
+    case promoProduct(Product)
 }
 
 final class HomeStore: Store<HomeState, HomeAction> {
     private let getHomeContent: GetHomeContentUseCase
     private let addToCart: AddToCartUseCase
+    private let getPromoPopup: GetPromoPopupUseCase
+    private let dismissPromoPopup: DismissPromoPopupUseCase
     var onRoute: ((HomeRoute) -> Void)?
 
-    init(getHomeContent: GetHomeContentUseCase, addToCart: AddToCartUseCase, cart: CartRepository) {
+    init(getHomeContent: GetHomeContentUseCase, addToCart: AddToCartUseCase, cart: CartRepository,
+         getPromoPopup: GetPromoPopupUseCase, dismissPromoPopup: DismissPromoPopupUseCase) {
         self.getHomeContent = getHomeContent
         self.addToCart = addToCart
+        self.getPromoPopup = getPromoPopup
+        self.dismissPromoPopup = dismissPromoPopup
         super.init(initialState: HomeState())
         bind(cart.summaryPublisher) { .cartChanged($0) }
     }
@@ -70,7 +87,11 @@ final class HomeStore: Store<HomeState, HomeAction> {
 
         case .contentResponse(.success(let content)):
             state.content = .loaded(content)
-            return nil
+            // Popup muncul setelah Beranda tampil, supaya tidak menutupi skeleton/error.
+            guard !state.didCheckPromoPopup else { return nil }
+            state.didCheckPromoPopup = true
+            let getPromoPopup = self.getPromoPopup
+            return .task { .promoPopupResponse(await getPromoPopup.execute()) }
 
         case .contentResponse(.failure(let error)):
             state.content = .failed(error.errorDescription ?? "")
@@ -119,6 +140,23 @@ final class HomeStore: Store<HomeState, HomeAction> {
         case .toastDismissed(let id):
             if state.toast?.id == id { state.toast = nil }
             return nil
+
+        case .promoPopupResponse(let popup):
+            guard let popup, state.promoPopup == nil else { return nil }
+            state.promoPopup = popup
+            return route(.showPromoPopup(popup))
+
+        case .promoPopupClosed:
+            guard let popup = state.promoPopup else { return nil }
+            state.promoPopup = nil
+            dismissPromoPopup.execute(popup)
+            return route(.hidePromoPopup)
+
+        case .promoPopupTapped:
+            guard let popup = state.promoPopup else { return nil }
+            state.promoPopup = nil
+            dismissPromoPopup.execute(popup)
+            return route(.promoProduct(popup.product))
         }
     }
 

@@ -21,7 +21,11 @@ struct ProductCardView: View {
                 .overlay { RemoteImage(url: product.imageURL) }
                 .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .overlay(alignment: .topLeading) {
-                    if product.isBestSeller { BestSellerBadge().padding(Spacing.s) }
+                    if product.isOnDeal {
+                        DiscountBadge(percent: product.discountPercent).padding(Spacing.s)
+                    } else if product.isBestSeller {
+                        BestSellerBadge().padding(Spacing.s)
+                    }
                 }
 
             Text(product.name)
@@ -31,10 +35,8 @@ struct ProductCardView: View {
 
             RatingLabel(rating: product.rating, soldCount: product.soldCount)
 
-            HStack {
-                Text(product.price.rupiahFormatted)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.brand)
+            HStack(alignment: .bottom) {
+                PriceLabel(price: product.price, originalPrice: product.originalPrice, axis: .vertical)
                 Spacer(minLength: 0)
                 AddButton(isEnabled: product.isAvailable, action: onAdd)
             }
@@ -72,7 +74,11 @@ struct ProductRowView: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
-                    if product.isBestSeller { BestSellerBadge() }
+                    if product.isOnDeal {
+                        DiscountBadge(percent: product.discountPercent)
+                    } else if product.isBestSeller {
+                        BestSellerBadge()
+                    }
                 }
                 Text(product.description)
                     .font(.caption)
@@ -81,9 +87,7 @@ struct ProductRowView: View {
                     .multilineTextAlignment(.leading)
                 RatingLabel(rating: product.rating, soldCount: product.soldCount)
                 HStack {
-                    Text(product.price.rupiahFormatted)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.brand)
+                    PriceLabel(price: product.price, originalPrice: product.originalPrice)
                     Spacer(minLength: 0)
                     AddButton(isEnabled: product.isAvailable, action: onAdd)
                 }
@@ -142,6 +146,66 @@ struct BestSellerBadge: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(Color.brand, in: Capsule())
+    }
+}
+
+/// Badge potongan harga, mis. "-37%".
+struct DiscountBadge: View {
+    let percent: Int
+
+    var body: some View {
+        Text(percent > 0 ? "-\(percent)%" : "PROMO")
+            .font(.caption2.weight(.heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.red, in: Capsule())
+            .accessibilityLabel(percent > 0 ? "Diskon \(percent) persen" : "Promo")
+    }
+}
+
+/// Harga berlaku + harga normal dicoret bila sedang promo.
+struct PriceLabel: View {
+    let price: Decimal
+    var originalPrice: Decimal?
+    var axis: Axis = .horizontal
+    var font: Font = .subheadline.bold()
+
+    private var showsOriginal: Bool { (originalPrice ?? 0) > price }
+
+    var body: some View {
+        let layout = axis == .horizontal
+            ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
+            : AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+        layout {
+            if showsOriginal, let originalPrice {
+                if axis == .vertical { original(originalPrice) }
+                current
+                if axis == .horizontal { original(originalPrice) }
+            } else {
+                current
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var current: some View {
+        Text(price.rupiahFormatted)
+            .font(font)
+            .foregroundStyle(showsOriginal ? Color.red : Color.brand)
+    }
+
+    private func original(_ value: Decimal) -> some View {
+        Text(value.rupiahFormatted)
+            .font(.caption)
+            .strikethrough()
+            .foregroundStyle(.secondary)
+    }
+
+    private var accessibilityText: String {
+        guard showsOriginal, let originalPrice else { return price.rupiahFormatted }
+        return "\(price.rupiahFormatted), dari \(originalPrice.rupiahFormatted)"
     }
 }
 

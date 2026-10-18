@@ -10,7 +10,12 @@ let minimumIOSVersion = "17.0"
 /// nilainya masih kosong saat `project` dibuat (dan `merging` membuat Tuist crash).
 let baseSettings: SettingsDictionary = [
     "OTHER_LDFLAGS": "$(inherited) -ObjC",
-    "SWIFT_VERSION": "5.0"
+    "SWIFT_VERSION": "5.0",
+    // Signing persisten: tidak perlu set ulang di Xcode setiap kali `tuist generate`.
+    // CODE_SIGN_STYLE = Automatic → Xcode urus provisioning profile sendiri.
+    // Ganti DEVELOPMENT_TEAM dengan Team ID kamu (dari developer.apple.com/account → Membership).
+    "CODE_SIGN_STYLE": "Automatic",
+    "DEVELOPMENT_TEAM": "44X7PP9237"
 ]
 
 // MARK: - Environment (Dev / Staging / Prod)

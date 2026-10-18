@@ -53,6 +53,15 @@ enum CatalogFixtures {
       { "id": "jumbo", "name": "Porsi Jumbo", "extra_price": 8000 } ]
     """
 
+    /// P07 sedang promo (dipakai juga oleh popup Beranda). Sama dengan seed backend D01.
+    private static let nasiGorengPromo = """
+    { "product_id": "P07", "product_name": "Nasi Goreng Spesial", "category_id": "rice",
+      "price": 19900, "original_price": 32000, "discount_percent": 37,
+      "description": "Nasi goreng bumbu rumahan dengan telur, ayam suwir, dan kerupuk.",
+      "image_url": "\(unsplash("1512058564366-18510be2db19"))", "rating": 4.8, "sold_count": 1210,
+      "is_available": true, "tags": ["best_seller", "promo"], "options": \(foodOptions) }
+    """
+
     /// Dua item terakhir sengaja tidak valid (tanpa nama / tanpa harga) → dibuang oleh Mapper.
     static let products = """
     {
@@ -75,7 +84,8 @@ enum CatalogFixtures {
           "description": "Double shot espresso dengan air dingin dan es batu. Segar tanpa gula.",
           "image_url": "\(unsplash("1676506739319-70bff65bfc48"))", "rating": 4.5, "sold_count": 410,
           "is_available": true, "options": \(drinkOptions) },
-        { "product_id": "P05", "product_name": "Iced Matcha Latte", "category_id": "non_coffee", "price": 27000,
+        { "product_id": "P05", "product_name": "Iced Matcha Latte", "category_id": "non_coffee",
+          "price": 17900, "original_price": 27000, "discount_percent": 33,
           "description": "Matcha premium dari Uji, Jepang, dengan susu segar dan es.",
           "image_url": "\(unsplash("1749280447307-31a68eb38673"))", "rating": 4.8, "sold_count": 890,
           "is_available": true, "tags": ["best_seller"], "options": \(drinkOptions) },
@@ -83,10 +93,7 @@ enum CatalogFixtures {
           "description": "Matcha hangat yang creamy, pas untuk sore hari.",
           "image_url": "\(unsplash("1515823064-d6e0c04616a7"))", "rating": 4.4, "sold_count": 220,
           "is_available": false, "options": \(drinkOptions) },
-        { "product_id": "P07", "product_name": "Nasi Goreng Spesial", "category_id": "rice", "price": 32000,
-          "description": "Nasi goreng bumbu rumahan dengan telur, ayam suwir, dan kerupuk.",
-          "image_url": "\(unsplash("1512058564366-18510be2db19"))", "rating": 4.8, "sold_count": 1210,
-          "is_available": true, "tags": ["best_seller"], "options": \(foodOptions) },
+        \(nasiGorengPromo),
         { "product_id": "P08", "product_name": "Nasi Goreng Udang", "category_id": "rice", "price": 38000,
           "description": "Nasi goreng dengan udang segar dan sayuran.",
           "image_url": "\(unsplash("1551326844-4df70f78d0e9"))", "rating": 4.6, "sold_count": 530,
@@ -103,7 +110,8 @@ enum CatalogFixtures {
           "description": "Patty daging sapi, keju cheddar, selada, dan saus rahasia.",
           "image_url": "\(unsplash("1543339469-94ba2391431f"))", "rating": 4.8, "sold_count": 1040,
           "is_available": true, "tags": ["best_seller"] },
-        { "product_id": "P12", "product_name": "Kentang Goreng", "category_id": "snack", "price": 18000,
+        { "product_id": "P12", "product_name": "Kentang Goreng", "category_id": "snack",
+          "price": 12000, "original_price": 18000, "discount_percent": 33,
           "description": "Kentang goreng renyah dengan saus tomat.",
           "image_url": "\(unsplash("1716042998725-0e0b957b9d99"))", "rating": 4.5, "sold_count": 870,
           "is_available": true },
@@ -120,4 +128,24 @@ enum CatalogFixtures {
       ]
     }
     """
+
+    /// Popup promo Beranda (§5.24). Berakhir 30 hari dari sekarang supaya mock selalu tampil.
+    static var promoPopup: String {
+        let endsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(30 * 24 * 3600))
+        return """
+        {
+          "code": 200,
+          "message": "success",
+          "data": {
+            "id": "D01",
+            "title": "Nasi Goreng Spesial cuma 19rb!",
+            "subtitle": "Promo makan hemat minggu ini. Selama persediaan ada.",
+            "badge": "HEMAT 37%",
+            "image_url": "\(unsplash("1512058564366-18510be2db19", width: 1200))",
+            "ends_at": "\(endsAt)",
+            "product": \(nasiGorengPromo)
+          }
+        }
+        """
+    }
 }

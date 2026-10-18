@@ -6,3 +6,11 @@
 //
 
 APP_NAME = TryTuist
+
+// Signing — nilai ini di-baca Xcode dari xcconfig, sehingga tidak perlu set ulang
+// setiap kali `tuist generate` dijalankan.
+// CODE_SIGN_STYLE = Automatic → Xcode urus provisioning profile sendiri.
+// Ganti DEVELOPMENT_TEAM dengan Team ID kamu (Settings › Developer › team ID,
+// atau dari https://developer.apple.com/account → Membership).
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM = 44X7PP9237

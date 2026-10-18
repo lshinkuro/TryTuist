@@ -9,6 +9,8 @@ struct HomeContent: Equatable {
     let categories: [MenuCategory]
     let bestSellers: [Product]
     let recommended: [Product]
+    /// Produk yang sedang promo, potongan terbesar dulu.
+    var deals: [Product] = []
 }
 
 struct MenuContent: Equatable {
@@ -30,8 +32,38 @@ struct GetHomeContentUseCase {
             banners: banners,
             categories: categories,
             bestSellers: Array(available.sorted { $0.soldCount > $1.soldCount }.prefix(6)),
-            recommended: Array(available.sorted { $0.rating > $1.rating }.prefix(5))
+            recommended: Array(available.sorted { $0.rating > $1.rating }.prefix(5)),
+            deals: Array(available.filter(\.isOnDeal).sorted { $0.discountPercent > $1.discountPercent }.prefix(6))
         )
+    }
+}
+
+/// Popup promo Beranda. Tidak ditampilkan bila sudah ditutup hari ini, produknya habis,
+/// atau promonya sudah lewat. Gagal memuat = tidak ada popup (bukan error di layar).
+struct GetPromoPopupUseCase {
+    let repository: CatalogRepository
+    let dismissals: PromoPopupDismissalStore
+    var now: () -> Date = Date.init
+
+    func execute() async -> PromoPopup? {
+        guard let popup = try? await repository.fetchPromoPopup() else { return nil }
+        let today = now()
+        guard popup.product.isAvailable, popup.product.isOnDeal,
+              popup.endsAt.map({ $0 > today }) ?? true,
+              !dismissals.isDismissed(promoID: popup.id, on: today) else {
+            return nil
+        }
+        return popup
+    }
+}
+
+/// Dipanggil saat popup ditutup ATAU di-tap: popup yang sama baru muncul lagi besok.
+struct DismissPromoPopupUseCase {
+    let dismissals: PromoPopupDismissalStore
+    var now: () -> Date = Date.init
+
+    func execute(_ popup: PromoPopup) {
+        dismissals.markDismissed(promoID: popup.id, on: now())
     }
 }
 

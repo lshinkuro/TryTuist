@@ -9,9 +9,11 @@ protocol CatalogRemoteDataSource {
     func fetchBanners() async throws -> BannerListResponseDTO
     func fetchCategories() async throws -> CategoryListResponseDTO
     func fetchProducts() async throws -> ProductListResponseDTO
+    func fetchPromoPopup() async throws -> PromoPopupResponseDTO
 }
 
-/// Backend asli (Go). Kontrak: API_PLAN.md → `GET /v1/banners`, `/v1/categories`, `/v1/products`.
+/// Backend asli (Go). Kontrak: API_PLAN.md → `GET /v1/banners`, `/v1/categories`, `/v1/products`,
+/// `/v1/promotions/popup`.
 struct CatalogAPIDataSource: CatalogRemoteDataSource {
     var api: APIManager = .shared
 
@@ -25,6 +27,10 @@ struct CatalogAPIDataSource: CatalogRemoteDataSource {
 
     func fetchProducts() async throws -> ProductListResponseDTO {
         try await api.request(.products)
+    }
+
+    func fetchPromoPopup() async throws -> PromoPopupResponseDTO {
+        try await api.request(.popupPromotion)
     }
 }
 
@@ -42,6 +48,10 @@ struct CatalogMockDataSource: CatalogRemoteDataSource {
 
     func fetchProducts() async throws -> ProductListResponseDTO {
         try await decode(CatalogFixtures.products)
+    }
+
+    func fetchPromoPopup() async throws -> PromoPopupResponseDTO {
+        try await decode(CatalogFixtures.promoPopup)
     }
 
     private func decode<T: Decodable>(_ json: String) async throws -> T {

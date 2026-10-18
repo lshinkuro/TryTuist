@@ -85,10 +85,43 @@ public extension APIManager {
 }
 
 extension APIManager {
+    /// Sesi dijaga otomatis untuk endpoint yang butuh login:
+    /// 1. access token sudah habis (dari `expires_at`) → refresh dulu, baru kirim request;
+    /// 2. server tetap membalas 401 → refresh sekali lalu ulangi request;
+    /// 3. refresh token ditolak server → sesi dihapus dan bottom sheet "Sesi habis" tampil.
+    /// Gagal refresh karena jaringan tidak menghapus sesi (user tetap login saat offline).
     func perform<T: Decodable>(_ endpoint: EndpointAPI,
                                expecting type: T.Type,
                                errorStyle: ErrorStyle,
                                completion: @escaping (Result<T, Error>) -> Void) {
+        guard endpoint.requiresAuth, TokenStorage.refreshToken != nil, TokenStorage.isAccessTokenExpired() else {
+            dispatch(endpoint, expecting: type, errorStyle: errorStyle, canRefresh: endpoint.requiresAuth, completion: completion)
+            return
+        }
+        TokenRefresher.shared.refresh { [weak self] outcome in
+            guard let self else { return }
+            if outcome == .rejected {
+                // Sesi benar-benar habis: tidak perlu mengirim request yang pasti ditolak.
+                self.expireSession(endpoint)
+                let error = Self.statusError(401, data: nil, style: errorStyle)
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            // `.failed` (jaringan): tetap kirim dengan token lama; bila 401, langkah 2 mencoba refresh lagi.
+            self.dispatch(endpoint, expecting: type, errorStyle: errorStyle, canRefresh: outcome == .failed, completion: completion)
+        }
+    }
+
+    private func expireSession(_ endpoint: EndpointAPI) {
+        TokenStorage.delete()
+        SessionEvents.postExpired(path: endpoint.path)
+    }
+
+    private func dispatch<T: Decodable>(_ endpoint: EndpointAPI,
+                                    expecting type: T.Type,
+                                    errorStyle: ErrorStyle,
+                                    canRefresh: Bool,
+                                    completion: @escaping (Result<T, Error>) -> Void) {
         let finish: (Result<T, Error>) -> Void = { result in
             DispatchQueue.main.async { completion(result) }
         }
@@ -106,7 +139,7 @@ extension APIManager {
         let logID = NetworkLogger.logRequest(request)
         let startedAt = Date()
 
-        session.dataTask(with: request) { [decoder] data, response, error in
+        session.dataTask(with: request) { [weak self, decoder] data, response, error in
             NetworkLogger.logResponse(id: logID, request: request, response: response,
                                       data: data, error: error, startedAt: startedAt)
             if let error {
@@ -115,16 +148,26 @@ extension APIManager {
             }
             // Setara dengan `.validate()` Alamofire: hanya status 2xx yang sukses.
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                // Token kedaluwarsa / tidak valid di endpoint yang butuh login → sesi habis (global).
                 if http.statusCode == 401, endpoint.requiresAuth {
-                    SessionEvents.postExpired(path: endpoint.path)
+                    // Access token ditolak: perbarui sekali lalu ulangi request (token baru dibaca ulang
+                    // oleh makeRequest). Tanpa refresh token / refresh ditolak → sesi habis (global).
+                    if canRefresh, TokenStorage.refreshToken != nil, let self {
+                        TokenRefresher.shared.refresh { outcome in
+                            switch outcome {
+                            case .refreshed:
+                                self.dispatch(endpoint, expecting: type, errorStyle: errorStyle, canRefresh: false, completion: completion)
+                            case .rejected:
+                                self.expireSession(endpoint)
+                                finish(.failure(Self.statusError(http.statusCode, data: data, style: errorStyle)))
+                            case .failed:
+                                finish(.failure(Self.statusError(http.statusCode, data: data, style: errorStyle)))
+                            }
+                        }
+                        return
+                    }
+                    self?.expireSession(endpoint)
                 }
-                switch errorStyle {
-                case .statusCode:
-                    finish(.failure(APIError.invalidStatusCode(http.statusCode)))
-                case .serverBody:
-                    finish(.failure(APIServerError(statusCode: http.statusCode, body: data)))
-                }
+                finish(.failure(Self.statusError(http.statusCode, data: data, style: errorStyle)))
                 return
             }
             guard let data else {
@@ -138,5 +181,12 @@ extension APIManager {
                 finish(.failure(error))
             }
         }.resume()
+    }
+
+    private static func statusError(_ statusCode: Int, data: Data?, style: ErrorStyle) -> Error {
+        switch style {
+        case .statusCode: return APIError.invalidStatusCode(statusCode)
+        case .serverBody: return APIServerError(statusCode: statusCode, body: data)
+        }
     }
 }

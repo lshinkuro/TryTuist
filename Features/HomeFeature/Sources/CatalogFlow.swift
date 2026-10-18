@@ -6,6 +6,7 @@
 //  Store hanya mengirim Route; keputusan push/present ada di sini.
 //
 import SwiftUI
+import UIKit
 import Navigation
 import TTUI
 
@@ -15,6 +16,7 @@ final class CatalogFlow {
     private let container: CatalogContainer
     /// Navigasi ke luar feature (tab Profil), diteruskan ke AppRouter.
     private let onExternalRoute: (CatalogExternalRoute) -> Void
+    private weak var promoPopupController: UIViewController?
 
     init(router: Router, container: CatalogContainer? = nil,
          onExternalRoute: @escaping (CatalogExternalRoute) -> Void = { _ in }) {
@@ -28,7 +30,9 @@ final class CatalogFlow {
     func makeHome() -> some View {
         let store = HomeStore(getHomeContent: container.getHomeContent,
                               addToCart: container.addToCart,
-                              cart: container.cartRepository)
+                              cart: container.cartRepository,
+                              getPromoPopup: container.getPromoPopup,
+                              dismissPromoPopup: container.dismissPromoPopup)
         store.onRoute = { [weak self, weak store] route in
             switch route {
             case .productDetail(let product):
@@ -39,6 +43,17 @@ final class CatalogFlow {
                 self?.showMenu(categoryID: nil, title: "Semua Menu")
             case .cart:
                 self?.showCart()
+            case .showPromoPopup(let popup):
+                self?.showPromoPopup(popup,
+                                     onClose: { store?.send(.promoPopupClosed) },
+                                     onOpen: { store?.send(.promoPopupTapped) })
+            case .hidePromoPopup:
+                self?.hidePromoPopup()
+            case .promoProduct(let product):
+                // Detail dibuka setelah popup hilang; harga di detail sudah harga promo.
+                self?.hidePromoPopup {
+                    self?.showProductDetail(product) { store?.send(.toastRequested($0)) }
+                }
             }
         }
         return HomeView(store: store)
@@ -78,6 +93,31 @@ final class CatalogFlow {
             }
         }
         router?.push(ProductDetailView(store: store))
+    }
+
+    // MARK: - Popup promo
+
+    /// Di atas seluruh layar (termasuk tab bar), fade in/out.
+    private func showPromoPopup(_ popup: PromoPopup, onClose: @escaping () -> Void, onOpen: @escaping () -> Void) {
+        guard let navigationController = router?.navigationController,
+              navigationController.presentedViewController == nil,
+              promoPopupController == nil else {
+            return   // Ada sheet lain (mis. sesi habis); popup dicoba lagi di pembukaan berikutnya.
+        }
+        let controller = UIHostingController(rootView: PromoPopupView(popup: popup, onClose: onClose, onOpen: onOpen))
+        controller.view.backgroundColor = .clear
+        controller.modalPresentationStyle = .overFullScreen
+        controller.modalTransitionStyle = .crossDissolve
+        promoPopupController = controller
+        navigationController.present(controller, animated: true)
+    }
+
+    private func hidePromoPopup(completion: (() -> Void)? = nil) {
+        guard let controller = promoPopupController, controller.presentingViewController != nil else {
+            completion?()
+            return
+        }
+        controller.dismiss(animated: true, completion: completion)
     }
 
     /// Dipakai shortcut Debugger.

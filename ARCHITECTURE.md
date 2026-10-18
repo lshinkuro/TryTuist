@@ -738,7 +738,7 @@ Memakai di project lain: salin `Foundations/Debugger`, `NetworkInspector.swift`,
 
 ### 11.2 Login dengan Google (GoogleSignIn-iOS)
 
-Dependency SPM di `Tuist/Package.swift` (`GoogleSignIn`), dipakai hanya oleh `AuthenticationFeature` (`.external(name: "GoogleSignIn")`).
+Dependency SPM didaftarkan langsung di `Project.swift` (`packages: [.remote(url: "https://github.com/google/GoogleSignIn-iOS", …)]`) dan dipakai hanya oleh `AuthenticationFeature` lewat `.package(product: "GoogleSignIn")`. Sengaja **tidak** lewat `Tuist/Package.swift` (`.external`): project turunan Tuist untuk GoogleUtilities mempertahankan deployment target iOS 12, sedangkan Xcode 26 minimal iOS 15.
 
 ```
 Tombol "Masuk/Daftar dengan Google"
@@ -752,6 +752,24 @@ Tombol "Masuk/Daftar dengan Google"
 - Konfigurasi per environment di `Configs/<Env>.xcconfig`: `GOOGLE_CLIENT_ID` → `Info.plist` `GIDClientID`, dan `GOOGLE_REVERSED_CLIENT_ID` → URL scheme callback. Kosong = tombol menampilkan "belum tersedia" (SDK tidak dipanggil, jadi tidak crash).
 - Callback URL ditangani `SceneDelegate` → `GoogleSignInURLHandler.handle(url)`; App tidak meng-import GoogleSignIn langsung.
 - User menutup sheet Google → `AuthError.googleCancelled` → tanpa pesan error.
+
+### 11.3 Popup promo & harga promo (Beranda)
+
+```
+HomeStore .contentResponse(.success)          (sekali per sesi Beranda)
+  → GetPromoPopupUseCase                      GET /v1/promotions/popup (API_PLAN.md §5.24)
+      ✗ sudah ditutup hari ini (PromoPopupDismissalStore / UserDefaults)
+      ✗ produk habis / bukan promo / sudah lewat
+  → HomeRoute.showPromoPopup                  CatalogFlow: UIHostingController .overFullScreen + crossDissolve
+      ✕ / tap di luar → .promoPopupClosed     → DismissPromoPopupUseCase → .hidePromoPopup
+      tap kartu / "Lihat Promo" → .promoPopupTapped → DismissPromoPopupUseCase → .promoProduct(product)
+                                              → popup ditutup, lalu push ProductDetail
+```
+
+- Harga promo datang dari server: `Product.price` = harga berlaku, `Product.originalPrice` = harga normal (`nil` bila tidak promo). Keranjang & checkout cukup memakai `price` seperti biasa; server menghitung ulang saat quote/checkout.
+- UI: `PriceLabel` (harga merah + harga normal dicoret) dan `DiscountBadge` (`-37%`) di kartu, baris, detail, dan popup; detail menampilkan "Kamu hemat Rp …". Beranda punya section "💸 Promo Hemat" (`HomeContent.deals`).
+- Mock (`USE_MOCK_DATA = YES`): `CatalogFixtures.promoPopup` + P05/P07/P12 berharga promo, sama dengan seed backend `D01`–`D03`.
+- Untuk menampilkan popup lagi saat develop: hapus app, atau hapus key `home.promoPopup.dismissedOn` di `UserDefaults`.
 
 ## 12. Testing
 

@@ -14,6 +14,9 @@ struct ProductDTO: Decodable {
     let description: String?
     let categoryID: String?
     let price: Int?
+    /// Harga normal; hanya ada bila produk sedang promo (§5.24).
+    let originalPrice: Int?
+    let discountPercent: Int?
     let imageURL: String?
     let rating: Double?
     let soldCount: Int?
@@ -27,6 +30,8 @@ struct ProductDTO: Decodable {
         case description
         case categoryID = "category_id"
         case price
+        case originalPrice = "original_price"
+        case discountPercent = "discount_percent"
         case imageURL = "image_url"
         case rating
         case soldCount = "sold_count"
@@ -68,6 +73,28 @@ struct BannerDTO: Decodable {
     }
 }
 
+/// `GET /v1/promotions/popup` (§5.24).
+struct PromoPopupDTO: Decodable {
+    let id: String?
+    let title: String?
+    let subtitle: String?
+    let badge: String?
+    let imageURL: String?
+    let endsAt: String?
+    let product: ProductDTO?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case subtitle
+        case badge
+        case imageURL = "image_url"
+        case endsAt = "ends_at"
+        case product
+    }
+}
+
+typealias PromoPopupResponseDTO = APIEnvelope<PromoPopupDTO>
 typealias ProductListResponseDTO = APIEnvelope<[ProductDTO]>
 typealias CategoryListResponseDTO = APIEnvelope<[CategoryDTO]>
 typealias BannerListResponseDTO = APIEnvelope<[BannerDTO]>

@@ -20,6 +20,7 @@ final class CatalogContainer {
     let catalogRepository: CatalogRepository
     let cartRepository: CartRepository
     let checkoutOptionsRepository: CheckoutOptionsRepository
+    let promoPopupDismissals: PromoPopupDismissalStore = UserDefaultsPromoPopupDismissalStore()
 
     private init() {
         catalogRepository = DefaultCatalogRepository(remote: Self.makeRemoteDataSource())
@@ -47,4 +48,8 @@ final class CatalogContainer {
     var getHomeContent: GetHomeContentUseCase { GetHomeContentUseCase(repository: catalogRepository) }
     var getMenu: GetMenuUseCase { GetMenuUseCase(repository: catalogRepository) }
     var addToCart: AddToCartUseCase { AddToCartUseCase(cart: cartRepository) }
+    var getPromoPopup: GetPromoPopupUseCase {
+        GetPromoPopupUseCase(repository: catalogRepository, dismissals: promoPopupDismissals)
+    }
+    var dismissPromoPopup: DismissPromoPopupUseCase { DismissPromoPopupUseCase(dismissals: promoPopupDismissals) }
 }

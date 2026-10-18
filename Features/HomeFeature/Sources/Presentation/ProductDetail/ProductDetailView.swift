@@ -71,17 +71,29 @@ struct ProductDetailView: View {
                 Text(product.name)
                     .font(.title.bold())
                 Spacer(minLength: Spacing.s)
-                if product.isBestSeller { BestSellerBadge() }
+                if product.isOnDeal {
+                    DiscountBadge(percent: product.discountPercent)
+                } else if product.isBestSeller {
+                    BestSellerBadge()
+                }
             }
             RatingLabel(rating: product.rating, soldCount: product.soldCount)
             Text(product.description)
                 .font(.body)
                 .foregroundStyle(.secondary)
-            Text(state.unitPrice.rupiahFormatted)
-                .font(.title2.bold())
-                .foregroundStyle(Color.brand)
+            PriceLabel(price: state.unitPrice, originalPrice: state.originalUnitPrice, font: .title2.bold())
                 .contentTransition(.numericText())
                 .animation(.snappy, value: state.unitPrice)
+            if state.totalSavings > 0 {
+                Label("Kamu hemat \(state.totalSavings.rupiahFormatted)", systemImage: "tag.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.red)
+                    .padding(.horizontal, Spacing.m)
+                    .padding(.vertical, 6)
+                    .background(Color.red.opacity(0.1), in: Capsule())
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: state.totalSavings)
+            }
         }
     }
 

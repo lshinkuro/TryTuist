@@ -8,6 +8,14 @@ protocol CatalogRepository {
     func fetchBanners() async throws -> [Banner]
     func fetchCategories() async throws -> [MenuCategory]
     func fetchProducts() async throws -> [Product]
+    /// `nil` = tidak ada promo popup yang berlaku.
+    func fetchPromoPopup() async throws -> PromoPopup?
+}
+
+/// Mengingat popup yang sudah ditutup supaya tidak muncul terus (sekali per hari per promo).
+protocol PromoPopupDismissalStore {
+    func isDismissed(promoID: String, on date: Date) -> Bool
+    func markDismissed(promoID: String, on date: Date)
 }
 
 enum CatalogError: LocalizedError, Equatable {

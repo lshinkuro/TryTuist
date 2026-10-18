@@ -22,6 +22,8 @@ public enum EndpointAPI {
     case register(param: RegisterParam)
     /// Daftar & masuk dengan Google (satu endpoint).
     case googleSignIn(param: GoogleSignInParam)
+    /// Perbarui access token (dipanggil otomatis oleh TokenRefresher, bukan oleh feature).
+    case refreshToken(refreshToken: String)
     // User / Profil
     case profile
     case updateProfile(param: UpdateProfileParam)
@@ -40,6 +42,8 @@ public enum EndpointAPI {
     case banners
     case categories
     case products
+    /// Popup promo harga produk di Beranda (`data: null` bila tidak ada).
+    case popupPromotion
     // Pesanan
     case orders
     case createOrder(param: CreateOrderParam, idempotencyKey: String)
@@ -49,6 +53,7 @@ public enum EndpointAPI {
         case .login: return "/v1/auth/login"
         case .register: return "/v1/auth/register"
         case .googleSignIn: return "/v1/auth/google"
+        case .refreshToken: return "/v1/auth/refresh"
         case .profile, .updateProfile: return "/v1/me"
         case .addresses, .createAddress: return "/v1/me/addresses"
         case .updateAddress(let id, _), .deleteAddress(let id): return "/v1/me/addresses/\(Self.escape(id))"
@@ -60,17 +65,18 @@ public enum EndpointAPI {
         case .banners: return "/v1/banners"
         case .categories: return "/v1/categories"
         case .products: return "/v1/products"
+        case .popupPromotion: return "/v1/promotions/popup"
         case .orders, .createOrder: return "/v1/orders"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .login, .register, .googleSignIn, .createOrder, .createAddress, .addEWallet: return .post
+        case .login, .register, .googleSignIn, .refreshToken, .createOrder, .createAddress, .addEWallet: return .post
         case .setDefaultPaymentMethod: return .put
         case .updateProfile, .updateAddress: return .patch
         case .deleteAddress, .deletePaymentMethod: return .delete
-        case .profile, .banners, .categories, .products, .orders,
+        case .profile, .banners, .categories, .products, .popupPromotion, .orders,
              .addresses, .paymentMethods, .helpCenter, .legalDocument: return .get
         }
     }
@@ -81,7 +87,8 @@ public enum EndpointAPI {
         case .profile, .orders, .createOrder,
              .updateProfile, .addresses, .createAddress, .updateAddress, .deleteAddress,
              .paymentMethods, .addEWallet, .setDefaultPaymentMethod, .deletePaymentMethod: return true
-        case .login, .register, .googleSignIn, .banners, .categories, .products, .helpCenter, .legalDocument: return false
+        case .login, .register, .googleSignIn, .refreshToken, .banners, .categories, .products, .popupPromotion,
+             .helpCenter, .legalDocument: return false
         }
     }
 
@@ -116,6 +123,8 @@ public enum EndpointAPI {
             var params: [String: Any] = ["id_token": param.idToken]
             if !param.firebaseToken.isEmpty { params["fcm_token"] = param.firebaseToken }
             return params
+        case .refreshToken(let refreshToken):
+            return ["refresh_token": refreshToken]
         case .createOrder(let param, _):
             return param.body
         case .updateProfile(let param):

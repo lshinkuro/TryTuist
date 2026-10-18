@@ -30,4 +30,12 @@ struct DefaultCatalogRepository: CatalogRepository {
             throw CatalogMapper.toDomainError(error)
         }
     }
+
+    func fetchPromoPopup() async throws -> PromoPopup? {
+        do {
+            return CatalogMapper.promoPopup(from: try await remote.fetchPromoPopup())
+        } catch {
+            throw CatalogMapper.toDomainError(error)
+        }
+    }
 }

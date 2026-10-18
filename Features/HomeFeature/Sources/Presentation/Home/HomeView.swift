@@ -112,6 +112,24 @@ struct HomeView: View {
             }
         }
 
+        if !content.deals.isEmpty {
+            VStack(alignment: .leading, spacing: Spacing.m) {
+                SectionHeader(title: "💸 Promo Hemat")
+                    .padding(.horizontal, Spacing.xl)
+                ScrollView(.horizontal) {
+                    HStack(spacing: Spacing.m) {
+                        ForEach(content.deals) { product in
+                            ProductCardView(product: product) { store.send(.quickAddTapped(product)) }
+                                .onTapGesture { store.send(.productTapped(product)) }
+                        }
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.vertical, Spacing.xs)
+                }
+                .scrollIndicators(.hidden)
+            }
+        }
+
         if !content.bestSellers.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.m) {
                 SectionHeader(title: "🔥 Paling Laris", actionTitle: "Lihat semua") { store.send(.seeAllTapped) }

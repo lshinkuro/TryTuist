@@ -24,8 +24,21 @@ struct ProductDetailState: Equatable {
         product.options.first { $0.id == selectedOptionID }
     }
 
+    /// Harga promo sudah termasuk di `product.price`; extra varian tetap ditambahkan.
     var unitPrice: Decimal { product.price + (selectedOption?.extraPrice ?? 0) }
     var totalPrice: Decimal { unitPrice * Decimal(quantity) }
+
+    /// Harga normal per item (sebelum promo), `nil` bila tidak promo.
+    var originalUnitPrice: Decimal? {
+        guard product.isOnDeal, let original = product.originalPrice else { return nil }
+        return original + (selectedOption?.extraPrice ?? 0)
+    }
+
+    /// Total potongan untuk jumlah yang dipilih.
+    var totalSavings: Decimal {
+        guard let originalUnitPrice else { return 0 }
+        return (originalUnitPrice - unitPrice) * Decimal(quantity)
+    }
 
     var canDecrease: Bool { quantity > AddToCartUseCase.quantityRange.lowerBound && !isAdding }
     var canIncrease: Bool { quantity < AddToCartUseCase.quantityRange.upperBound && !isAdding }

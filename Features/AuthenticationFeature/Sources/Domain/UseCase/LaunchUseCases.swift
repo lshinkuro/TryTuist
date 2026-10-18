@@ -16,9 +16,13 @@ enum LaunchDestination: Equatable {
 struct GetLaunchDestinationUseCase {
     var hasSession: () -> Bool = { TokenStorage.hasToken }
     var isFirstLaunch: () -> Bool = { AppSetting.shared.isFirstTime }
+    /// Flag in-memory: `true` hanya jika user sudah login di sesi proses yang sedang berjalan.
+    /// Selalu `false` saat app baru dibuka (setelah di-kill), sehingga user harus login ulang.
+    var isSessionActive: () -> Bool = { AppSetting.shared.isSessionActive }
 
     func execute() -> LaunchDestination {
-        if hasSession() { return .main }
+        // Token ada di Keychain, tapi session belum aktif → proses baru (app di-kill) → login ulang
+        if hasSession() && isSessionActive() { return .main }
         if isFirstLaunch() { return .onboarding }
         return .signIn
     }

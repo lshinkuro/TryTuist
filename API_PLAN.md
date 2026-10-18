@@ -189,10 +189,20 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 | 30 | `DELETE` | `/v1/me/payment-methods/{id}` | 🔒 | 3b | Metode Pembayaran → hapus e-wallet (§5.21) |
 | 31 | `GET` | `/v1/help` | | 3b | Profil → Pusat Bantuan (topik, FAQ, kontak, cari) (§5.22) |
 | 32 | `GET` | `/v1/legal/{slug}` | | 3b | Profil → Kebijakan Privasi, Syarat & Ketentuan (§5.23) |
+| 33 | `GET` | `/v1/promotions/popup` | | 3c | Beranda → popup promo makanan/minuman murah → Detail menu (§5.24) |
+| 34 | `GET` | `/v1/admin/me` | 🛡 | 4 | Web admin: cek akun admin setelah login (§5.25) |
+| 35 | `GET` | `/v1/admin/dashboard?from=&to=` | 🛡 | 4 | Web admin → Dashboard penjualan & pembelian |
+| 36 | `GET` | `/v1/admin/orders` · `/v1/admin/orders/{id}` | 🛡 | 4 | Web admin → Pesanan (semua pelanggan) |
+| 37 | `PATCH` | `/v1/admin/orders/{id}/status` | 🛡 | 4 | Web admin → Tandai sukses / gagal / batal, majukan status |
+| 38 | `GET` `POST` · `PATCH` | `/v1/admin/products[/{id}]` | 🛡 | 4 | Web admin → Tambah menu; ubah harga, varian, foto, stok, nama, deskripsi |
+| 39 | `GET` `POST` · `PATCH` `DELETE` | `/v1/admin/deals[/{id}]` | 🛡 | 4 | Web admin → Promo (§5.24) |
+| 40 | `GET` | `/v1/admin/customers` · `/v1/admin/audit-logs` | 🛡 | 4 | Web admin → Pelanggan, Aktivitas |
+
+🛡 = 🔒 + akun ber-role `ADMIN` (403 `FORBIDDEN` untuk akun biasa). Dipakai web admin `trytuistadmin` (§5.25).
 
 🔒* = token **opsional**. Tanpa token, response tetap berhasil tetapi bagian yang personal (nama, poin, alamat) kosong.
 
-Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 6, 7, 8, 11, 12, 16, 17, 18, 19, 28, 29, 30, 31, 32.
+Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 5b, 6, 7, 8, 11, 12, 16, 17, 18, 19, 28, 29, 30, 31, 32, 33.
 
 ### 4.1 Status data per screen: dari API atau masih di aplikasi
 
@@ -431,7 +441,12 @@ Response (iOS: `ProductDTO`):
 ```
 
 - Produk habis tetap dikirim dengan `is_available: false` (iOS menampilkan label "Habis").
-- `tags` saat ini: `best_seller`. Tag lain (`new`, `spicy`) boleh ditambah; iOS mengabaikan yang tidak dikenal.
+- `tags` saat ini: `best_seller`, `promo`. Tag lain (`new`, `spicy`) boleh ditambah; iOS mengabaikan yang tidak dikenal.
+- **Harga promo (§5.24):** `price` selalu harga yang berlaku sekarang. Bila produk sedang promo, `original_price` berisi harga normal dan `discount_percent` potongannya (dibulatkan ke bawah); bila tidak, `original_price: null` dan `discount_percent: 0`. `sort=price_asc|price_desc` memakai harga berlaku.
+
+  ```json
+  { "product_id": "P07", "price": 19900, "original_price": 32000, "discount_percent": 37, "tags": ["best_seller", "promo"], "...": "..." }
+  ```
 - `options` boleh `[]` atau tidak dikirim.
 
 ### 5.9 `GET /v1/products/{id}`
@@ -836,6 +851,124 @@ Publik. `slug`: `privacy-policy`, `terms`. Selain itu → `404 NOT_FOUND`. `Cach
 ```
 
 Isi diubah lewat `UPDATE legal_documents` (naikkan `version` & `effective_at`), tanpa update app.
+
+---
+
+### 5.24 `GET /v1/promotions/popup` — popup promo Beranda
+
+Publik. Mengembalikan **satu** promo harga produk yang ditandai `show_as_popup`, sedang berlaku (`starts_at ≤ now < ends_at`), lebih murah dari harga normal, produknya tersedia, dan kategorinya aktif. Urutan: `sort_order`, lalu yang paling cepat berakhir. Tidak ada → `data: null`.
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "D01",
+    "title": "Nasi Goreng Spesial cuma 19rb!",
+    "subtitle": "Promo makan hemat minggu ini. Selama persediaan ada.",
+    "badge": "HEMAT 37%",
+    "image_url": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&q=80&auto=format&fit=crop",
+    "ends_at": "2026-11-17T10:00:00+07:00",
+    "product": { "product_id": "P07", "price": 19900, "original_price": 32000, "discount_percent": 37, "...": "bentuk sama dengan §5.8" }
+  }
+}
+```
+
+- `image_url` = gambar khusus promo, atau foto produk bila `product_deals.image_url` kosong. `badge` kosong di DB → server mengisi `HEMAT {discount_percent}%`.
+- Harga promo berlaku **di semua endpoint**: `/v1/products`, `/v1/products/{id}`, `/v1/home`, favorit, serta `POST /v1/orders/quote` dan `POST /v1/orders` (`unit_price` = harga promo + `extra_price` varian). Jadi item yang dibuka dari popup lalu ditambah ke keranjang otomatis dibayar dengan potongan; server tetap menghitung ulang harga saat checkout, jadi promo yang sudah lewat tidak bisa dipakai.
+- Beberapa deal aktif untuk produk yang sama → yang termurah dipakai.
+- iOS: popup muncul sekali setelah Beranda termuat. Ditutup (✕ / tap di luar) atau di-tap → promo yang sama tidak muncul lagi **hari itu** (disimpan di `UserDefaults`, `home.promoPopup.dismissedOn`). Tap → Detail menu dengan harga coret & badge diskon. Gagal memuat popup tidak menampilkan error.
+- Gambar: foto Unsplash (lisensi gratis). Gambar hasil generate AI bisa dipakai lewat `image_url` yang sama, cukup diunggah ke storage/CDN lalu diisi di `product_deals.image_url`.
+
+### 5.25 Web admin `/v1/admin/*` 🛡
+
+Dipakai `trytuistadmin` (Next.js, port 3000) lewat BFF server-side; lihat `trytuistadmin/WEBPLAN.md`.
+
+**Akses.**
+
+- Login memakai `POST /v1/auth/login` yang sama dengan aplikasi.
+- Semua route `/v1/admin/*` memakai `Auth` + `RequireAdmin`, yang membaca `users.role` di DB **setiap request**. Akun biasa → **403 `FORBIDDEN`** "Akun ini tidak punya akses admin.".
+- Admin dev dibuat oleh seed: `admin@trytuist.com / admin12345`.
+- Production: `UPDATE users SET role = 'ADMIN' WHERE lower(email) = '…';`
+
+**Audit.** Semua perubahan (status pesanan, produk, promo) dicatat di `admin_audit_logs`.
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /v1/admin/me` | `{ id, name, email, role: "ADMIN" }` |
+| `GET /v1/admin/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD` | Default 30 hari terakhir (WIB), maks. 366 hari. `from > to` → 400 |
+| `GET /v1/admin/orders?status=PENDING,PAID&q=&from=&to=&page=&limit=` | Semua pelanggan; `q` = nomor pesanan / nama / email; status tidak dikenal → 400 |
+| `GET /v1/admin/orders/{id}` | Bentuk `OrderDTO` (§5.13) + `customer`, `status_history[].note/changed_by`, `next_statuses` |
+| `PATCH /v1/admin/orders/{id}/status` | `{ status, note }` → pesanan terbaru |
+| `GET /v1/admin/products?q=&category_id=&available=true\|false` | Termasuk produk habis & kategori nonaktif; `price` = harga normal, `deal_price`, `effective_price` |
+| `POST /v1/admin/products` | Tambah menu → **201**. Wajib `category_id`, `product_name`, `price`; opsional `description`, `image_url` (https), `is_available` (default true), `is_best_seller`, `options` |
+| `PATCH /v1/admin/products/{id}` | Field yang sama, semua opsional; `price` 0–10.000.000; `image_url: ""` = hapus foto; `options` dikirim = daftar varian diganti seluruhnya (`[]` = tanpa varian); body kosong → 400 |
+| `GET /v1/admin/deals` · `POST` · `PATCH /{id}` · `DELETE /{id}` | Promo §5.24. `deal_price ≥` harga normal → 422 `DEAL_PRICE_TOO_HIGH`; `ends_at ≤ starts_at` → 400; `status` dihitung: `ACTIVE` \| `SCHEDULED` \| `EXPIRED` \| `INACTIVE` |
+| `GET /v1/admin/customers?q=&page=&limit=` | User + `orders_count`, `total_spent` (COMPLETED), `last_order_at` |
+| `GET /v1/admin/audit-logs?page=&limit=` | `{ action, entity, entity_id, summary, data, admin_name, created_at }` |
+
+**Tambah menu.**
+
+```json
+POST /v1/admin/products
+{ "category_id": "non_coffee", "product_name": "Es Teh Manis", "price": 8000,
+  "description": "Teh melati dingin.", "image_url": "https://images.unsplash.com/…",
+  "options": [ { "name": "Regular" }, { "name": "Porsi Jumbo", "extra_price": 3000 } ] }
+→ 201 { "message": "Menu ditambahkan",
+        "data": { "product_id": "P15", "options": [ { "id": "regular", … }, { "id": "porsi-jumbo", "extra_price": 3000 } ], … } }
+```
+
+- `product_id` dibuat berurutan (`P15`, `P16`, …) dengan advisory lock, jadi dua admin yang menambah bersamaan tidak bentrok.
+- Menu baru tampil di akhir urutan.
+- Varian:
+  - Tanpa `id` → id dari nama (slug), unik per menu.
+  - Nama varian kosong / kembar (tanpa beda huruf besar) → 400 `options[i].name`.
+  - `extra_price` 0–1.000.000, maksimal 10 varian.
+- `category_id` tidak ada → 400.
+- Menu langsung bisa dipesan (`POST /v1/orders/quote`) dan tampil di `GET /v1/products` bila tersedia.
+- Menu tidak bisa dihapus (dirujuk `order_items`); matikan `is_available` untuk menyembunyikan.
+
+**Ubah status pesanan.**
+
+```
+PENDING → PAID → PROCESSING → DELIVERING → COMPLETED   (maju, boleh melompat; COMPLETED = "sukses")
+  aktif mana pun → FAILED ("gagal") / CANCELLED          (note wajib, dilihat pelanggan)
+  COMPLETED / FAILED / CANCELLED                          → terkunci (422 INVALID_STATUS_TRANSITION)
+```
+
+- `FAILED` dan `CANCELLED` mengembalikan voucher dan `sold_count`.
+- `note` (maks. 300) dan nama admin disimpan di `order_status_history`.
+- Pelanggan melihat `note` di `GET /v1/orders/{id}` → `status_history[].note`.
+
+```json
+PATCH /v1/admin/orders/{id}/status
+{ "status": "FAILED", "note": "Stok nasi goreng habis" }
+→ 200 { "message": "Status pesanan diperbarui", "data": { "status": "FAILED", "next_statuses": [],
+        "status_history": [ …, { "status": "FAILED", "note": "Stok nasi goreng habis", "changed_by": "Admin TryTuist" } ] } }
+```
+
+**Dashboard.**
+
+- *Penjualan* = pesanan `COMPLETED` yang dibuat dalam rentang.
+- *Pembelian* = semua transaksi pelanggan dalam rentang, apa pun statusnya.
+
+```json
+{
+  "range": { "from": "2026-09-19", "to": "2026-10-18" },
+  "sales": { "revenue": 1384200, "orders_completed": 18, "average_order_value": 76900, "items_sold": 55,
+             "discount_total": 0, "delivery_fee_total": 180000, "revenue_change_pct": 12.5 },
+  "purchases": { "orders": 26, "buyers": 2, "new_buyers": 2, "repeat_buyers": 0, "in_progress": 4,
+                 "failed": 2, "cancelled": 2, "success_rate_pct": 69.2, "gross_value": 1962100, "orders_change_pct": null },
+  "daily": [ { "date": "2026-10-18", "revenue": 0, "orders": 1, "orders_completed": 0 } ],
+  "by_status": [ { "status": "COMPLETED", "count": 18, "total": 1384200 } ],
+  "top_products": [ { "product_id": "P12", "product_name": "Kentang Goreng", "quantity": 20, "revenue": 240000 } ],
+  "payment_methods": [ { "method": "COD", "count": 15, "total": 1227200 } ]
+}
+```
+
+- `*_change_pct` dibanding periode sebelumnya dengan panjang yang sama; `null` bila periode sebelumnya 0.
+- `daily` selalu berisi setiap hari dalam rentang (hari kosong = 0).
+- *Pembeli baru* = pesanan pertamanya sepanjang waktu ada di rentang ini.
 
 ---
 
@@ -1380,6 +1513,53 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 -- kholis@gmail.com / 12345678, demo@trytuist.com / password123  (sama dengan AuthMockDataSource)
 ```
 
+`db/migrations/0006_product_deals.up.sql` (untuk §5.24):
+
+```sql
+CREATE TABLE product_deals (
+    id            TEXT PRIMARY KEY,
+    product_id    TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    title         TEXT NOT NULL,
+    subtitle      TEXT NOT NULL DEFAULT '',
+    badge         TEXT NOT NULL DEFAULT '',           -- kosong = "HEMAT {persen}%"
+    image_url     TEXT,                               -- NULL = foto produk
+    deal_price    BIGINT NOT NULL CHECK (deal_price > 0),
+    starts_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ends_at       TIMESTAMPTZ NOT NULL,
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    show_as_popup BOOLEAN NOT NULL DEFAULT FALSE,
+    sort_order    INT NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (ends_at > starts_at)
+);
+CREATE INDEX product_deals_active_idx ON product_deals (product_id) WHERE is_active;
+CREATE INDEX product_deals_popup_idx ON product_deals (sort_order) WHERE is_active AND show_as_popup;
+```
+
+`db/migrations/0007_admin.up.sql` (untuk §5.25):
+
+```sql
+ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'CUSTOMER' CHECK (role IN ('CUSTOMER', 'ADMIN'));
+ALTER TABLE order_status_history
+    ADD COLUMN note       TEXT,
+    ADD COLUMN changed_by UUID REFERENCES users(id) ON DELETE SET NULL;
+CREATE TABLE admin_audit_logs (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id    UUID REFERENCES users(id) ON DELETE SET NULL,
+    action      TEXT NOT NULL,          -- ORDER_STATUS | PRODUCT_CREATE | PRODUCT_UPDATE | DEAL_CREATE | DEAL_UPDATE | DEAL_DELETE
+    entity      TEXT NOT NULL,          -- order | product | deal
+    entity_id   TEXT NOT NULL,
+    summary     TEXT NOT NULL,
+    data        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX admin_audit_logs_created_idx ON admin_audit_logs (created_at DESC);
+CREATE INDEX orders_created_idx ON orders (created_at DESC);
+CREATE INDEX orders_status_created_idx ON orders (status, created_at DESC);
+```
+
+Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … deal aktif & < p.price), p.price)`. Seed dev: `D01` Nasi Goreng Spesial 32.000 → 19.900 (popup), `D02` Iced Matcha Latte 27.000 → 17.900, `D03` Kentang Goreng 18.000 → 12.000; semuanya berlaku 30 hari sejak seed dijalankan.
+
 ---
 
 ## 10. Roadmap & checklist
@@ -1430,6 +1610,22 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 - [x] iOS: Keranjang → "Antar ke" & "Pembayaran" (default = utama, bisa diganti per pesanan; tombol kelola → tab Profil)
 - [ ] Hapus akun (`DELETE /v1/me`) dari Pusat Bantuan
 
+**Fase 3c: Promo harga produk**
+
+- [x] Migrasi `0006_product_deals` + seed `D01`–`D03`
+- [x] Harga promo di katalog, `/v1/home`, favorit, quote & checkout (`original_price`, `discount_percent`, tag `promo`)
+- [x] `GET /v1/promotions/popup` (`TestProductDeals`)
+- [x] iOS: popup promo di Beranda (bisa ditutup, sekali per hari) → Detail menu → tambah ke keranjang dengan harga promo; section "Promo Hemat"; harga coret & badge diskon di kartu, list, dan detail
+- [ ] CMS / endpoint admin untuk membuat promo
+
+**Fase 4: Web admin (`trytuistadmin`)**
+
+- [x] Migrasi `0007_admin` (role, alasan & pengubah status, audit log) + seed akun admin
+- [x] `/v1/admin/*`: dashboard, pesanan + ubah status (sukses/gagal/batal), tambah & ubah menu (varian, foto), promo, pelanggan, audit log (`TestAdmin`)
+- [x] Web Next.js 16 (port 3000), login biasa + role ADMIN, BFF cookie httpOnly; lihat `trytuistadmin/WEBPLAN.md`
+- [ ] Ekspor CSV, notifikasi pesanan baru, kelola kategori/banner/voucher/outlet
+- [ ] Pembelian bahan baku (stok & HPP)
+
 **Siap staging/prod**
 
 - [ ] Dockerfile multi-stage (`distroless`), deploy (Fly.io / Railway / VPS + Nginx)
@@ -1454,6 +1650,7 @@ INSERT INTO stores (id, name, address, lat, lng) VALUES
 | `.banners` | `GET /v1/banners` | `CatalogAPIDataSource` | `BannerListResponseDTO` |
 | `.categories` | `GET /v1/categories` | `CatalogAPIDataSource` | `CategoryListResponseDTO` |
 | `.products` | `GET /v1/products` | `CatalogAPIDataSource` | `ProductListResponseDTO` |
+| `.popupPromotion` | `GET /v1/promotions/popup` | `CatalogAPIDataSource` | `PromoPopupResponseDTO` |
 | `.orders` | `GET /v1/orders` | `OrderAPIDataSource` | `OrderListResponseDTO` |
 | `.createOrder` | `POST /v1/orders` | `CheckoutAPIDataSource` | `PlacedOrderResponseDTO` |
 | `.profile` | `GET /v1/me` | `ProfileAPIDataSource` | `ProfileResponseDTO` |
