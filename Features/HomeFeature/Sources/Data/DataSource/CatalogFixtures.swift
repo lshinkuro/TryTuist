@@ -129,6 +129,47 @@ enum CatalogFixtures {
     }
     """
 
+    /// Stok per outlet (harga sama): Kemang Utara kehabisan Ramen Pedas, Kelapa Gading kehabisan Chocolate Cake.
+    static let soldOutByStore: [String: Set<String>] = ["ST02": ["P09"], "ST03": ["P14"]]
+
+    /// `products` dengan `is_available` mengikuti outlet `storeID` (nil = stok pusat).
+    static func productsJSON(storeID: String?) -> String {
+        guard let storeID, let soldOut = soldOutByStore[storeID],
+              var root = try? JSONSerialization.jsonObject(with: Data(products.utf8)) as? [String: Any],
+              let items = root["data"] as? [[String: Any]] else { return products }
+        root["data"] = items.map { item -> [String: Any] in
+            var item = item
+            if let id = item["product_id"] as? String, soldOut.contains(id) { item["is_available"] = false }
+            return item
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: root) else { return products }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// `GET /v1/stores` (§5.26). Kelapa Gading buka 10:00–22:00 (status ikut jam perangkat).
+    static var stores: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let gadingOpen = (10..<22).contains(hour)
+        let gadingNote = gadingOpen ? "null" : "\"Outlet Kelapa Gading buka 10:00–22:00.\""
+        return """
+        {
+          "code": 200,
+          "message": "success",
+          "data": [
+            { "id": "ST01", "name": "Gandaria City", "address": "Jl. Sultan Iskandar Muda, Jakarta Selatan",
+              "is_open": true, "hours_label": "24 jam", "delivery_radius_km": 7,
+              "distance_km": 1.4, "is_deliverable": true, "closed_note": null },
+            { "id": "ST02", "name": "Kemang Utara", "address": "Jl. Kemang Utara Raya, Jakarta Selatan",
+              "is_open": true, "hours_label": "24 jam", "delivery_radius_km": 5,
+              "distance_km": 4.2, "is_deliverable": true, "closed_note": null },
+            { "id": "ST03", "name": "Kelapa Gading", "address": "Jl. Boulevard Raya, Jakarta Utara",
+              "is_open": \(gadingOpen), "hours_label": "10:00–22:00", "delivery_radius_km": 6,
+              "distance_km": 18.9, "is_deliverable": false, "closed_note": \(gadingNote) }
+          ]
+        }
+        """
+    }
+
     /// Popup promo Beranda (§5.24). Berakhir 30 hari dari sekarang supaya mock selalu tampil.
     static var promoPopup: String {
         let endsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(30 * 24 * 3600))

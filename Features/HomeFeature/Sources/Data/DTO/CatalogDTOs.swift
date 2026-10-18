@@ -94,6 +94,30 @@ struct PromoPopupDTO: Decodable {
     }
 }
 
+/// `GET /v1/stores` (§5.26).
+struct StoreDTO: Decodable {
+    let id: String?
+    let name: String?
+    let address: String?
+    let isOpen: Bool?
+    let hoursLabel: String?
+    let closedNote: String?
+    let deliveryRadiusKM: Double?
+    let distanceKM: Double?
+    let isDeliverable: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, address
+        case isOpen = "is_open"
+        case hoursLabel = "hours_label"
+        case closedNote = "closed_note"
+        case deliveryRadiusKM = "delivery_radius_km"
+        case distanceKM = "distance_km"
+        case isDeliverable = "is_deliverable"
+    }
+}
+
+typealias StoreListResponseDTO = APIEnvelope<[StoreDTO]>
 typealias PromoPopupResponseDTO = APIEnvelope<PromoPopupDTO>
 typealias ProductListResponseDTO = APIEnvelope<[ProductDTO]>
 typealias CategoryListResponseDTO = APIEnvelope<[CategoryDTO]>

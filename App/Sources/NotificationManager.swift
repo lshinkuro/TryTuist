@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 import UserNotifications
 
 class NotificationManager {
@@ -14,12 +15,16 @@ class NotificationManager {
     
     private init() {}
     
+    /// Minta izin notifikasi; bila diizinkan, daftarkan ke APNs → AppDelegate menerima device token
+    /// (diteruskan ke `PushRegistrar`). Juga dipanggil ulang tiap launch supaya token tetap segar.
     func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if granted {
-                print("Notification authorization granted")
-            } else {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+            guard granted else {
                 print("Notification authorization denied")
+                return
+            }
+            DispatchQueue.main.async {
+                UIApplication.shared.registerForRemoteNotifications()
             }
         }
     }

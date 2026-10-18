@@ -8,10 +8,11 @@ import Foundation
 import NetworkManager
 
 enum CheckoutMapper {
-    /// Outlet dipilih server (outlet buka pertama). Alamat & metode bayar: pilihan user,
-    /// atau default user di server bila `nil`.
+    /// Outlet, alamat & metode bayar: pilihan user, atau dipilih server bila `nil`
+    /// (outlet buka terdekat yang menjangkau alamat).
     static func request(from items: [CartItem], selection: CheckoutSelection) -> CreateOrderParam {
         CreateOrderParam(
+            storeID: selection.storeID,
             paymentMethodID: selection.paymentMethodID,
             addressID: selection.addressID,
             items: items.map {
@@ -24,12 +25,12 @@ enum CheckoutMapper {
     }
 
     /// `fallbackTotal` dipakai bila server (atau mock) tidak mengirim total.
-    static func placedOrder(from response: PlacedOrderResponseDTO, fallbackTotal: Decimal = 0) throws -> PlacedOrder {
-        guard let dto = response.data, let number = dto.orderNumber, !number.isEmpty else {
+    static func placedOrder(from dto: PlacedOrderDTO, fallbackTotal: Decimal = 0) throws -> PlacedOrder {
+        guard let number = dto.orderNumber, !number.isEmpty else {
             throw CartError.checkoutFailed
         }
         let total = dto.total.map { Decimal($0) } ?? fallbackTotal
-        return PlacedOrder(orderNumber: number, total: total == 0 ? fallbackTotal : total)
+        return PlacedOrder(orderNumber: number, total: total == 0 ? fallbackTotal : total, orderID: dto.orderID)
     }
 
     static func toDomainError(_ error: Error) -> CartError {
@@ -51,11 +52,17 @@ enum CheckoutMapper {
         switch (server.statusCode, server.type) {
         case (401, _): return .sessionExpired
         case (404, _): return .selectionNotFound
-        case (_, "PRODUCT_UNAVAILABLE"?): return .productUnavailable
+        case (_, "PRODUCT_UNAVAILABLE"?):
+            // Server menyebut menu & outletnya ("X sedang habis di outlet Y.").
+            if let message = server.message, !message.isEmpty { return .rejected(message) }
+            return .productUnavailable
         case (_, "INVALID_QUANTITY"?): return .invalidQuantity
         case (_, "EMPTY_CART"?): return .emptyCart
+        case (_, "PAYMENT_GATEWAY_ERROR"?), (502, _):
+            return .rejected(server.message ?? "Pembayaran sedang gangguan. Coba lagi sebentar lagi.")
         case (422, _), (409, _):
-            // Mis. PAYMENT_METHOD_UNAVAILABLE, STORE_CLOSED, INVALID_VOUCHER: pakai pesan server.
+            // Mis. PAYMENT_METHOD_UNAVAILABLE, STORE_CLOSED, OUT_OF_DELIVERY_AREA, INVALID_VOUCHER,
+            // PRODUCT_UNAVAILABLE di outlet tertentu: pakai pesan server.
             if let message = server.message, !message.isEmpty { return .rejected(message) }
             return server.statusCode == 422 ? .productUnavailable : .checkoutFailed
         default:

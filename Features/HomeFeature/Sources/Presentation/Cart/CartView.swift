@@ -58,7 +58,7 @@ struct CartView: View {
                 }
             case .payment:
                 CheckoutOptionSheet(title: "Metode pembayaran",
-                                    manageTitle: "Tautkan / kelola e-wallet",
+                                    manageTitle: "Kelola metode pembayaran",
                                     onManage: { store.send(.managePaymentMethodsTapped) }) {
                     ForEach(state.paymentMethods) { method in
                         OptionRow(title: method.name,
@@ -79,6 +79,12 @@ struct CartView: View {
         ScrollView {
             VStack(spacing: Spacing.xl) {
                 deliverySection
+
+                if let outlet = state.outlet {
+                    SelectionCard(title: "Dikirim dari", value: outlet.name, detail: outlet.detailText,
+                                  systemImage: outlet.canOrder ? "storefront.fill" : "exclamationmark.triangle.fill",
+                                  actionTitle: nil) {}
+                }
 
                 VStack(spacing: 0) {
                     ForEach(state.items) { item in
@@ -128,7 +134,7 @@ struct CartView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                PrimaryButton("Pesan Sekarang · \(state.total.rupiahFormatted)",
+                PrimaryButton(state.checkoutTitle,
                               isLoading: state.isCheckingOut,
                               isEnabled: state.canCheckout) {
                     store.send(.checkoutTapped)
@@ -268,9 +274,9 @@ private struct OrderPlacedView: View {
                 .foregroundStyle(.green)
                 .symbolEffect(.bounce, value: order.orderNumber)
             VStack(spacing: Spacing.s) {
-                Text("Pesanan diterima! 🎉")
+                Text(order.paidVia == nil ? "Pesanan diterima! 🎉" : "Pembayaran berhasil! 🎉")
                     .font(.title2.bold())
-                Text("No. pesanan \(order.orderNumber)\nTotal \(order.total.rupiahFormatted)")
+                Text("No. pesanan \(order.orderNumber)\nTotal \(order.total.rupiahFormatted)" + (order.paidVia.map { "\n\($0)" } ?? ""))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
             }

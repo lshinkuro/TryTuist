@@ -6,6 +6,7 @@
 //  (dari tab Profil); pilihan di sini hanya berlaku untuk pesanan ini.
 //
 import Foundation
+import TTUI
 import Utility
 
 /// Sheet pilihan di Keranjang.
@@ -26,6 +27,8 @@ struct CartState: Equatable {
     var selectedAddressID: String?
     var selectedPaymentID: String?
     var activeSheet: CartSheet?
+    /// Outlet asal pesanan (dipilih di Beranda).
+    var outlet: Outlet?
 
     static let standardDeliveryFee: Decimal = 10000
 
@@ -49,11 +52,17 @@ struct CartState: Equatable {
 
     var checkoutHint: String? {
         if needsAddress { return "Tambahkan alamat pengiriman dulu ya." }
+        if selectedPayment?.isOnline == true { return "Pesanan dibuat setelah pembayaran berhasil." }
         return nil
     }
 
+    /// Bayar Online → "Bayar"; COD → "Pesan Sekarang".
+    var checkoutTitle: String {
+        "\(selectedPayment?.isOnline == true ? "Bayar" : "Pesan Sekarang") · \(total.rupiahFormatted)"
+    }
+
     var selection: CheckoutSelection {
-        CheckoutSelection(addressID: selectedAddressID, paymentMethodID: selectedPaymentID)
+        CheckoutSelection(addressID: selectedAddressID, paymentMethodID: selectedPaymentID, storeID: outlet?.id)
     }
 }
 
@@ -62,6 +71,7 @@ enum CartAction {
     case retryOptionsTapped
     case optionsResponse(Result<CheckoutOptions, CartError>)
     case itemsChanged([CartItem])
+    case outletChanged(Outlet?)
     case incrementTapped(CartItem)
     case decrementTapped(CartItem)
     case removeTapped(CartItem)
@@ -71,12 +81,16 @@ enum CartAction {
     case manageAddressesTapped
     case managePaymentMethodsTapped
     case checkoutTapped
-    case checkoutResponse(Result<PlacedOrder, CartError>)
+    case checkoutResponse(Result<CheckoutOutcome, CartError>)
+    /// Layar Pembayaran ditutup.
+    case paymentFinished(PaymentOutcome)
     case closeTapped
 }
 
 enum CartRoute {
     case close
+    /// Bayar Online: buka layar Pembayaran (Snap).
+    case payment(PaymentSession)
     /// Ke tab Profil (keranjang ditutup, isinya tetap tersimpan).
     case manageAddresses
     case managePaymentMethods
@@ -85,14 +99,19 @@ enum CartRoute {
 final class CartStore: Store<CartState, CartAction> {
     private let cart: CartRepository
     private let options: CheckoutOptionsRepository
+    /// "Antar ke" di Beranda: alamat tersimpan yang dipilih jadi default di sini.
+    private let delivery: DeliveryLocationRepository
     var onRoute: ((CartRoute) -> Void)?
 
-    init(cart: CartRepository, options: CheckoutOptionsRepository) {
+    init(cart: CartRepository, options: CheckoutOptionsRepository, outlets: OutletSelectionRepository,
+         delivery: DeliveryLocationRepository) {
         self.cart = cart
         self.options = options
+        self.delivery = delivery
         super.init(initialState: CartState())
         // Daftar item selalu sinkron dengan repository (sumber kebenaran keranjang).
         bind(cart.itemsPublisher) { .itemsChanged($0) }
+        bind(outlets.selectedPublisher) { .outletChanged($0) }
     }
 
     override func reduce(state: inout CartState, action: CartAction) -> Effect<CartAction>? {
@@ -111,7 +130,8 @@ final class CartStore: Store<CartState, CartAction> {
             state.options = .loaded(options)
             // Pertahankan pilihan user bila masih ada; selain itu pakai default.
             if !options.addresses.contains(where: { $0.id == state.selectedAddressID }) {
-                state.selectedAddressID = options.defaultAddress?.id
+                let fromHome = delivery.selected?.savedAddressID.flatMap { id in options.addresses.first { $0.id == id } }
+                state.selectedAddressID = (fromHome ?? options.defaultAddress)?.id
             }
             if !options.paymentMethods.contains(where: { $0.id == state.selectedPaymentID && $0.isEnabled }) {
                 state.selectedPaymentID = options.defaultPaymentMethod?.id
@@ -125,6 +145,10 @@ final class CartStore: Store<CartState, CartAction> {
 
         case .itemsChanged(let items):
             state.items = items
+            return nil
+
+        case .outletChanged(let outlet):
+            state.outlet = outlet
             return nil
 
         case .incrementTapped(let item):
@@ -179,9 +203,26 @@ final class CartStore: Store<CartState, CartAction> {
                 }
             }
 
-        case .checkoutResponse(.success(let order)):
+        case .checkoutResponse(.success(.placed(let order))):
             state.isCheckingOut = false
             state.placedOrder = order
+            return nil
+
+        case .checkoutResponse(.success(.payment(let session))):
+            state.isCheckingOut = false
+            return .run { [weak self] in self?.onRoute?(.payment(session)) }
+
+        case .paymentFinished(.paid(let order)):
+            state.placedOrder = order
+            state.errorMessage = nil
+            return nil
+
+        case .paymentFinished(.notPaid(let message)):
+            state.errorMessage = message
+            return nil
+
+        case .paymentFinished(.later):
+            state.errorMessage = "Pembayaran masih menunggu. Tekan Bayar lagi untuk melanjutkan."
             return nil
 
         case .checkoutResponse(.failure(let error)):

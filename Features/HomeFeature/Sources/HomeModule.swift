@@ -29,6 +29,11 @@ public final class HomeModule: TabFeature {
     public func openCart() {
         flow?.openCart()
     }
+
+    /// "Pesan Lagi" dari tab Pesanan: isi keranjang lalu buka Keranjang.
+    public func reorder(_ items: [CatalogReorderItem]) {
+        flow?.reorder(items)
+    }
 }
 
 @MainActor
@@ -55,6 +60,23 @@ public enum CatalogSession {
     /// Panggil sebelum tab bar dibuat ulang, karena screen yang sudah tampil masih memegang instance lama.
     public static func reset() {
         CatalogContainer.reset()
+    }
+}
+
+/// Satu item pesanan lama untuk "Pesan Lagi" (dirakit AppRouter dari tab Pesanan).
+public struct CatalogReorderItem {
+    public let productID: String
+    public let optionID: String?
+    public let name: String
+    public let quantity: Int
+    public let note: String
+
+    public init(productID: String, optionID: String?, name: String, quantity: Int, note: String) {
+        self.productID = productID
+        self.optionID = optionID
+        self.name = name
+        self.quantity = quantity
+        self.note = note
     }
 }
 

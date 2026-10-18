@@ -7,7 +7,10 @@ import Foundation
 protocol CatalogRepository {
     func fetchBanners() async throws -> [Banner]
     func fetchCategories() async throws -> [MenuCategory]
-    func fetchProducts() async throws -> [Product]
+    /// `storeID` nil = stok pusat; diisi = ketersediaan mengikuti outlet itu (harga tetap sama).
+    func fetchProducts(storeID: String?) async throws -> [Product]
+    /// Outlet aktif, yang buka & menjangkau `point` lebih dulu.
+    func fetchOutlets(near point: GeoPoint?) async throws -> [Outlet]
     /// `nil` = tidak ada promo popup yang berlaku.
     func fetchPromoPopup() async throws -> PromoPopup?
 }

@@ -66,6 +66,23 @@ enum CatalogMapper {
 
     // MARK: Category & Banner
 
+    static func outlets(from response: StoreListResponseDTO) -> [Outlet] {
+        (response.data ?? []).compactMap(outlet(from:))
+    }
+
+    static func outlet(from dto: StoreDTO) -> Outlet? {
+        guard let id = dto.id, !id.isEmpty, let name = dto.name, !name.isEmpty else { return nil }
+        return Outlet(id: id,
+                      name: name,
+                      address: dto.address ?? "",
+                      hoursLabel: dto.hoursLabel ?? "",
+                      isOpenNow: dto.isOpen ?? false,
+                      closedNote: dto.closedNote.flatMap { $0.isEmpty ? nil : $0 },
+                      deliveryRadiusKM: dto.deliveryRadiusKM ?? 0,
+                      distanceKM: dto.distanceKM,
+                      isDeliverable: dto.isDeliverable)
+    }
+
     static func categories(from response: CategoryListResponseDTO) -> [MenuCategory] {
         (response.data ?? []).compactMap { (dto) -> MenuCategory? in
             guard let id = dto.id, let name = dto.name else { return nil }

@@ -8,12 +8,14 @@ import NetworkManager
 protocol CatalogRemoteDataSource {
     func fetchBanners() async throws -> BannerListResponseDTO
     func fetchCategories() async throws -> CategoryListResponseDTO
-    func fetchProducts() async throws -> ProductListResponseDTO
+    /// `storeID` nil = stok pusat.
+    func fetchProducts(storeID: String?) async throws -> ProductListResponseDTO
+    func fetchStores(near point: GeoPoint?) async throws -> StoreListResponseDTO
     func fetchPromoPopup() async throws -> PromoPopupResponseDTO
 }
 
 /// Backend asli (Go). Kontrak: API_PLAN.md → `GET /v1/banners`, `/v1/categories`, `/v1/products`,
-/// `/v1/promotions/popup`.
+/// `/v1/stores`, `/v1/promotions/popup`.
 struct CatalogAPIDataSource: CatalogRemoteDataSource {
     var api: APIManager = .shared
 
@@ -25,8 +27,12 @@ struct CatalogAPIDataSource: CatalogRemoteDataSource {
         try await api.request(.categories)
     }
 
-    func fetchProducts() async throws -> ProductListResponseDTO {
-        try await api.request(.products)
+    func fetchProducts(storeID: String?) async throws -> ProductListResponseDTO {
+        try await api.request(.products(storeID: storeID))
+    }
+
+    func fetchStores(near point: GeoPoint?) async throws -> StoreListResponseDTO {
+        try await api.request(.stores(lat: point?.lat, lng: point?.lng))
     }
 
     func fetchPromoPopup() async throws -> PromoPopupResponseDTO {
@@ -46,8 +52,12 @@ struct CatalogMockDataSource: CatalogRemoteDataSource {
         try await decode(CatalogFixtures.categories)
     }
 
-    func fetchProducts() async throws -> ProductListResponseDTO {
-        try await decode(CatalogFixtures.products)
+    func fetchProducts(storeID: String?) async throws -> ProductListResponseDTO {
+        try await decode(CatalogFixtures.productsJSON(storeID: storeID))
+    }
+
+    func fetchStores(near point: GeoPoint?) async throws -> StoreListResponseDTO {
+        try await decode(CatalogFixtures.stores)
     }
 
     func fetchPromoPopup() async throws -> PromoPopupResponseDTO {

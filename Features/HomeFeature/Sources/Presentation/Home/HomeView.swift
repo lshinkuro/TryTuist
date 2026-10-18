@@ -42,7 +42,30 @@ struct HomeView: View {
         }
         .animation(.snappy, value: state.cart)
         .toast(state.toast)
-        .task { @MainActor in store.send(.onAppear) }
+        .sheet(isPresented: store.binding(\.isOutletPickerPresented, send: { $0 ? .outletPickerTapped : .outletPickerDismissed })) {
+            OutletPickerView(choice: state.outletChoice,
+                             switchingOutletID: state.switchingOutletID) { store.send(.outletSelected($0)) }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: store.binding(\.isDeliverySheetPresented, send: { $0 ? .deliveryTapped : .deliverySheetDismissed })) {
+            DeliveryPickerView(choice: state.deliveryChoice,
+                               permission: state.locationPermission,
+                               isUpdating: state.isUpdatingDelivery,
+                               onUseCurrentLocation: { store.send(.useCurrentLocationTapped) },
+                               onSelectAddress: { store.send(.deliveryAddressSelected($0)) },
+                               onManageAddresses: { store.send(.manageAddressesTapped) },
+                               onOpenSettings: { store.send(.openSettingsTapped) })
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .task { @MainActor in
+            store.send(.onAppear)
+            store.send(.refreshPendingPayment)
+            store.send(.refreshDeliveryChoice)
+            // Izin lokasi ditawarkan sekali, saat Beranda pertama tampil setelah login.
+            store.send(.offerLocationPermission)
+        }
     }
 
     // MARK: - Header
@@ -50,23 +73,36 @@ struct HomeView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Spacing.l) {
             HStack(alignment: .center, spacing: Spacing.m) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Antar ke")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 4) {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundStyle(Color.brand)
-                        Text(state.deliveryAddress)
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2.weight(.bold))
+                Button { store.send(.deliveryTapped) } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Antar ke")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
+                        HStack(spacing: 4) {
+                            Image(systemName: state.delivery?.source == .currentLocation ? "location.fill" : "mappin.circle.fill")
+                                .foregroundStyle(Color.brand)
+                            Text(deliveryText)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Image(systemName: "chevron.down")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Antar ke \(deliveryText). Ketuk untuk ganti lokasi antar.")
                 Spacer(minLength: 0)
                 CartIconButton(count: state.cart.itemCount) { store.send(.cartTapped) }
+            }
+
+            if let outlet = state.outlet {
+                outletChip(outlet)
+            }
+
+            if let payment = state.pendingPayment {
+                pendingPaymentCard(payment)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -92,6 +128,78 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    /// "Rumah · Jl. Kebayoran Lama No. 12" / "Lokasi saat ini · Jl. …" / ajakan memilih.
+    private var deliveryText: String {
+        guard let delivery = state.delivery else {
+            return state.content.isLoading ? "Mencari lokasimu…" : "Pilih lokasi antar"
+        }
+        return delivery.subtitle.isEmpty ? delivery.title : "\(delivery.title) · \(delivery.subtitle)"
+    }
+
+    /// Kartu "Menunggu pembayaran" (sesi Bayar Online yang belum selesai, termasuk setelah app ditutup).
+    private func pendingPaymentCard(_ payment: PaymentSession) -> some View {
+        Button { store.send(.pendingPaymentTapped) } label: {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: "clock.fill")
+                    .font(.title3)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Menunggu pembayaran \(payment.amount.rupiahFormatted)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let remaining = Int(payment.remaining(at: context.date))
+                        Text(remaining > 0
+                             ? String(format: "Selesaikan dalam %02d:%02d", remaining / 60, remaining % 60)
+                             : "Mengecek status pembayaran…")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                Text("Bayar")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Spacing.m)
+                    .padding(.vertical, Spacing.xs)
+                    .background(Color.brand, in: Capsule())
+            }
+            .padding(Spacing.m)
+            .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Menunggu pembayaran \(payment.amount.rupiahFormatted). Ketuk untuk melanjutkan.")
+    }
+
+    /// "Dari: Gandaria City · 1,4 km · 24 jam ▾" — tap untuk ganti outlet.
+    private func outletChip(_ outlet: Outlet) -> some View {
+        Button { store.send(.outletPickerTapped) } label: {
+            HStack(spacing: Spacing.s) {
+                Image(systemName: "storefront.fill")
+                    .foregroundStyle(outlet.canOrder ? Color.brand : .orange)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Dari \(outlet.name)")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(outlet.detailText)
+                        .font(.caption2)
+                        .foregroundStyle(outlet.canOrder ? Color.secondary : Color.orange)
+                }
+                .lineLimit(1)
+                Spacer(minLength: 0)
+                Text("Ganti")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.brand)
+            }
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(state.outletChoice.outlets.count < 2)
+        .accessibilityLabel("Outlet \(outlet.name), \(outlet.detailText). Ketuk untuk ganti outlet.")
     }
 
     // MARK: - Content

@@ -540,6 +540,8 @@ flowchart LR
 
 Instance repository dibagikan lewat container (`CatalogContainer.shared`) yang dirakit di layer Module.
 
+Pola yang sama dipakai untuk **outlet yang dipilih** (`OutletSelectionRepository.selectedPublisher`, §11.4): Beranda menggantinya, Menu memuat ulang stok, Keranjang mengirim `store_id`.
+
 ### 8.7 Pola Toast (pesan sementara)
 
 ```swift
@@ -687,7 +689,7 @@ Setiap environment terdiri dari **1 build configuration + 1 xcconfig + 1 scheme*
 
 | Scheme | Configuration | Build | Bundle ID | Nama app | API | Mock |
 |---|---|---|---|---|---|---|
-| `TryTuist-Dev` | `Dev` | Debug | `com.lshinkuro.TryTuist.dev` | TryTuist Dev | `http://localhost:8080` | `YES` (ubah ke `NO` saat backend lokal jalan) |
+| `TryTuist-Dev` | `Dev` | Debug | `com.lshinkuro.TryTuist.dev` | TryTuist Dev | `http://localhost:8080` | `NO` (ubah ke `YES` untuk jalan tanpa backend) |
 | `TryTuist-Staging` | `Staging` | Release | `com.lshinkuro.TryTuist.staging` | TryTuist Staging | `https://staging-api.trytuist.com` | `NO` |
 | `TryTuist-Prod` | `Prod` | Release | `com.lshinkuro.TryTuist` | TryTuist | `https://api.trytuist.com` | `NO` |
 
@@ -712,7 +714,7 @@ AppEnvironment.useMockData  → AppConfig.useMockData → <Feature>Module memili
 |---|---|---|
 | Auth (login/register) | `AuthMockDataSource`: akun `kholis@gmail.com / 12345678`, `demo@trytuist.com / password123`; akun hasil daftar disimpan di UserDefaults | `AuthAPIDataSource` → `POST /v1/auth/login`, `/v1/auth/register` |
 | Katalog: Beranda & Menu | `CatalogMockDataSource` + `CatalogFixtures` (JSON + foto Unsplash) | `CatalogAPIDataSource` → `GET /v1/banners`, `/v1/categories`, `/v1/products` |
-| Keranjang & checkout | `InMemoryCartRepository` | belum: `POST /v1/orders` (lihat API_PLAN.md fase 2) |
+| Keranjang & checkout | `InMemoryCartRepository` (keranjang selalu lokal) + `CheckoutMockDataSource` | `CheckoutAPIDataSource` → `POST /v1/checkout`; `PaymentAPIDataSource` → `/v1/payments` |
 | Pesanan | `OrderMockDataSource` | `OrderAPIDataSource` → `GET /v1/orders` |
 
 ---
@@ -770,6 +772,92 @@ HomeStore .contentResponse(.success)          (sekali per sesi Beranda)
 - UI: `PriceLabel` (harga merah + harga normal dicoret) dan `DiscountBadge` (`-37%`) di kartu, baris, detail, dan popup; detail menampilkan "Kamu hemat Rp …". Beranda punya section "💸 Promo Hemat" (`HomeContent.deals`).
 - Mock (`USE_MOCK_DATA = YES`): `CatalogFixtures.promoPopup` + P05/P07/P12 berharga promo, sama dengan seed backend `D01`–`D03`.
 - Untuk menampilkan popup lagi saat develop: hapus app, atau hapus key `home.promoPopup.dismissedOn` di `UserDefaults`.
+
+### 11.4 Multi-outlet (pilih outlet di Beranda)
+
+Harga sama di semua outlet; stok, jam buka, dan radius antar berbeda (API_PLAN.md §5.26).
+
+```
+HomeStore .onAppear
+  → GetHomeContentUseCase
+      → ResolveOutletUseCase      alamat utama (lat/lng) → GET /v1/stores?lat=&lng=
+                                  pilihan tersimpan (UserDefaults home.selectedOutletID) bila masih ada, selain itu urutan teratas server
+      → GET /v1/products?store_id=   stok ikut outlet → Paling Laris / Rekomendasi / Promo
+  header: "Dari <outlet> · 1,4 km · 24 jam — Ganti"
+  → .outletPickerTapped → OutletPickerView (sheet)
+  → .outletSelected(outlet) → ChangeOutletUseCase
+        1. GET /v1/products?store_id=  (gagal → outlet lama tetap dipakai)
+        2. OutletSelectionRepository.select(outlet)   → MenuStore (.outletChanged → muat ulang), CartStore
+        3. CartRepository.removeProducts(notIn:)       → toast "X habis di <outlet>, dikeluarkan dari keranjang"
+  → muat ulang Beranda
+Keranjang: "Dikirim dari <outlet>" + CheckoutSelection.storeID → POST /v1/orders { store_id }
+```
+
+- File: `Domain/Entity/Outlet.swift` (`Outlet`, `GeoPoint`, `OutletChoice`), `Domain/Repository/OutletSelectionRepository.swift`, `Data/Repository/UserDefaultsOutletSelectionRepository.swift`, `Presentation/Home/OutletPickerView.swift`. `CheckoutAddress.location` diisi dari `lat`/`lng` alamat.
+- Gagal memuat outlet bukan error di layar: katalog tampil dengan stok pusat dan server memilih outlet saat checkout.
+- Error checkout `STORE_CLOSED`, `OUT_OF_DELIVERY_AREA`, `PRODUCT_UNAVAILABLE` ("X sedang habis di outlet Y.") → `CartError.rejected(pesan server)`.
+- Mock: `CatalogFixtures.stores` (ST01–ST03, Kelapa Gading 10:00–22:00 mengikuti jam perangkat, di luar jangkauan) dan `soldOutByStore` (P09 habis di ST02, P14 habis di ST03), sama dengan seed backend.
+
+### 11.5 Pembayaran online (Midtrans Snap)
+
+Bayar dulu, pesanan dibuat server setelah lunas (API_PLAN.md §5.27).
+
+```
+CartStore .checkoutTapped → CartRepository.checkout(selection)      POST /v1/checkout
+  → .placed(PlacedOrder)        COD: keranjang kosong, OrderPlacedView
+  → .payment(PaymentSession)    Bayar Online: keranjang tetap → CartRoute.payment
+CatalogFlow.showPayment          UIHostingController .fullScreen di atas screen paling atas
+  PaymentStore + PaymentView
+    MidtransWebView (WKWebView)  redirect_url Snap; finish URL dicegat → .webFinished
+                                 gojek:// shopeeid:// bca:// … → UIApplication.open
+    polling tiap 3 dtk           GET /v1/payments/{id} (server ikut cek ke Midtrans)
+                                 + saat app aktif lagi (kembali dari GoPay/m-banking)
+    PAID          → FinishPaymentUseCase (keranjang kosong) → .finished(.paid) → OrderPlacedView "Pembayaran berhasil"
+    FAILED/EXPIRED/CANCELLED → layar gagal → .finished(.notPaid) → Keranjang (isi utuh, key baru)
+    ✕ → "Batalkan pembayaran" (POST …/cancel) / "Bayar nanti" (.later)
+Beranda: GetPendingPaymentUseCase → kartu "Menunggu pembayaran" → HomeRoute.resumePayment → layar yang sama
+```
+
+- File:
+  - Domain: `Domain/Entity/Payment.swift` (`PaymentSession`, `CheckoutOutcome`, `PaymentOutcome`), `Domain/Repository/PaymentRepository.swift`, `Domain/UseCase/PaymentUseCases.swift`.
+  - Data: `Data/DTO/CheckoutDTOs.swift`, `Data/Mapper/PaymentMapper.swift`, `Data/DataSource/PaymentRemoteDataSource.swift`, `Data/Repository/DefaultPaymentRepository.swift`.
+  - Presentation: `Presentation/Payment/{PaymentStore,PaymentView,MidtransWebView}.swift`.
+- Status lunas hanya dari server; query `transaction_status` di finish URL diabaikan.
+- Polling memakai `pollGeneration`: tiap loop baru menaikkan angka, respons dari loop lama tidak menjadwalkan tick lagi.
+- Idempotency-Key dipertahankan selama sesi `PENDING` (tekan Bayar lagi = sesi yang sama), lalu diganti setelah sesi selesai (`CartRepository.finishPayment`).
+- Mock (`USE_MOCK_DATA = YES`): metode "Bayar Online" default. `PaymentMockStore` tidak punya halaman Snap; sesi otomatis lunas 4 detik setelah dibuat.
+
+### 11.6 Notifikasi push (APNs)
+
+- `App/Sources/PushRegistrar.swift` (App target, `@MainActor`): menyimpan device token APNs (`UserDefaults`), mendaftarkannya ke backend setelah login (`PUT /v1/me/devices`), dan melepasnya saat sesi berakhir (`POST /v1/devices/unregister`, tanpa login).
+- Hook di `AppRouter`: `start()` (cold start = sesi dihapus), logout Profil, sesi habis 401, dan Debugger → `sessionEnded()`. `showMain()` → `sessionStarted()`.
+- `AppDelegate`: `didRegisterForRemoteNotificationsWithDeviceToken` → `PushRegistrar.didRegister`. Tap notifikasi (`type` = `payment_paid` / `order_status`) → `handleTap` → tab Pesanan (atau setelah login bila app baru dibuka).
+- Entitlements `TryTuist.entitlements` (`aps-environment`) dipasang lewat `Project.swift`; build Debug mendaftar sebagai `sandbox`, Release sebagai `production`.
+- Mock (`USE_MOCK_DATA = YES`): token tidak dikirim ke server.
+- Detail payload & setup key `.p8`: API_PLAN.md §5.28.
+
+### 11.7 "Antar ke" & izin lokasi
+
+```
+HomeView .task → .offerLocationPermission    sekali saja (UserDefaults home.didOfferLocationPermission),
+                                             dialog iOS "Izinkan TryTuist memakai lokasimu?"
+GetHomeContentUseCase
+  → ResolveDeliveryLocationUseCase           pilihan terakhir (alamat tersimpan / lokasi saat ini)
+                                             → alamat utama → lokasi perangkat (tanpa dialog, bila sudah diizinkan)
+  → ResolveOutletUseCase(near: titik antar)  GET /v1/stores?lat=&lng= → outlet terdekat
+Header "Antar ke ▾" → DeliveryPickerView (sheet)
+  • Gunakan lokasi saat ini   → UseCurrentLocationUseCase (minta izin bila perlu, CLGeocoder untuk nama jalan)
+  • Alamat tersimpan           → pilih
+  • Tambah / kelola alamat     → tab Profil → Alamat Pengiriman
+  → ChangeDeliveryLocationUseCase: simpan pilihan → outlet terbaik untuk titik baru → ChangeOutletUseCase
+    (menu yang habis dikeluarkan dari keranjang) → muat ulang Beranda
+Keranjang: alamat tersimpan yang dipilih di Beranda jadi default "Antar ke".
+```
+
+- File: `Domain/Entity/DeliveryLocation.swift`, `Domain/Repository/LocationRepositories.swift` (`LocationService`, `DeliveryLocationRepository`), `Domain/UseCase/DeliveryLocationUseCases.swift`, `Data/DataSource/CoreLocationService.swift`, `Data/Repository/UserDefaultsDeliveryLocationRepository.swift`, `Presentation/Home/DeliveryPickerView.swift`.
+- Izin ditanya saat Beranda pertama tampil setelah login (bukan di layar login), supaya konteksnya jelas: user sedang melihat outlet & menu. Ditolak → baris "Buka Pengaturan" di sheet.
+- Lokasi saat ini hanya untuk mencari outlet terdekat. Checkout tetap memakai alamat tersimpan (kurir butuh alamat lengkap).
+- Info.plist: `NSLocationWhenInUseUsageDescription`.
 
 ## 12. Testing
 

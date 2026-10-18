@@ -17,6 +17,9 @@ final class CatalogFlow {
     /// Navigasi ke luar feature (tab Profil), diteruskan ke AppRouter.
     private let onExternalRoute: (CatalogExternalRoute) -> Void
     private weak var promoPopupController: UIViewController?
+    private weak var paymentController: UIViewController?
+    /// Untuk menyegarkan kartu "Menunggu pembayaran" setelah Keranjang ditutup.
+    private weak var homeStore: HomeStore?
 
     init(router: Router, container: CatalogContainer? = nil,
          onExternalRoute: @escaping (CatalogExternalRoute) -> Void = { _ in }) {
@@ -32,7 +35,13 @@ final class CatalogFlow {
                               addToCart: container.addToCart,
                               cart: container.cartRepository,
                               getPromoPopup: container.getPromoPopup,
-                              dismissPromoPopup: container.dismissPromoPopup)
+                              dismissPromoPopup: container.dismissPromoPopup,
+                              changeOutlet: container.changeOutlet,
+                              getPendingPayment: container.getPendingPayment,
+                              location: HomeLocationUseCases(resolveDelivery: container.resolveDelivery,
+                                                             useCurrentLocation: container.useCurrentLocation,
+                                                             changeDelivery: container.changeDeliveryLocation,
+                                                             offerPermission: container.offerLocationPermission))
         store.onRoute = { [weak self, weak store] route in
             switch route {
             case .productDetail(let product):
@@ -49,6 +58,14 @@ final class CatalogFlow {
                                      onOpen: { store?.send(.promoPopupTapped) })
             case .hidePromoPopup:
                 self?.hidePromoPopup()
+            case .manageAddresses:
+                self?.onExternalRoute(.manageAddresses)
+            case .openSettings:
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            case .resumePayment(let session):
+                self?.showPayment(session) { outcome in store?.send(.paymentFinished(outcome)) }
             case .promoProduct(let product):
                 // Detail dibuka setelah popup hilang; harga di detail sudah harga promo.
                 self?.hidePromoPopup {
@@ -56,6 +73,7 @@ final class CatalogFlow {
                 }
             }
         }
+        homeStore = store
         return HomeView(store: store)
     }
 
@@ -63,6 +81,7 @@ final class CatalogFlow {
         let store = MenuStore(getMenu: container.getMenu,
                               addToCart: container.addToCart,
                               cart: container.cartRepository,
+                              outlets: container.outletSelection,
                               isRootScreen: isRootScreen,
                               initialCategoryID: categoryID)
         store.onRoute = { [weak self, weak store] route in
@@ -125,12 +144,31 @@ final class CatalogFlow {
         showCart()
     }
 
+    func reorder(_ items: [CatalogReorderItem]) {
+        let reorder = container.reorder
+        Task { [weak self] in
+            do {
+                let result = try await reorder.execute(items)
+                if !result.skipped.isEmpty {
+                    self?.homeStore?.send(.toastRequested(.error("Sedang tidak tersedia: \(result.skipped.joined(separator: ", "))")))
+                }
+                if result.added > 0 { self?.showCart() }
+            } catch {
+                self?.homeStore?.send(.toastRequested(.error("Gagal memuat menu. Coba lagi.")))
+            }
+        }
+    }
+
     private func showCart() {
-        let store = CartStore(cart: container.cartRepository, options: container.checkoutOptionsRepository)
-        store.onRoute = { [weak self] route in
+        let store = CartStore(cart: container.cartRepository, options: container.checkoutOptionsRepository,
+                              outlets: container.outletSelection, delivery: container.deliveryLocation)
+        store.onRoute = { [weak self, weak store] route in
             switch route {
             case .close:
                 self?.router?.dismiss()
+                self?.homeStore?.send(.refreshPendingPayment)
+            case .payment(let session):
+                self?.showPayment(session) { outcome in store?.send(.paymentFinished(outcome)) }
             case .manageAddresses:
                 self?.leaveCart(to: .manageAddresses)
             case .managePaymentMethods:
@@ -138,6 +176,29 @@ final class CatalogFlow {
             }
         }
         router?.present(CartView(store: store), title: "Keranjang")
+    }
+
+    // MARK: - Pembayaran online (§5.27)
+
+    /// Layar Pembayaran layar penuh di atas screen paling atas (Keranjang atau Beranda).
+    private func showPayment(_ session: PaymentSession, onFinish: @escaping (PaymentOutcome) -> Void) {
+        guard paymentController == nil, let navigationController = router?.navigationController else { return }
+        let store = PaymentStore(session: session,
+                                 checkPayment: container.checkPayment,
+                                 cancelPayment: container.cancelPayment,
+                                 finishPayment: container.finishPayment)
+        let controller = UIHostingController(rootView: PaymentView(store: store))
+        controller.modalPresentationStyle = .fullScreen
+        store.onRoute = { [weak controller] route in
+            switch route {
+            case .finished(let outcome):
+                controller?.dismiss(animated: true) { onFinish(outcome) }
+            }
+        }
+        paymentController = controller
+        var top: UIViewController = navigationController
+        while let presented = top.presentedViewController { top = presented }
+        top.present(controller, animated: true)
     }
 
     /// Tutup keranjang dulu (isinya tetap tersimpan), lalu pindah ke tab Profil.

@@ -63,7 +63,20 @@ final class InMemoryCartRepository: CartRepository {
         pendingIdempotencyKey = nil
     }
 
-    func checkout(_ selection: CheckoutSelection) async throws -> PlacedOrder {
+    func removeProducts(notIn availableIDs: Set<String>) async -> [CartItem] {
+        let removed = items.value.filter { !availableIDs.contains($0.product.id) }
+        guard !removed.isEmpty else { return [] }
+        items.send(items.value.filter { availableIDs.contains($0.product.id) })
+        pendingIdempotencyKey = nil
+        return removed
+    }
+
+    func finishPayment(paid: Bool) async {
+        pendingIdempotencyKey = nil
+        if paid { items.send([]) }
+    }
+
+    func checkout(_ selection: CheckoutSelection) async throws -> CheckoutOutcome {
         let current = items.value
         guard !current.isEmpty else { throw CartError.emptyCart }
 
@@ -73,16 +86,23 @@ final class InMemoryCartRepository: CartRepository {
         pendingSelection = selection
 
         let request = CheckoutMapper.request(from: current, selection: selection)
+        // Total resmi dari server; fallback (subtotal + ongkir flat) hanya untuk mock.
+        let fallbackTotal = current.reduce(Decimal(0)) { $0 + $1.subtotal } + 10000
         do {
-            let response = try await checkoutSource.createOrder(request, idempotencyKey: key)
-            // Total resmi dari server; fallback (subtotal + ongkir flat) hanya untuk mock.
-            let fallbackTotal = current.reduce(Decimal(0)) { $0 + $1.subtotal } + 10000
-            let order = try CheckoutMapper.placedOrder(from: response, fallbackTotal: fallbackTotal)
-            pendingIdempotencyKey = nil
-            items.send([])
-            return order
+            let response = try await checkoutSource.checkout(request, idempotencyKey: key,
+                                                             expectedTotal: NSDecimalNumber(decimal: fallbackTotal).intValue)
+            let outcome = try PaymentMapper.outcome(from: response, fallbackTotal: fallbackTotal)
+            if case .placed = outcome {
+                pendingIdempotencyKey = nil
+                items.send([])
+            }
+            // Bayar Online: keranjang tetap sampai lunas; key dipertahankan supaya retry
+            // mengembalikan sesi yang sama.
+            return outcome
         } catch {
-            throw CheckoutMapper.toDomainError(error)
+            let domain = CheckoutMapper.toDomainError(error)
+            if case .rejected = domain { pendingIdempotencyKey = nil }   // mis. IDEMPOTENCY_CONFLICT, gateway gangguan
+            throw domain
         }
     }
 }

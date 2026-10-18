@@ -23,7 +23,7 @@ struct CheckoutOptionsAPIDataSource: CheckoutOptionsRemoteDataSource {
     }
 }
 
-/// Mock: satu alamat + COD/QRIS (tanpa network).
+/// Mock: satu alamat + Bayar Online/COD (tanpa network).
 struct CheckoutOptionsMockDataSource: CheckoutOptionsRemoteDataSource {
     var latency: Duration = .milliseconds(300)
 
@@ -32,7 +32,8 @@ struct CheckoutOptionsMockDataSource: CheckoutOptionsRemoteDataSource {
         return try decode("""
         { "code": 200, "message": "success", "data": [
           { "id": "addr-1", "label": "Rumah", "recipient": "Kholis", "phone": "081234567890",
-            "address": "Jl. Kebayoran Lama No. 12, Jakarta Selatan", "is_default": true }
+            "address": "Jl. Kebayoran Lama No. 12, Jakarta Selatan", "is_default": true,
+            "lat": -6.2389, "lng": 106.7826 }
         ] }
         """)
     }
@@ -40,11 +41,11 @@ struct CheckoutOptionsMockDataSource: CheckoutOptionsRemoteDataSource {
     func fetchPaymentMethods() async throws -> CheckoutPaymentOverviewResponseDTO {
         try await Task.sleep(for: latency)
         return try decode("""
-        { "code": 200, "message": "success", "data": { "default_id": "COD", "methods": [
+        { "code": 200, "message": "success", "data": { "default_id": "ONLINE", "methods": [
+          { "id": "ONLINE", "type": "ONLINE", "name": "Bayar Online", "description": "GoPay, QRIS, ShopeePay, transfer bank (VA), kartu",
+            "icon": "creditcard.fill", "is_enabled": true, "is_default": true },
           { "id": "COD", "type": "COD", "name": "Bayar di Tempat", "description": "Bayar tunai ke kurir saat pesanan tiba",
-            "icon": "banknote", "is_enabled": true, "is_default": true },
-          { "id": "QRIS", "type": "QRIS", "name": "QRIS", "description": "Scan QR dari aplikasi bank atau e-wallet apa pun",
-            "icon": "qrcode", "is_enabled": true, "is_default": false }
+            "icon": "banknote", "is_enabled": true, "is_default": false }
         ] } }
         """)
     }

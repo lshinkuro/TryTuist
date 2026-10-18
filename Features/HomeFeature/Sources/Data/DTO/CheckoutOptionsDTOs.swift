@@ -15,9 +15,11 @@ struct CheckoutAddressDTO: Decodable {
     let phone: String?
     let address: String?
     let isDefault: Bool?
+    let lat: Double?
+    let lng: Double?
 
     enum CodingKeys: String, CodingKey {
-        case id, label, recipient, phone, address
+        case id, label, recipient, phone, address, lat, lng
         case isDefault = "is_default"
     }
 }

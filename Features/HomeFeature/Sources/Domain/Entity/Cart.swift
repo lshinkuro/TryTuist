@@ -24,8 +24,11 @@ struct CartSummary: Equatable {
     var isEmpty: Bool { itemCount == 0 }
 }
 
-/// Hasil checkout.
+/// Pesanan yang sudah dibuat (COD, atau online setelah lunas).
 struct PlacedOrder: Equatable {
     let orderNumber: String
     let total: Decimal
+    var orderID: String? = nil
+    /// Mis. "Dibayar via GoPay"; `nil` untuk COD.
+    var paidVia: String? = nil
 }

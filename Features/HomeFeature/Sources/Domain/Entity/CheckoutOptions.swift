@@ -14,16 +14,20 @@ struct CheckoutAddress: Identifiable, Equatable {
     let phone: String
     let address: String
     let isDefault: Bool
+    /// Titik antar; dipakai untuk mencari outlet terdekat. nil = alamat belum dipin.
+    var location: GeoPoint?
 }
 
 struct CheckoutPaymentMethod: Identifiable, Equatable {
-    /// "COD" | "QRIS" | uuid e-wallet — dikirim sebagai `payment_method_id`.
+    /// "ONLINE" | "COD" | "QRIS" | uuid e-wallet — dikirim sebagai `payment_method_id`.
     let id: String
     let name: String
     let detail: String?
     let systemImage: String
     let isEnabled: Bool
     let isDefault: Bool
+    /// Bayar Online (Midtrans): bayar dulu, pesanan dibuat setelah lunas.
+    var isOnline: Bool = false
 }
 
 struct CheckoutOptions: Equatable {
@@ -43,6 +47,8 @@ struct CheckoutOptions: Equatable {
 struct CheckoutSelection: Equatable {
     var addressID: String?
     var paymentMethodID: String?
+    /// Outlet yang dipilih di Beranda. nil = server memilih outlet terbaik untuk alamat.
+    var storeID: String?
 
     static let serverDefault = CheckoutSelection()
 }

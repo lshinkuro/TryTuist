@@ -56,9 +56,16 @@ final class AppRouter {
         window.tintColor = UIColor.brand
         configureDebugMenu()
         observeSessionExpired()
+        PushRegistrar.shared.onOpenOrders = { [weak self] in self?.showTab(.orders) }
     }
 
+    /// Dipanggil sekali saat app dibuka dari nol (cold start, mis. setelah di-kill).
+    /// Kebijakan sesi: sesi tidak dibawa ke peluncuran berikutnya, jadi kill app = login ulang.
+    /// Selama app masih berjalan (termasuk ke background lalu kembali), sesi tetap dan
+    /// access token diperbarui otomatis oleh NetworkManager.
     func start() {
+        PushRegistrar.shared.sessionEnded()
+        TokenStorage.delete()
         showAuth(at: .splash)
     }
 
@@ -81,20 +88,24 @@ final class AppRouter {
         }
         let home = HomeModule(onExternalRoute: catalogRoute)
         let profile = ProfileModule(onLogout: { [weak self] in
+            PushRegistrar.shared.sessionEnded()
             self?.showAuth(at: .signIn)
         })
         let tabBar = MainTabBarController(features: [
             home,
             MenuModule(onExternalRoute: catalogRoute),
-            FocusModule(),
+            FocusModule(onReorder: { [weak self] items in self?.reorder(items) }),
             profile
         ])
-        tabBar.selectedIndex = tab.rawValue
+        // Dibuka dari tap notifikasi sebelum login → langsung ke Pesanan.
+        tabBar.selectedIndex = PushRegistrar.shared.consumePendingOpenOrders() ? MainTab.orders.rawValue : tab.rawValue
         // tabBar menyimpan feature-nya, jadi referensi weak di sini cukup.
         self.tabBar = tabBar
         self.homeModule = home
         self.profileModule = profile
         setRoot(tabBar, animated: true)
+        // Hanya user yang login yang didaftarkan (token sesi wajib).
+        if TokenStorage.hasToken { PushRegistrar.shared.sessionStarted() }
     }
 
     /// Pindah tab; bila sedang di flow Auth, tab bar dibuat dulu (tanpa login).
@@ -117,6 +128,15 @@ final class AppRouter {
         }
     }
 
+    /// Pesanan → "Pesan Lagi": pindah ke Beranda, isi keranjang, lalu buka Keranjang.
+    private func reorder(_ items: [OrderReorderItem]) {
+        showTab(.home)
+        homeModule?.reorder(items.map {
+            CatalogReorderItem(productID: $0.productID, optionID: $0.optionID, name: $0.name,
+                               quantity: $0.quantity, note: $0.note)
+        })
+    }
+
     // MARK: - Sesi habis (401)
 
     private func observeSessionExpired() {
@@ -135,6 +155,7 @@ final class AppRouter {
               let presenter = BottomSheetPresenter.topController(in: window) else { return }
         isShowingSessionExpired = true
         // Token sudah tidak berlaku: hapus sekarang supaya request lain tidak memakainya.
+        PushRegistrar.shared.sessionEnded()
         TokenStorage.delete()
 
         BottomSheetPresenter.present(.sessionExpired { [weak self] in
@@ -172,6 +193,7 @@ private extension AppRouter {
 
     /// Ganti server = token & keranjang lama tidak berlaku lagi.
     func restartWithFreshSession() {
+        PushRegistrar.shared.sessionEnded()
         TokenStorage.delete()
         CatalogSession.reset()
         showAuth(at: .splash)
@@ -216,12 +238,14 @@ private extension AppRouter {
         let session = DebugShortcutSection("Sesi & data", items: [
             DebugShortcut("Logout", subtitle: hasToken ? "Hapus token lalu ke Sign In" : "Belum ada token",
                           systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { [weak self] in
+                PushRegistrar.shared.sessionEnded()
                 TokenStorage.delete()
                 self?.showAuth(at: .signIn)
             },
             DebugShortcut("Reset onboarding", subtitle: "Hapus token, onboarding tampil lagi",
                           systemImage: "arrow.counterclockwise", role: .destructive) { [weak self] in
                 AppSetting.shared.isFirstTime = true
+                PushRegistrar.shared.sessionEnded()
                 TokenStorage.delete()
                 self?.showAuth(at: .splash)
             },

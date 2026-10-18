@@ -4,6 +4,7 @@
 //
 //  Dipakai di dua tempat: root tab "Menu" dan screen kategori yang di-push dari Beranda.
 //
+import Combine
 import Foundation
 import TTUI
 import Utility
@@ -23,6 +24,8 @@ struct MenuState: Equatable {
     var content: Loadable<MenuContent> = .idle
     var cart: CartSummary = .empty
     var toast: ToastMessage?
+    /// Outlet yang stoknya sedang ditampilkan (nil = stok pusat).
+    var outletID: String?
 
     /// Hasil filter kategori + pencarian, dikelompokkan per kategori. Dihitung dari state, tidak disimpan.
     var sections: [MenuSection] {
@@ -53,6 +56,7 @@ enum MenuAction {
     case quickAddResponse(Result<Product, CartError>)
     case cartTapped
     case cartChanged(CartSummary)
+    case outletChanged(String?)
     case toastRequested(ToastMessage)
     case toastDismissed(UUID)
 }
@@ -70,12 +74,17 @@ final class MenuStore: Store<MenuState, MenuAction> {
     init(getMenu: GetMenuUseCase,
          addToCart: AddToCartUseCase,
          cart: CartRepository,
+         outlets: OutletSelectionRepository,
          isRootScreen: Bool,
          initialCategoryID: String? = nil) {
         self.getMenu = getMenu
         self.addToCart = addToCart
-        super.init(initialState: MenuState(isRootScreen: isRootScreen, selectedCategoryID: initialCategoryID))
+        var initial = MenuState(isRootScreen: isRootScreen, selectedCategoryID: initialCategoryID)
+        initial.outletID = outlets.savedOutletID
+        super.init(initialState: initial)
         bind(cart.summaryPublisher) { .cartChanged($0) }
+        // Ganti outlet di Beranda → stok di Menu ikut berubah.
+        bind(outlets.selectedPublisher.compactMap { $0?.id }.removeDuplicates()) { .outletChanged($0) }
     }
 
     override func reduce(state: inout MenuState, action: MenuAction) -> Effect<MenuAction>? {
@@ -130,6 +139,12 @@ final class MenuStore: Store<MenuState, MenuAction> {
             state.cart = summary
             return nil
 
+        case .outletChanged(let id):
+            guard id != state.outletID else { return nil }
+            state.outletID = id
+            // Belum pernah dimuat → biarkan onAppear yang memuat.
+            return state.content.isIdle ? nil : load(&state)
+
         case .toastRequested(let toast):
             return showToast(&state, toast)
 
@@ -142,9 +157,10 @@ final class MenuStore: Store<MenuState, MenuAction> {
     private func load(_ state: inout MenuState) -> Effect<MenuAction> {
         state.content = .loading
         let getMenu = self.getMenu
+        let storeID = state.outletID
         return .task {
             do {
-                return .contentResponse(.success(try await getMenu.execute()))
+                return .contentResponse(.success(try await getMenu.execute(storeID: storeID)))
             } catch {
                 return .contentResponse(.failure(error as? CatalogError ?? .unknown))
             }

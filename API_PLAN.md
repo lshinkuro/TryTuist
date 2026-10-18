@@ -2,7 +2,7 @@
 
 Rencana backend untuk aplikasi iOS **TryTuist** (pesan makanan & minuman). Dokumen ini adalah **kontrak** antara iOS dan backend. Semua nama field dan bentuk JSON di sini sudah sama persis dengan DTO di aplikasi, jadi begitu backend jadi, iOS cukup mengganti `USE_MOCK_DATA = NO`.
 
-> Backend dibuat di direktori/repo terpisah, misalnya `~/Documents/Backend/trytuist-api`.
+> Backend ada di repo terpisah `trytuist-api/`, berdampingan dengan `trytuist/` (iOS) dan `trytuistadmin/` (web admin).
 
 ---
 
@@ -64,6 +64,16 @@ JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=720h              # 30 hari
 LOG_LEVEL=debug                   # debug (dev) | info (staging/prod)
 GOOGLE_CLIENT_IDS=                # client ID iOS Google (dipisah koma per env); kosong = login Google nonaktif
+# Pembayaran online (§5.27)
+MIDTRANS_SERVER_KEY=              # sandbox: SB-Mid-server-…; kosong = Bayar Online nonaktif
+MIDTRANS_IS_PRODUCTION=false
+PUBLIC_BASE_URL=http://localhost:8080   # finish URL Snap; webhook butuh URL publik (tunnel) di dev
+PAYMENT_EXPIRY=15m
+COD_ENABLED=true
+# Notifikasi push APNs (§5.28). Kosong = push hanya dicatat di log.
+APNS_KEY_ID=                      # Key ID dari developer.apple.com → Keys (APNs)
+APNS_TEAM_ID=                     # Team ID (Membership)
+APNS_KEY_FILE=                    # path file AuthKey_XXXX.p8 (jangan di-commit)
 ```
 
 `docker-compose.yml` untuk dev:
@@ -179,7 +189,7 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 | 20 | `GET` | `/v1/me/favorites` | 🔒 | 3 | Profil → Menu Favorit |
 | 21 | `PUT`/`DELETE` | `/v1/me/favorites/{product_id}` | 🔒 | 3 | Detail produk → ❤️ |
 | 22 | `GET` | `/v1/me/vouchers` | 🔒 | 3 | Profil → Voucher |
-| 23 | `GET` | `/v1/stores` | | 3 | Pilih outlet terdekat |
+| 23 | `GET` | `/v1/stores?lat=&lng=` | | 3d | Beranda → "Dari: <outlet>" (outlet terdekat dari alamat utama, bisa diganti) (§5.26) |
 | 24 | `GET` | `/v1/home` | 🔒* | 1b | Beranda: semua isi halaman dalam satu request (§5.18) |
 | 25 | `GET` | `/v1/app-config` | | 1b | Onboarding, ongkir, menu Profil, link bantuan, versi minimal (§5.19) |
 | 26 | `GET` | `/v1/promotions/featured` | 🔒* | 3 | Kartu promo langganan di Profil (§5.20) |
@@ -197,12 +207,22 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 | 38 | `GET` `POST` · `PATCH` | `/v1/admin/products[/{id}]` | 🛡 | 4 | Web admin → Tambah menu; ubah harga, varian, foto, stok, nama, deskripsi |
 | 39 | `GET` `POST` · `PATCH` `DELETE` | `/v1/admin/deals[/{id}]` | 🛡 | 4 | Web admin → Promo (§5.24) |
 | 40 | `GET` | `/v1/admin/customers` · `/v1/admin/audit-logs` | 🛡 | 4 | Web admin → Pelanggan, Aktivitas |
+| 41 | `GET` `POST` · `PATCH` | `/v1/admin/stores[/{id}]` | 🛡 | 4b | Web admin → Outlet: tambah, jam buka, radius, tutup sementara (§5.26) |
+| 42 | `PUT` | `/v1/admin/stores/{id}/products/{product_id}` | 🛡 | 4b | Web admin → Menu → stok per outlet (habis / tersedia) |
+| 43 | `POST` | `/v1/checkout` | 🔒 | 5 | Keranjang → Pesan Sekarang / Bayar: COD → pesanan, Bayar Online → sesi Midtrans (§5.27) |
+| 44 | `GET` | `/v1/payments/{id}` · `/v1/payments?status=PENDING` | 🔒 | 5 | Layar Pembayaran (polling), kartu "Menunggu pembayaran" |
+| 45 | `POST` | `/v1/payments/{id}/cancel` | 🔒 | 5 | Batalkan pembayaran |
+| 46 | `POST` | `/v1/payments/midtrans/notification` | publik (signature) | 5 | Webhook Midtrans |
+| 47 | `GET` | `/v1/payments/finish` · `/v1/admin/payments` | publik · 🛡 | 5 | Finish URL Snap · Web admin → Pembayaran (*belum*, fase 5b) |
+| 48 | `PUT` | `/v1/me/devices` | 🔒 | 5c | Setelah login: daftarkan device token APNs (§5.28) |
+| 49 | `POST` | `/v1/devices/unregister` | (API key saja) | 5c | Logout / sesi habis / cold start: berhenti menerima push |
+| 50 | `POST` | `/v1/dev/push-test` | 🔒 dev | 5c | Kirim notifikasi contoh ke device sendiri (`APP_ENV=dev`) |
 
 🛡 = 🔒 + akun ber-role `ADMIN` (403 `FORBIDDEN` untuk akun biasa). Dipakai web admin `trytuistadmin` (§5.25).
 
 🔒* = token **opsional**. Tanpa token, response tetap berhasil tetapi bagian yang personal (nama, poin, alamat) kosong.
 
-Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 5b, 6, 7, 8, 11, 12, 16, 17, 18, 19, 28, 29, 30, 31, 32, 33.
+Endpoint yang **sudah terdaftar di `EndpointAPI.swift`**: 2, 3, 4, 5b, 6, 7, 8 (`store_id`), 11, 12 (filter + paginasi), 13, 15, 16, 17, 18, 19, 23, 28, 29, 30, 31, 32, 33, 43, 44, 45, 48, 49.
 
 ### 4.1 Status data per screen: dari API atau masih di aplikasi
 
@@ -211,7 +231,7 @@ Dengan `USE_MOCK_DATA = NO`, banner, kategori, dan produk di Beranda & Menu **su
 | Screen | Data | Sekarang di iOS | Pindah ke |
 |---|---|---|---|
 | Beranda | Nama user ("Ishinkuro") | `HomeState.userName` | `/v1/home` → `user.name` |
-| Beranda | Alamat "Antar ke" | `HomeState.deliveryAddress` | `/v1/home` → `delivery_address` |
+| Beranda | Alamat "Antar ke" | ✅ API (`/v1/me/addresses`) + lokasi perangkat (CoreLocation) → outlet terdekat lewat `/v1/stores?lat=&lng=` | — |
 | Beranda | Isi & urutan section "Paling Laris" / "Rekomendasi" | dihitung di `GetHomeContentUseCase` (sort `sold_count` / `rating`) | `/v1/home` → `sections` (server yang menentukan) |
 | Beranda | Teks sapaan ("Selamat pagi") | `HomeState.greeting` (jam lokal) | `/v1/home` → `greeting` (opsional, boleh tetap lokal) |
 | Beranda | Placeholder kolom cari | `HomeView` | `/v1/app-config` → `search_placeholder` |
@@ -220,8 +240,9 @@ Dengan `USE_MOCK_DATA = NO`, banner, kategori, dan produk di Beranda & Menu **su
 | Detail produk | Batas jumlah (1–20) & catatan (100) | `AddToCartUseCase`, `ProductDetailState` | `/v1/app-config` → `order_rules` |
 | Detail produk | Status favorit ❤️ | lokal (`isFavorite`) | `/v1/me/favorites` (§5.17) |
 | Keranjang | Ongkir Rp 10.000 | `CartState.standardDeliveryFee` | `POST /v1/orders/quote` (§5.10) |
+| Keranjang | Bayar online sebelum pesanan dibuat | ✅ API (`POST /v1/checkout` + Midtrans Snap, §5.27) | — |
 | Keranjang | Alamat & metode bayar | ✅ API (`/v1/me/addresses`, `/v1/me/payment-methods`) → `address_id`, `payment_method_id` | — |
-| Keranjang | Outlet | dipilih server (outlet buka pertama) | `/v1/stores?lat=&lng=` (outlet terdekat dari alamat) |
+| Beranda, Menu, Keranjang | Outlet & stok per outlet | ✅ API (`/v1/stores?lat=&lng=`, `/v1/products?store_id=`, `store_id` di checkout) | — |
 | Pesanan | Daftar pesanan | ✅ API | — |
 | Profil | Nama, tier member, voucher, poin, saldo | ✅ API (`/v1/me`) | — |
 | Edit Profil | Nama, nomor HP | ✅ API (`PATCH /v1/me`) | — |
@@ -498,7 +519,7 @@ Body: sama dengan quote, ditambah field pembayaran dan `"note"` opsional. **Semu
 
 | Field | Kosong → | Diisi |
 |---|---|---|
-| `store_id` | outlet buka pertama | outlet tertentu (`422 STORE_CLOSED` bila tutup) |
+| `store_id` | outlet terbaik untuk alamat (§5.26: buka → menjangkau → terdekat) | outlet tertentu: tidak dikenal → `400`; tutup → `422 STORE_CLOSED`; alamat di luar radius → `422 OUT_OF_DELIVERY_AREA`; menu habis di outlet itu → `422 PRODUCT_UNAVAILABLE` "X sedang habis di outlet Y." |
 | `address_id` | alamat utama user (`addresses.is_default`); user tanpa alamat → pesanan tanpa alamat | alamat milik user, selain itu `404 NOT_FOUND` |
 | `payment_method_id` | metode utama user (`users.default_payment_method`); e-wallet utama sudah dihapus → `COD` | `"COD"`, `"QRIS"`, atau uuid e-wallet milik user (`404` bila bukan miliknya) |
 | `payment_method` | — | tipe saja (`COD`/`QRIS`/`EWALLET`), untuk app lama. Bila diisi bersama `payment_method_id` dan tidak cocok → `400` |
@@ -545,7 +566,7 @@ Response **201** (iOS: `PlacedOrder` → `order_number`, `total`):
 
 ### 5.12 `GET /v1/orders` 🔒
 
-Query: `status` (opsional, bisa koma: `PENDING,PROCESSING`), `page`, `limit`. Urut `created_at DESC`.
+Query: `status` (opsional, bisa koma: `PENDING,PROCESSING`), `from` / `to` (opsional, RFC3339, rentang `[from, to)`; iOS mengirim awal hari di zona waktu perangkat dalam UTC `…Z`, karena `+` di query terbaca spasi), `sort` (`desc` default = terbaru dulu, `asc` = terlama dulu), `page`, `limit` (default 20, maks. 100). Format salah → `400 VALIDATION_ERROR`.
 
 Response: **ringkasan** per order, sesuai `OrderDTO` di iOS:
 
@@ -562,7 +583,8 @@ Response: **ringkasan** per order, sesuai `OrderDTO` di iOS:
       "created_at": "2026-10-17T14:30:00+07:00",
       "total_price": 96400,
       "qty": 3,
-      "status": "PENDING"
+      "status": "PENDING",
+      "can_rate": false
     }
   ],
   "meta": { "page": 1, "limit": 20, "total": 1 }
@@ -571,6 +593,7 @@ Response: **ringkasan** per order, sesuai `OrderDTO` di iOS:
 
 - `product_name`: nama item pertama, ditambah ` +N lainnya` bila lebih dari satu item.
 - `qty`: total kuantitas semua item.
+- `can_rate`: `true` bila `COMPLETED` dan belum dinilai (tombol "Beri Nilai" di iOS).
 - `status`: `PENDING` | `PAID` | `PROCESSING` | `DELIVERING` | `COMPLETED` | `CANCELLED` | `FAILED`. iOS mengelompokkannya: `PENDING/PAID/PROCESSING/DELIVERING` → *Diproses*, `COMPLETED` → *Selesai*, `CANCELLED/FAILED` → *Gagal*.
 
 ### 5.13 `GET /v1/orders/{id}` 🔒
@@ -629,7 +652,7 @@ Email tidak bisa diubah lewat endpoint ini (dipakai untuk login).
 | `GET /v1/me/favorites` | `[ProductDTO]` (bentuk sama dengan 5.8) |
 | `PUT/DELETE /v1/me/favorites/{product_id}` | `data: null` (idempotent) |
 | `GET /v1/me/vouchers` | `[{ "code", "title", "description", "discount_type": "PERCENT"\|"FIXED", "discount_value", "min_subtotal", "max_discount", "ends_at" }]` |
-| `GET /v1/stores?lat=&lng=` | `[{ "id", "name", "address", "lat", "lng", "is_open", "distance_km" }]` |
+| `GET /v1/stores?lat=&lng=` | lihat §5.26 |
 
 ### 5.18 `GET /v1/home` 🔒*
 
@@ -970,6 +993,440 @@ PATCH /v1/admin/orders/{id}/status
 - `daily` selalu berisi setiap hari dalam rentang (hari kosong = 0).
 - *Pembeli baru* = pesanan pertamanya sepanjang waktu ada di rentang ini.
 
+### 5.26 Multi-outlet: `GET /v1/stores` + stok per outlet
+
+**Aturan.** Harga menu **sama di semua outlet**. Yang berbeda per outlet:
+
+- stok: menu bisa ditandai habis khusus di satu outlet (`store_product_availability`);
+- jam buka (`opens_at`–`closes_at`, WIB);
+- radius antar (`delivery_radius_km`);
+- tombol tutup sementara.
+
+`products.is_available = false` tetap berarti habis di **semua** outlet.
+
+**`GET /v1/stores?lat=&lng=`** (publik). Hanya outlet aktif. Urutan: buka sekarang → menjangkau koordinat → terdekat → `sort_order`. `lat`/`lng` opsional tetapi harus dikirim berdua (salah satu saja / di luar rentang → 400).
+
+```json
+{ "code": 200, "message": "success", "data": [
+  { "id": "ST01", "name": "Gandaria City", "address": "Jl. Sultan Iskandar Muda, Jakarta Selatan",
+    "lat": -6.2443, "lng": 106.7834, "phone": "021-2900-1001",
+    "is_open": true, "opens_at": "00:00", "closes_at": "00:00", "hours_label": "24 jam",
+    "delivery_radius_km": 7, "distance_km": 0.6, "is_deliverable": true, "closed_note": null },
+  { "id": "ST03", "name": "Kelapa Gading", "is_open": false, "opens_at": "10:00", "closes_at": "22:00",
+    "hours_label": "10:00–22:00", "delivery_radius_km": 6, "distance_km": 19.2, "is_deliverable": false,
+    "closed_note": "Outlet Kelapa Gading buka 10:00–22:00.", "...": "…" }
+] }
+```
+
+- `is_open` = buka **sekarang** (jam buka dan tidak tutup sementara).
+- `opens_at == closes_at` = 24 jam; `closes_at < opens_at` = lewat tengah malam (mis. 18:00–02:00).
+- `distance_km` / `is_deliverable` hanya terisi bila koordinat dikirim.
+- `closed_note` = kalimat untuk pelanggan, `null` bila buka.
+
+**Stok per outlet.** `GET /v1/products?store_id=ST02`, `GET /v1/products/{id}?store_id=`, dan `GET /v1/home?store_id=` mengisi `is_available` sesuai outlet. `store_id` tidak dikenal → 400. Tanpa `store_id` → stok pusat (`/v1/home` memakai outlet terbaik). `/v1/home` juga membuang menu yang habis dari section-nya.
+
+**Checkout.** `store_id` di `POST /v1/orders/quote` dan `POST /v1/orders` (§5.11). Kosong → server memilih seperti `GET /v1/stores` memakai koordinat alamat pesanan. Response quote berisi `store_name`.
+
+**Admin** (🛡, audit `STORE_CREATE` / `STORE_UPDATE` / `STORE_STOCK`):
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /v1/admin/stores` | Semua outlet (termasuk nonaktif) + `is_temporarily_closed`, `is_open_now`, `unavailable_products`, `today { orders, revenue, active }` |
+| `POST /v1/admin/stores` | Wajib `name`, `address`, `lat`, `lng`; opsional `phone`, `opens_at`/`closes_at` (`HH:MM`), `delivery_radius_km` (0 < r ≤ 50, default 7), `sort_order` → **201**, id berurutan `ST04`, `ST05`, … |
+| `PATCH /v1/admin/stores/{id}` | Field yang sama + `is_active`, `is_temporarily_closed`; semua opsional |
+| `PUT /v1/admin/stores/{id}/products/{product_id}` | `{ "is_available": false }` = habis di outlet ini; `true` = ikut stok pusat |
+| `GET /v1/admin/products?store_id=` | Tiap produk + `store_available`, `store_sold_out` |
+| `GET /v1/admin/orders?store_id=` · `GET /v1/admin/dashboard?store_id=` | Filter per outlet. Dashboard tanpa filter menambah `by_store` (perbandingan omzet & pesanan per outlet) |
+
+**iOS.**
+
+- Beranda: baris "Dari <outlet> · 1,4 km · 24 jam — Ganti" di bawah "Antar ke".
+- Outlet awal dipilih dari `GET /v1/stores` dengan koordinat alamat utama. Pilihan user disimpan di `UserDefaults` (`home.selectedOutletID`) dan dipakai lagi selama outlet masih aktif.
+- Ganti outlet:
+  - Stok outlet baru diambil dulu (gagal → outlet lama tetap dipakai).
+  - Item keranjang yang habis di sana dikeluarkan, dengan toast.
+  - Beranda & Menu dimuat ulang.
+- Keranjang menampilkan "Dikirim dari" dan mengirim `store_id`. Pesan `STORE_CLOSED` / `OUT_OF_DELIVERY_AREA` / `PRODUCT_UNAVAILABLE` dari server ditampilkan apa adanya.
+
+### 5.27 Pembayaran online (Midtrans Snap)
+
+> Status: **sudah dibuat** — backend (`internal/payment`, migrasi `0009_payments`, `TestPayments`) dan iOS (layar Pembayaran).
+> Aktif bila `MIDTRANS_SERVER_KEY` diisi; tanpa key, checkout memakai alur lama. Mulai di **sandbox**; produksi tinggal ganti key + URL (§5.27.10).
+> Belum diuji ke server sandbox Midtrans sungguhan (tes memakai fake Midtrans).
+
+#### 5.27.1 Keputusan
+
+| Hal | Pilihan | Alasan |
+|---|---|---|
+| Penyedia | **Midtrans** (GoTo), mode **Snap** | Satu integrasi untuk GoPay, QRIS, ShopeePay, VA bank, kartu. Dok berbahasa Indonesia, sandbox gratis. |
+| UI pembayaran di iOS | **Halaman Snap (`redirect_url`) di `WKWebView`**, bukan Mobile SDK, bukan Core API | Lihat 5.27.2 |
+| Kapan pesanan dibuat | **Setelah lunas.** Checkout membuat **sesi pembayaran** (`payments`); baris `orders` baru dibuat saat Midtrans melaporkan lunas | Sesuai alur "bayar dulu baru pesanan dibuat". Outlet & admin tidak pernah melihat pesanan yang belum dibayar; tab Pesanan pelanggan tetap bersih |
+| Sumber kebenaran status | **Webhook Midtrans** (HTTP notification), dicek ulang ke **GET Status API** | Redirect/finish di app bisa dipalsukan atau tidak terpanggil |
+| COD | Tetap ada (langsung jadi pesanan `PENDING` seperti sekarang), bisa dimatikan `COD_ENABLED=false` | Supaya alur lama dan tes lama tetap jalan |
+| Library Go | `net/http` biasa (±150 baris) di `internal/payment/midtrans`, di balik interface | Hanya 3 panggilan (create Snap, get status, expire); mudah di-fake di tes |
+
+#### 5.27.2 Kenapa Snap di WebView
+
+| Opsi | Kelebihan | Kekurangan |
+|---|---|---|
+| **Snap di `WKWebView`** ✅ | UI semua metode bayar sudah jadi & dirawat Midtrans; 3DS kartu, QR, nomor VA, deeplink GoPay ditangani Snap; data kartu tidak lewat app/backend kita (aman PCI) | Tampilan bukan native; perlu atur WebView (deeplink, finish URL) |
+| Mobile SDK iOS (MidtransKit) | UI native | Midtrans menghentikan dukungan Mobile SDK bertahap mulai Juni 2026; integrasi baru sejak 6 Maret 2026 diminta memakai Snap atau Core API |
+| Core API (bikin UI sendiri) | Tampilan 100% sesuai TTUI | Harus membuat UI tiap channel (QR, VA, deeplink, form kartu + tokenisasi + 3DS) dan menanganinya satu per satu |
+
+Rencana ke depan: bila nanti ingin tampilan native untuk metode favorit (mis. QRIS / GoPay), metode itu saja yang dipindah ke Core API. Kontrak `payments` di bawah tetap sama.
+
+#### 5.27.3 Alur end-to-end
+
+```mermaid
+sequenceDiagram
+    participant App as iOS
+    participant API as trytuist-api
+    participant MT as Midtrans (sandbox)
+    App->>API: POST /v1/checkout (keranjang, alamat, outlet, ONLINE)
+    API->>API: quote + validasi (outlet buka, radius, stok, voucher)
+    API->>API: INSERT payments (PENDING, snapshot quote, expires_at = now+15m)
+    API->>MT: POST /snap/v1/transactions
+    MT-->>API: token, redirect_url
+    API-->>App: 201 { payment_id, redirect_url, amount, expires_at }
+    App->>MT: buka redirect_url di WKWebView, user pilih GoPay/QRIS/VA/kartu & bayar
+    MT->>API: POST /v1/payments/midtrans/notification (settlement)
+    API->>API: cek signature + GET Status API → PAID → INSERT orders (status PAID) dalam 1 transaksi
+    App->>API: GET /v1/payments/{id} (polling tiap 3 detik)
+    API-->>App: status PAID + order { id, order_number }
+    App->>App: kosongkan keranjang → layar "Pembayaran berhasil" → detail pesanan
+```
+
+- **Polling + cek mandiri.** Saat iOS polling dan status masih `PENDING`, server sendiri ikut menanyakan ke Midtrans (paling sering tiap 5 detik per pembayaran). Jadi alur tetap jalan di laptop dev walau webhook belum tersambung.
+- **Keranjang** baru dikosongkan setelah `PAID`. Gagal / batal / kedaluwarsa → kembali ke Keranjang dengan isi utuh.
+- **Satu sesi aktif per user.** Checkout baru otomatis membatalkan sesi `PENDING` sebelumnya (status lokal `CANCELLED` + `expire` ke Midtrans), supaya user tidak membayar dua VA.
+
+#### 5.27.4 Status pembayaran
+
+```
+PENDING ──settlement / capture+accept──▶ PAID      (pesanan dibuat)
+   │──deny / failure──────────────────▶ FAILED
+   │──expire / lewat expires_at────────▶ EXPIRED
+   └──user batal / checkout baru────────▶ CANCELLED
+
+EXPIRED / CANCELLED / FAILED ──settlement datang terlambat──▶ PAID   (uang sudah masuk → pesanan tetap dibuat)
+PAID ──refund / chargeback (dari Midtrans)──▶ PAID + refund_status   (pesanan tidak otomatis diubah; admin memutuskan)
+```
+
+Pemetaan `transaction_status` Midtrans:
+
+| Midtrans | `payments.status` |
+|---|---|
+| `settlement` | `PAID` |
+| `capture` + `fraud_status=accept` | `PAID` |
+| `capture` + `fraud_status=challenge`, `authorize`, `pending` | tetap `PENDING` |
+| `deny`, `failure` | `FAILED` |
+| `expire` | `EXPIRED` |
+| `cancel` | `CANCELLED` |
+| `refund`, `partial_refund`, `chargeback`, `partial_chargeback` | status tetap; `refund_status` diisi |
+| `settlement` → `deny` (reversal VA/Indomaret, jarang) | `FAILED` bila pesanan belum diproses; bila sudah → `refund_status = REVERSED` untuk ditangani admin |
+
+#### 5.27.5 Endpoint
+
+| Method | Path | Auth | Keterangan |
+|---|---|---|---|
+| `POST` | `/v1/checkout` | 🔒 + `Idempotency-Key` | Body = `POST /v1/orders` (§5.11). `payment_method_id: "ONLINE"` (atau `QRIS` / e-wallet / metode utama online) → sesi Midtrans (201 di bawah). `"COD"` → langsung pesanan: `data = { "next": "ORDER", "order": <OrderDTO §5.11> }`. Midtrans nonaktif → selalu `ORDER` (alur lama) |
+| `GET` | `/v1/payments/{id}` | 🔒 pemilik | Status sesi; bila `PENDING` server ikut cek ke Midtrans |
+| `GET` | `/v1/payments?status=PENDING` | 🔒 | Sesi milik user (untuk kartu "Menunggu pembayaran") |
+| `POST` | `/v1/payments/{id}/cancel` | 🔒 pemilik | Batalkan sesi `PENDING` (expire ke Midtrans). Sudah final → `409 PAYMENT_ALREADY_FINAL` |
+| `POST` | `/v1/payments/midtrans/notification` | **publik**, tanpa `X-API-Key`, divalidasi `signature_key` | Webhook Midtrans. Dibalas `200` secepatnya |
+| `GET` | `/v1/payments/finish` | publik | Finish URL Snap. Halaman HTML kecil "Kembali ke aplikasi"; di iOS URL ini dicegat WebView sehingga tidak pernah benar-benar dimuat |
+| `GET` | `/v1/admin/payments?status=&q=&from=&to=` | 🛡 | Web admin → Pembayaran (fase 5b) |
+
+`POST /v1/orders` lama tetap ada untuk COD. Saat Midtrans aktif, dipanggil dengan `ONLINE` / `QRIS` / e-wallet (termasuk metode utama user) → `422 PAYMENT_REQUIRED`, supaya pesanan online tidak bisa dibuat tanpa bayar. Tanpa Midtrans, `QRIS`/e-wallet tetap seperti dulu; `ONLINE` → `422 PAYMENT_METHOD_UNAVAILABLE`.
+
+**`POST /v1/checkout` (ONLINE) → 201** (Idempotency-Key yang sama → **200**, sesi yang sama)
+
+```json
+{
+  "code": 201,
+  "message": "Silakan selesaikan pembayaran",
+  "data": {
+    "next": "PAYMENT",
+    "payment": {
+      "id": "6c2f…",
+      "provider": "MIDTRANS",
+      "provider_order_id": "TT-DEV-20261018-7K3QX9PA",
+      "status": "PENDING",
+      "amount": 49800,
+      "expires_at": "2026-10-18T15:55:00+07:00",
+      "redirect_url": "https://app.sandbox.midtrans.com/snap/v4/redirection/66e4…",
+      "finish_url_prefix": "https://<PUBLIC_BASE_URL>/v1/payments/finish",
+      "store": { "id": "ST01", "name": "Gandaria City" },
+      "quote": { "subtotal": 39800, "delivery_fee": 10000, "discount": 0, "total": 49800, "items": [ "…bentuk §5.10…" ] },
+      "order": null
+    }
+  }
+}
+```
+
+**`GET /v1/payments/{id}` → 200.** Bentuk sama dengan `payment` di atas, ditambah:
+
+- `payment_type`: `"gopay"`, `"qris"`, `"bank_transfer"`, `"credit_card"`, …; `null` bila user belum memilih.
+- `paid_at`.
+- `status_message`, untuk ditampilkan saat `FAILED` / `EXPIRED`.
+- `order`: `{ "id", "order_number", "status" }` setelah `PAID`, selain itu `null`.
+
+`redirect_url` dikosongkan setelah status final.
+
+**Error checkout** (selain error quote yang sudah ada: `EMPTY_CART`, `PRODUCT_UNAVAILABLE`, `STORE_CLOSED`, `OUT_OF_DELIVERY_AREA`, `INVALID_VOUCHER`):
+
+| Kode | Kapan |
+|---|---|
+| `422 PAYMENT_METHOD_UNAVAILABLE` | `ONLINE` dimatikan (`MIDTRANS_SERVER_KEY` kosong) atau `COD_ENABLED=false` |
+| `422 AMOUNT_TOO_SMALL` | Total < Rp 1.000 (batas minimum transaksi; cek ulang di sandbox) |
+| `502 PAYMENT_GATEWAY_ERROR` | Midtrans menolak / timeout (10 detik). Sesi ditandai `FAILED`, iOS boleh mencoba lagi dengan `Idempotency-Key` baru |
+| `409 IDEMPOTENCY_CONFLICT` | `Idempotency-Key` sama dipakai untuk isi keranjang berbeda |
+
+Idempotency: `Idempotency-Key` yang sama + isi keranjang sama → sesi yang sama dikembalikan (200, status apa pun), tanpa memanggil Midtrans lagi. Setelah sesi gagal / dibatalkan, iOS memakai key baru.
+
+#### 5.27.6 Panggilan ke Midtrans (server → Midtrans)
+
+Header semua panggilan: `Authorization: Basic base64("<MIDTRANS_SERVER_KEY>:")`, `Accept` & `Content-Type: application/json`.
+
+| Fungsi | Sandbox | Produksi |
+|---|---|---|
+| Buat transaksi Snap | `POST https://app.sandbox.midtrans.com/snap/v1/transactions` | `POST https://app.midtrans.com/snap/v1/transactions` |
+| Cek status | `GET https://api.sandbox.midtrans.com/v2/{order_id}/status` | `GET https://api.midtrans.com/v2/{order_id}/status` |
+| Hentikan transaksi pending | `POST https://api.sandbox.midtrans.com/v2/{order_id}/expire` | `POST https://api.midtrans.com/v2/{order_id}/expire` |
+
+Body Snap yang dikirim:
+
+```json
+{
+  "transaction_details": { "order_id": "TT-DEV-20261018-7K3QX9PA", "gross_amount": 49800 },
+  "item_details": [
+    { "id": "P07-regular", "name": "Nasi Goreng Spesial", "price": 19900, "quantity": 2 },
+    { "id": "DELIVERY", "name": "Ongkos kirim", "price": 10000, "quantity": 1 }
+  ],
+  "customer_details": { "first_name": "Kholis", "email": "kholis@…", "phone": "081234567890" },
+  "expiry": { "start_time": "2026-10-18 15:40:00 +0700", "unit": "minutes", "duration": 15 },
+  "callbacks": { "finish": "https://<PUBLIC_BASE_URL>/v1/payments/finish" },
+  "custom_field1": "6c2f…"
+}
+```
+
+- `order_id` = `provider_order_id`: `TT-{APP_ENV}-{YYYYMMDD}-{8 karakter acak}`, maks. 50 karakter.
+  - **Jangan** pakai nomor urut atau `order_number`. Midtrans menolak `order_id` yang pernah dipakai, dan nomor urut akan bentrok setelah DB dev di-reset.
+- `gross_amount` **harus sama** dengan jumlah `price × quantity` semua `item_details`. Server menghitung dari snapshot quote, lalu memeriksa sebelum mengirim.
+  - Diskon voucher dikirim sebagai baris harga negatif, mis. `{ "id": "DISCOUNT", "name": "Voucher HEMAT10", "price": -3980, "quantity": 1 }` (cek di sandbox).
+  - Bila ditolak, fallback: satu baris "Pesanan TryTuist" seharga total.
+- `name` item dipotong 50 karakter. `price` = harga satuan **termasuk** `extra_price` varian & harga promo.
+- `enabled_payments` hanya dikirim bila `MIDTRANS_ENABLED_PAYMENTS` diisi. Kosong = semua channel yang aktif di dashboard sandbox.
+- Webhook dan GET Status: jawab `200` paling lama 5 detik (batas Midtrans 30 detik). Selain 2xx, Midtrans mengulang beberapa kali dengan jeda 1 menit.
+
+#### 5.27.7 Webhook `POST /v1/payments/midtrans/notification`
+
+1. Baca body (maks. 64 KB, JSON longgar: field baru diabaikan).
+2. Cek `signature_key == SHA512(order_id + status_code + gross_amount + MIDTRANS_SERVER_KEY)` (hex, bandingkan constant-time). Salah → `403`, dicatat di `payment_events`.
+3. Cari `payments` berdasarkan `provider_order_id` (`SELECT … FOR UPDATE`). Tidak ada → `200` (abaikan; mungkin dari env lain yang memakai akun sandbox sama).
+4. Cek `gross_amount` sama dengan `payments.amount`. Beda → tandai `FAILED` + log error.
+5. **Konfirmasi** lewat GET Status API (notifikasi bisa datang tidak berurutan). Pakai status dari GET Status bila berhasil.
+6. Terapkan transisi 5.27.4 secara **idempotent**:
+   - Sudah `PAID` → tidak membuat pesanan kedua.
+   - Pembuatan pesanan memakai `orders.payment_id UNIQUE`.
+7. Saat menjadi `PAID`, dalam **satu transaksi DB**:
+   - `INSERT orders` dari snapshot: harga tidak dihitung ulang, dan stok / jam buka tidak dicek ulang karena uang sudah masuk.
+   - Kolom: `status = 'PAID'`, `payment_method = 'ONLINE'`, `payment_provider = payment_type`.
+   - `order_items`, `order_status_history` ("Dibayar via GoPay"), `sold_count`, voucher terpakai, `payments.order_id`, `paid_at`.
+8. Simpan payload mentah di `payment_events`, lalu balas `200 {"status":"ok"}`.
+
+Sweeper (goroutine tiap 1 menit) untuk `PENDING` yang lewat `expires_at` + 2 menit:
+
+- Cek GET Status.
+- Bila belum dibayar: `expire` ke Midtrans, lalu tandai `EXPIRED`.
+
+#### 5.27.8 Skema (migrasi `0009_payments`)
+
+```sql
+CREATE TYPE payment_status AS ENUM ('PENDING','PAID','FAILED','EXPIRED','CANCELLED');
+
+CREATE TABLE payments (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id            UUID           NOT NULL REFERENCES users(id),
+    store_id           TEXT           NOT NULL REFERENCES stores(id),
+    provider           TEXT           NOT NULL DEFAULT 'MIDTRANS',
+    provider_order_id  TEXT           NOT NULL UNIQUE,         -- dikirim sebagai order_id ke Midtrans
+    status             payment_status NOT NULL DEFAULT 'PENDING',
+    amount             BIGINT         NOT NULL CHECK (amount > 0),
+    quote              JSONB          NOT NULL,                -- snapshot: items, alamat, voucher, outlet, ongkir, catatan
+    idempotency_key    TEXT,
+    snap_token         TEXT,
+    redirect_url       TEXT,
+    payment_type       TEXT,                                   -- gopay | qris | bank_transfer | credit_card | …
+    provider_txn_id    TEXT,                                   -- transaction_id Midtrans
+    provider_status    TEXT,                                   -- transaction_status terakhir (mentah)
+    status_message     TEXT,
+    refund_status      TEXT,                                   -- NULL | REFUND | PARTIAL_REFUND | CHARGEBACK | REVERSED | REQUIRED
+    expires_at         TIMESTAMPTZ    NOT NULL,
+    paid_at            TIMESTAMPTZ,
+    last_checked_at    TIMESTAMPTZ,                            -- batasi cek GET Status (5 detik)
+    order_id           UUID UNIQUE REFERENCES orders(id),
+    created_at         TIMESTAMPTZ    NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ    NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX payments_idempotency ON payments (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX payments_pending_idx ON payments (expires_at) WHERE status = 'PENDING';
+CREATE INDEX payments_user_idx ON payments (user_id, created_at DESC);
+
+CREATE TABLE payment_events (                                  -- audit setiap notifikasi / cek status
+    id            BIGSERIAL PRIMARY KEY,
+    payment_id    UUID REFERENCES payments(id),
+    source        TEXT        NOT NULL,                        -- webhook | status_api | client | sweeper
+    provider_status TEXT,
+    signature_ok  BOOLEAN,
+    payload       JSONB       NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE orders DROP CONSTRAINT orders_payment_method_check;
+ALTER TABLE orders ADD CONSTRAINT orders_payment_method_check
+    CHECK (payment_method IN ('COD','QRIS','EWALLET','ONLINE'));
+ALTER TABLE orders ADD COLUMN payment_id UUID UNIQUE REFERENCES payments(id);
+```
+
+`app_config.payment_methods` mendapat metode bawaan baru:
+
+```json
+{ "id": "ONLINE", "type": "ONLINE", "name": "Bayar Online",
+  "description": "GoPay, QRIS, ShopeePay, transfer bank (VA), kartu", "icon": "creditcard.fill" }
+```
+
+- Saat Midtrans aktif: `QRIS` tidak dikirim di `GET /v1/me/payment-methods`, akun e-wallet tersimpan (§5.21) tampil `is_enabled: false` dan tidak bisa ditambah. Endpoint §5.21 tetap ada untuk app lama.
+- Metode utama user yang menunjuk QRIS / e-wallet dibaca sebagai `ONLINE` (`default_id: "ONLINE"`).
+- Midtrans nonaktif → `ONLINE` tidak dikirim sama sekali. `COD_ENABLED=false` → COD `is_enabled: false`.
+
+#### 5.27.9 iOS
+
+**Layer.** Ikuti pola HomeFeature; Keranjang tetap jadi pintu masuk.
+
+- Domain:
+  - `PaymentSession` (id, status, amount, expiresAt, redirectURL, finishURLPrefix, order?);
+  - `PaymentRepository` (`start(selection)`, `status(id)`, `cancel(id)`, `pending()`);
+  - use case: `StartCheckoutUseCase` → `.order(PlacedOrder)` untuk COD atau `.payment(PaymentSession)`; `PollPaymentUseCase`; `CancelPaymentUseCase`.
+- Data:
+  - `PaymentDTOs`, `PaymentMapper`;
+  - `PaymentAPIDataSource` (`.checkout`, `.payment(id)`, `.cancelPayment(id)`, `.pendingPayments`);
+  - `PaymentMockDataSource` + `PaymentMockStore`: sesi palsu tanpa halaman Snap, otomatis `PAID` 4 detik setelah dibuat.
+- Presentation:
+  - `PaymentStore` + `PaymentView`, layar penuh dari `CatalogFlow`:
+    - header "Bayar Rp 49.800" + hitung mundur `expires_at`;
+    - `MidtransWebView` (`UIViewRepresentable` `WKWebView`);
+    - tombol Tutup ("Batalkan pembayaran?" → cancel / lanjut nanti).
+  - `PaymentResultView`: sukses → "Lihat pesanan" (tab Pesanan); gagal / kedaluwarsa → "Kembali ke keranjang".
+
+**`MidtransWebView`** (`WKNavigationDelegate.decidePolicyFor`):
+
+- URL berawalan `finish_url_prefix` → batalkan navigasi, tutup WebView, lanjut polling. Status dari query **tidak dipercaya**; server yang menentukan.
+- Scheme selain `http`/`https` (`gojek://`, `shopeeid://`, `bca://`, …) → `UIApplication.shared.open`. Gagal dibuka → biarkan Snap menampilkan QR.
+- Tidak menyuntikkan JavaScript ke halaman Snap (larangan Midtrans).
+- Tidak menyimpan cookie di luar sesi (`WKWebsiteDataStore.nonPersistent()`).
+
+**Polling.**
+
+- Tiap 3 detik selama `PaymentView` tampil, dan saat app kembali aktif (`scenePhase`).
+- Berhenti saat status final atau setelah 2 menit sejak WebView ditutup. Setelah itu tampil "Kami masih menunggu konfirmasi pembayaran" + "Cek lagi".
+
+**Lainnya.**
+
+- **Keranjang:** baru dikosongkan setelah `PAID`.
+- **Menunggu pembayaran:** sesi `PENDING` muncul sebagai kartu di Beranda ("Menunggu pembayaran Rp … · Bayar"), termasuk setelah app di-kill. Tab Pesanan belum (berikutnya).
+- **Metode Pembayaran** (Profil & Keranjang): "Bayar Online" (default) + "Bayar di Tempat" bila COD aktif.
+- **Error:** `PAYMENT_GATEWAY_ERROR` → "Pembayaran sedang gangguan, coba lagi."; `PAYMENT_REQUIRED` tidak muncul di app versi baru.
+
+#### 5.27.10 Konfigurasi & testing sandbox
+
+```dotenv
+MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxxxxx     # Dashboard sandbox → Settings → Access Keys. JANGAN ditaruh di iOS / web admin
+MIDTRANS_IS_PRODUCTION=false
+MIDTRANS_ENABLED_PAYMENTS=                     # kosong = semua channel aktif; contoh: gopay,shopeepay,bca_va,bni_va,credit_card
+PAYMENT_EXPIRY=15m
+PUBLIC_BASE_URL=http://localhost:8080          # dev: ganti dengan URL tunnel supaya webhook masuk
+COD_ENABLED=true
+```
+
+- Client Key **tidak dibutuhkan**: iOS memakai `redirect_url`, bukan `snap.js`.
+- **Webhook di laptop.** Midtrans tidak bisa mengirim ke `localhost`.
+  - Jalankan tunnel, mis. `cloudflared tunnel --url http://localhost:8080`.
+  - Isi URL-nya di Dashboard sandbox → Settings → Configuration → **Payment Notification URL** = `https://<tunnel>/v1/payments/midtrans/notification`.
+  - Tanpa tunnel pun alur tetap selesai lewat cek GET Status saat polling (5.27.3), hanya sedikit lebih lambat.
+- **Bayar di sandbox** (jangan pakai uang asli):
+  - QRIS / GoPay / ShopeePay: salin URL/QR ke `https://simulator.sandbox.midtrans.com/v2/qris/index` atau `…/v2/deeplink/index`.
+  - VA: simulator per bank, mis. BCA `https://simulator.sandbox.midtrans.com/bca/va/index`.
+  - Kartu: `4811 1111 1111 1114`, CVV `123`, OTP `112233`, masa berlaku tahun depan.
+- **Tes otomatis.** `midtrans.Client` berupa interface. `TestPayments` memakai fake untuk:
+  - sukses → pesanan dibuat sekali walau webhook dikirim 3×;
+  - signature salah;
+  - amount beda;
+  - expire;
+  - settlement terlambat;
+  - idempotency;
+  - satu sesi aktif per user;
+  - `POST /v1/orders` ONLINE → 422.
+- **Produksi:** `MIDTRANS_IS_PRODUCTION=true` + server key produksi + `PUBLIC_BASE_URL` https asli. Notification URL diisi di dashboard produksi.
+
+#### 5.27.11 Di luar cakupan tahap ini
+
+- Refund otomatis (Refund API). Sementara: admin menandai pesanan `FAILED`/`CANCELLED` → `refund_status = REQUIRED` tampil di admin, refund dilakukan manual dari dashboard Midtrans.
+- Simpan kartu / GoPay tokenization (one-click).
+- Pembayaran di web admin (kasir).
+
+### 5.28 Notifikasi push (APNs)
+
+Dikirim langsung ke **APNs** (Apple Push Notification service) dengan *token-based auth* (file `.p8`), tanpa Firebase: tidak perlu SDK tambahan di iOS maupun service account Google. Bila nanti butuh Android, `push.Sender` bisa ditambah implementasi FCM.
+
+**Kapan dikirim** (setelah transaksi DB commit, di background, maks. 15 detik):
+
+| Kejadian | Judul | `type` di payload |
+|---|---|---|
+| Pembayaran online lunas (§5.27) | Pembayaran berhasil 🎉 — "Pesanan ORD-… diteruskan ke outlet …" | `payment_paid` (+ `payment_id`, `order_id`) |
+| Pembayaran kedaluwarsa | Waktu pembayaran habis | `payment_expired` (+ `payment_id`) |
+| Admin / outlet: `PROCESSING` | Pesanan sedang disiapkan 👨‍🍳 | `order_status` (+ `order_id`, `status`) |
+| `DELIVERING` | Pesanan dalam perjalanan 🛵 | `order_status` |
+| `COMPLETED` | Pesanan selesai ✅ — ajakan memberi nilai | `order_status` |
+| `FAILED` / `CANCELLED` oleh admin | Pesanan gagal / dibatalkan + alasan admin | `order_status` |
+
+Payload APNs:
+
+```json
+{ "aps": { "alert": { "title": "Pembayaran berhasil 🎉", "body": "Pesanan ORD-20261018-0007 diteruskan ke outlet Gandaria City." },
+           "sound": "default", "thread-id": "<order_id>" },
+  "type": "payment_paid", "payment_id": "6c2f…", "order_id": "1b7d…" }
+```
+
+**Endpoint.**
+
+| Endpoint | Body | Keterangan |
+|---|---|---|
+| `PUT /v1/me/devices` 🔒 | `{ "token": "<hex>", "bundle_id": "com.lshinkuro.try-tuist.dev", "environment": "sandbox" }` | `environment`: `sandbox` (build Debug) \| `production` (TestFlight/App Store). Token yang sama dari akun lain dipindahkan ke user ini. → `{ "push_enabled": bool }` |
+| `POST /v1/devices/unregister` | `{ "token": "<hex>" }` | Tanpa login (dipanggil setelah token sesi dihapus). Idempotent |
+| `POST /v1/dev/push-test` 🔒 | — | Hanya `APP_ENV=dev` |
+
+- APNs membalas `410` / `BadDeviceToken` / `DeviceTokenNotForTopic` → token dihapus otomatis.
+- `apns-topic` = `bundle_id` yang dikirim app, jadi build Dev (`….dev`) dan Prod memakai key `.p8` yang sama.
+- Tabel `push_devices` (migrasi `0010_push_devices`): `token` (PK), `user_id`, `platform`, `bundle_id`, `environment`, `last_seen_at`.
+
+**iOS.**
+
+- `NotificationManager` meminta izin. Bila diizinkan → `registerForRemoteNotifications`.
+- `AppDelegate` meneruskan device token ke `PushRegistrar` (App target).
+- `PushRegistrar` mengirim `PUT /v1/me/devices` setelah login (`AppRouter.showMain`) dan setiap token baru.
+- Saat sesi berakhir (cold start, logout Profil, sesi habis 401, Debugger) → `POST /v1/devices/unregister`.
+- Tap notifikasi `payment_paid` / `order_status` → tab Pesanan. Bila app dibuka dari notifikasi lalu harus login dulu, tab Pesanan dipilih setelah login.
+- `TryTuist.entitlements` (`aps-environment = development`) dipasang di target app lewat `Project.swift`.
+
+**Setup.**
+
+1. Developer account berbayar → developer.apple.com → Certificates, IDs & Profiles → **Keys** → `+` → centang **Apple Push Notifications service (APNs)** → unduh `AuthKey_XXXXXXXXXX.p8` (hanya bisa diunduh sekali). Catat **Key ID** dan **Team ID**.
+2. Backend `.env`: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_FILE=/path/AuthKey_….p8`. Log start: `push APNs aktif`.
+3. Xcode: target TryTuist → Signing & Capabilities harus menampilkan **Push Notifications** (dari entitlements). App ID `com.lshinkuro.try-tuist.dev` otomatis mendapat capability Push dengan Automatic signing.
+4. Jalankan di **iPhone asli**, atau Simulator iOS 16+ di Mac Apple silicon. Izinkan notifikasi, login, lalu `curl -X POST …/v1/dev/push-test` dengan token login.
+5. Tes tanpa backend: `xcrun simctl push booted com.lshinkuro.try-tuist.dev payload.apns`.
+
 ---
 
 ## 6. Skema database (PostgreSQL)
@@ -1060,8 +1517,22 @@ CREATE TABLE stores (
     address   TEXT             NOT NULL,
     lat       DOUBLE PRECISION NOT NULL,
     lng       DOUBLE PRECISION NOT NULL,
-    is_open   BOOLEAN          NOT NULL DEFAULT TRUE
+    is_open   BOOLEAN          NOT NULL DEFAULT TRUE  -- false = tutup sementara (tombol admin)
+    -- 0008_multi_outlet:
+    -- phone TEXT, opens_at TIME DEFAULT '00:00', closes_at TIME DEFAULT '00:00' (sama = 24 jam),
+    -- delivery_radius_km NUMERIC(4,1) DEFAULT 7 CHECK (> 0 AND <= 50),
+    -- is_active BOOLEAN DEFAULT TRUE, sort_order INT DEFAULT 0, created_at TIMESTAMPTZ
 );
+
+-- 0008_multi_outlet: menu habis khusus di satu outlet (tidak ada baris = ikut products.is_available)
+CREATE TABLE store_product_availability (
+    store_id     TEXT        NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    product_id   TEXT        NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    is_available BOOLEAN     NOT NULL,
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (store_id, product_id)
+);
+-- + index orders (store_id, created_at) untuk filter outlet di admin
 
 -- ========== Alamat, favorit, voucher ==========
 CREATE TABLE addresses (
@@ -1322,7 +1793,8 @@ ALTER TABLE users ADD CONSTRAINT users_has_login_method
 | Panjang catatan item | ≤ 100 karakter | `ProductDetailState.noteLimit` |
 | Ongkir | flat Rp 10.000 | `CartState.standardDeliveryFee` |
 | Gratis ongkir | subtotal ≥ Rp 50.000 dengan voucher/banner promo B2 | (belum di iOS) |
-| Produk habis | `is_available = false` → 422 `PRODUCT_UNAVAILABLE` | `CartError.productUnavailable` |
+| Produk habis | `is_available = false` (pusat) atau habis di outlet (§5.26) → 422 `PRODUCT_UNAVAILABLE` | `CartError.productUnavailable` / pesan server |
+| Outlet | tutup → 422 `STORE_CLOSED`; alamat di luar radius → 422 `OUT_OF_DELIVERY_AREA`; harga sama di semua outlet | `CartError.rejected(pesan)` |
 | Keranjang kosong | 422 `EMPTY_CART` | `CartError.emptyCart` |
 | Password | ≥ 8 karakter, disimpan bcrypt (cost 12) | `CredentialValidator` |
 | Nomor order | `ORD-YYYYMMDD-NNNN` (urut per hari) | |
@@ -1504,9 +1976,13 @@ INSERT INTO product_options (product_id, id, name, extra_price, sort_order) VALU
   ('P10', 'jumbo', 'Porsi Jumbo', 8000, 3);
 
 -- Outlet
+-- Outlet (lengkap di db/seed/dev_seed.sql): ST01 & ST02 24 jam (radius 7 & 5 km),
+-- ST03 Kelapa Gading 10:00–22:00 (radius 6 km). Stok: Ramen Pedas (P09) habis di ST02,
+-- Chocolate Cake (P14) habis di ST03.
 INSERT INTO stores (id, name, address, lat, lng) VALUES
   ('ST01', 'Gandaria City', 'Jl. Sultan Iskandar Muda, Jakarta Selatan', -6.2443, 106.7834),
-  ('ST02', 'Kemang Utara', 'Jl. Kemang Utara Raya, Jakarta Selatan', -6.2608, 106.8133);
+  ('ST02', 'Kemang Utara', 'Jl. Kemang Utara Raya, Jakarta Selatan', -6.2608, 106.8133),
+  ('ST03', 'Kelapa Gading', 'Jl. Boulevard Raya, Jakarta Utara', -6.1588, 106.9057);
 
 -- Akun demo (password: 12345678 & password123) — hash dibuat dengan bcrypt saat seeding:
 --   go run ./cmd/seed  (atau isi password_hash dengan hasil bcrypt.GenerateFromPassword)
@@ -1566,37 +2042,39 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 
 **Fase 1: Auth + Katalog** (cukup untuk login dan Beranda/Menu tanpa mock)
 
-- [ ] Init repo, `go mod init`, docker-compose Postgres, `Makefile`
-- [ ] `config`, `httpx` (envelope, error), middleware RequestID/Logger/Recover/APIKey
-- [ ] Migrasi `0001_init` + seed
-- [ ] `GET /healthz`
-- [ ] `POST /v1/auth/register`, `/login`, `/refresh`, `/logout` (JWT + refresh token rotation)
-- [ ] `GET /v1/banners`, `/v1/categories`, `/v1/products`, `/v1/products/{id}`
-- [ ] Test: unit service + integration test handler (Postgres via `testcontainers-go` atau DB test lokal)
-- [ ] iOS: `USE_MOCK_DATA = NO` di Dev → login & katalog jalan dari API
+- [x] Init repo, `go mod init`, docker-compose Postgres, `Makefile`
+- [x] `config`, `httpx` (envelope, error), middleware RequestID/Logger/Recover/APIKey
+- [x] Migrasi `0001_init` + seed
+- [x] `GET /healthz`
+- [x] `POST /v1/auth/register`, `/login`, `/refresh`, `/logout` (JWT + refresh token rotation)
+- [x] `GET /v1/banners`, `/v1/categories`, `/v1/products`, `/v1/products/{id}`
+- [x] Test: unit service + integration test handler (DB test lokal `trytuist_test`: `TestAuthFlow`, `TestCatalog`)
+- [x] iOS: `USE_MOCK_DATA = NO` di Dev → login & katalog jalan dari API
 - [x] `POST /v1/auth/google` (daftar & masuk dengan Google, migrasi `0005_google_auth`, `TestGoogleSignIn`)
 - [x] iOS: tombol "Lanjutkan dengan Google" di Sign In & Sign Up (GoogleSignIn-iOS)
 
 **Fase 1b: Semua data Beranda, Menu & konfigurasi dari backend**
 
-- [ ] Migrasi `0002_home_config` + seed `home_sections` & `app_config`
-- [ ] `GET /v1/home` (section dinamis, alamat default, sapaan)
-- [ ] `GET /v1/app-config` (+ `ETag` / `Cache-Control`)
+- [x] Migrasi `0002_home_config` + seed `home_sections` & `app_config`
+- [x] `GET /v1/home` (section dinamis, alamat default, sapaan)
+- [x] `GET /v1/app-config` (+ `ETag` / `Cache-Control`)
 - [ ] iOS: `HomeAPIDataSource` → `/v1/home`; Beranda merender `sections` dari server (bukan dihitung di `GetHomeContentUseCase`)
 - [ ] iOS: `AppConfigRepository` dipanggil saat Splash (onboarding, ongkir, aturan jumlah/catatan, menu Profil, cek versi)
 
 **Fase 2: Checkout & Pesanan**
 
-- [ ] `POST /v1/orders/quote`, `POST /v1/orders` (transaksi + idempotency)
-- [ ] `GET /v1/orders`, `/v1/orders/{id}`, `POST /v1/orders/{id}/cancel`
-- [ ] iOS: `CartAPIRepository` (checkout via API, keranjang tetap lokal) + tab Pesanan dari API
+- [x] `POST /v1/orders/quote`, `POST /v1/orders` (transaksi + idempotency)
+- [x] `GET /v1/orders`, `/v1/orders/{id}`, `POST /v1/orders/{id}/cancel`
+- [x] iOS: checkout via API (`CheckoutAPIDataSource` → `POST /v1/checkout`, keranjang tetap lokal) + tab Pesanan dari API
+- [ ] iOS: Keranjang memakai `POST /v1/orders/quote` (ongkir & diskon dari server, bukan `CartState.standardDeliveryFee`)
 
 **Fase 3: Profil & fitur tambahan**
 
-- [ ] `GET/PATCH /v1/me`, alamat, favorit, voucher, outlet, rating
-- [ ] `GET /v1/promotions/featured`, `POST /v1/subscriptions/{plan_id}/activate`
-- [ ] iOS: Profil dari `/v1/me` + `/v1/promotions/featured`; ❤️ di Detail ke `/v1/me/favorites`
-- [ ] Push notification status pesanan (FCM) memakai `users.fcm_token`
+- [x] `GET/PATCH /v1/me`, alamat, favorit, voucher, outlet, rating
+- [x] `GET /v1/promotions/featured`, `POST /v1/subscriptions/{plan_id}/activate`
+- [x] iOS: Profil dari `/v1/me`
+- [ ] iOS: kartu promo dari `/v1/promotions/featured`; ❤️ di Detail & Menu Favorit ke `/v1/me/favorites`
+- [x] Push notification status pesanan → APNs langsung (§5.28), bukan FCM
 
 **Fase 3b: Pengaturan Profil**
 
@@ -1616,22 +2094,52 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] Harga promo di katalog, `/v1/home`, favorit, quote & checkout (`original_price`, `discount_percent`, tag `promo`)
 - [x] `GET /v1/promotions/popup` (`TestProductDeals`)
 - [x] iOS: popup promo di Beranda (bisa ditutup, sekali per hari) → Detail menu → tambah ke keranjang dengan harga promo; section "Promo Hemat"; harga coret & badge diskon di kartu, list, dan detail
-- [ ] CMS / endpoint admin untuk membuat promo
+- [x] CMS / endpoint admin untuk membuat promo (fase 4: `/v1/admin/deals`, halaman Promo di web admin)
 
 **Fase 4: Web admin (`trytuistadmin`)**
 
 - [x] Migrasi `0007_admin` (role, alasan & pengubah status, audit log) + seed akun admin
 - [x] `/v1/admin/*`: dashboard, pesanan + ubah status (sukses/gagal/batal), tambah & ubah menu (varian, foto), promo, pelanggan, audit log (`TestAdmin`)
 - [x] Web Next.js 16 (port 3000), login biasa + role ADMIN, BFF cookie httpOnly; lihat `trytuistadmin/WEBPLAN.md`
-- [ ] Ekspor CSV, notifikasi pesanan baru, kelola kategori/banner/voucher/outlet
+- [ ] Ekspor CSV, notifikasi pesanan baru, kelola kategori/banner/voucher
 - [ ] Pembelian bahan baku (stok & HPP)
+
+**Fase 4b: Multi-outlet (§5.26)**
+
+- [x] Migrasi `0008_multi_outlet` (jam buka, radius, aktif, urutan; stok per outlet) + seed `ST03`
+- [x] `GET /v1/stores` diurutkan buka → menjangkau → terdekat; `store_id` di `/v1/products`, `/v1/home`, quote & checkout (`STORE_CLOSED`, `OUT_OF_DELIVERY_AREA`) (`TestMultiOutlet`)
+- [x] Admin: `/v1/admin/stores`, stok per outlet, filter outlet di pesanan & dashboard (`by_store`)
+- [x] Web admin: halaman Outlet, pilih outlet di Menu / Pesanan / Dashboard
+- [x] iOS: pilih outlet di Beranda, stok Menu ikut outlet, keranjang dibersihkan dari menu yang habis, `store_id` di checkout
+- [ ] Admin per outlet (role `OUTLET_STAFF` yang hanya melihat outletnya)
+- [ ] Ongkir per jarak, estimasi waktu antar
+
+**Fase 5: Pembayaran online Midtrans (§5.27)**
+
+- [ ] Akun Midtrans sandbox: server key, aktifkan channel (GoPay, QRIS, ShopeePay, VA, kartu), isi Payment Notification URL (tunnel)
+- [x] Migrasi `0009_payments` (`payments`, `payment_events`, `orders.payment_id`, metode `ONLINE`)
+- [x] `internal/payment`: klien Midtrans (Snap, status, expire), `POST /v1/checkout`, `GET /v1/payments[/{id}]`, cancel, webhook (signature + konfirmasi status), sweeper kedaluwarsa
+- [x] Pesanan dibuat saat lunas dari snapshot (idempotent); `POST /v1/orders` menolak metode online (`PAYMENT_REQUIRED`)
+- [x] `TestPayments` + `TestPaymentsDisabled` dengan fake Midtrans; unit test signature & klien HTTP
+- [x] iOS: `PaymentView` (Snap di `WKWebView`, deeplink e-wallet, cegat finish URL), polling, layar hasil, kartu "Menunggu pembayaran" di Beranda, metode "Bayar Online"
+- [ ] Uji end-to-end di sandbox: GoPay/QRIS (simulator), VA BCA, kartu 3DS, kedaluwarsa, batal
+- [ ] Fase 5b: web admin → Pembayaran + info pembayaran di detail pesanan; tanda `refund_status`
+- [ ] Nanti: Refund API, pindah QRIS/GoPay ke Core API bila ingin UI native
+
+**Fase 5c: Notifikasi push (§5.28)**
+
+- [x] Migrasi `0010_push_devices`, `internal/push` (APNs HTTP/2 + JWT ES256, hapus token mati), `PUT /v1/me/devices`, `POST /v1/devices/unregister`, `POST /v1/dev/push-test`
+- [x] Push: pembayaran lunas / kedaluwarsa, status pesanan dari admin (`TestPush`, unit test klien APNs)
+- [x] iOS: daftar token setelah login, unregister saat sesi berakhir, tap → tab Pesanan, entitlements
+- [ ] Uji di device asli dengan key `.p8` (butuh Apple Developer Program berbayar)
+- [ ] Badge jumlah pesanan aktif, notifikasi promo (opt-in), Android (FCM)
 
 **Siap staging/prod**
 
 - [ ] Dockerfile multi-stage (`distroless`), deploy (Fly.io / Railway / VPS + Nginx)
 - [ ] HTTPS, `API_KEYS` & `JWT_SECRET` dari secret manager, `LOG_LEVEL=info`
 - [ ] Backup harian Postgres prod, migrasi dijalankan di pipeline CI sebelum deploy
-- [ ] Rate limit login, timeout request 30 detik, batas ukuran body 1 MB
+- [x] Rate limit login, timeout request 30 detik, batas ukuran body 1 MB
 
 ---
 
@@ -1652,7 +2160,14 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 | `.products` | `GET /v1/products` | `CatalogAPIDataSource` | `ProductListResponseDTO` |
 | `.popupPromotion` | `GET /v1/promotions/popup` | `CatalogAPIDataSource` | `PromoPopupResponseDTO` |
 | `.orders` | `GET /v1/orders` | `OrderAPIDataSource` | `OrderListResponseDTO` |
+| `.orderDetail(id:)` | `GET /v1/orders/{id}` | `OrderAPIDataSource` | `OrderDetailResponseDTO` |
+| `.rateOrder` | `POST /v1/orders/{id}/rating` | `OrderAPIDataSource` | `OrderDetailResponseDTO` |
 | `.createOrder` | `POST /v1/orders` | `CheckoutAPIDataSource` | `PlacedOrderResponseDTO` |
+| `.checkout` | `POST /v1/checkout` | `CheckoutAPIDataSource` | `CheckoutResponseDTO` |
+| `.stores(lat:lng:)` | `GET /v1/stores` | `CatalogAPIDataSource` | `StoreListResponseDTO` |
+| `.payment` · `.payments` · `.cancelPayment` | `/v1/payments[...]` | `PaymentAPIDataSource` | `PaymentResponseDTO` / `PaymentListResponseDTO` |
+| `.registerDevice` · `.unregisterDevice` | `PUT /v1/me/devices` · `POST /v1/devices/unregister` | `PushRegistrar` (App) | — |
+| `.refreshToken` | `POST /v1/auth/refresh` | `TokenRefresher` (NetworkManager, otomatis saat 401) | — |
 | `.profile` | `GET /v1/me` | `ProfileAPIDataSource` | `ProfileResponseDTO` |
 | `.updateProfile` | `PATCH /v1/me` | `ProfileAPIDataSource` | `ProfileResponseDTO` |
 | `.addresses` · `.createAddress` · `.updateAddress` · `.deleteAddress` | `/v1/me/addresses[/{id}]` | `ProfileAPIDataSource` | `AddressListResponseDTO` / `AddressResponseDTO` |
@@ -1663,4 +2178,4 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 | *(belum ada)* | `GET /v1/app-config` | `AppConfigAPIDataSource` (fase 1b) | `AppConfigResponseDTO` |
 | *(belum ada)* | `GET /v1/promotions/featured` | `ProfileAPIDataSource` (fase 3) | `FeaturedPromotionDTO` |
 
-5. Yang masih perlu ditambah di iOS: `EndpointAPI` case untuk `home`, `appConfig`, `quote`, `refresh`, dan `featuredPromotion`; refresh token otomatis saat 401 `TOKEN_EXPIRED`; dan mengganti data hardcoded di [§4.1](#41-status-data-per-screen-dari-api-atau-masih-di-aplikasi).
+5. Yang masih perlu ditambah di iOS: `EndpointAPI` case untuk `home`, `appConfig`, `quote`, `featuredPromotion`, dan `favorites`; lalu mengganti data hardcoded di [§4.1](#41-status-data-per-screen-dari-api-atau-masih-di-aplikasi).

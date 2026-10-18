@@ -150,6 +150,8 @@ public extension ProjectDescription.Target {
             resources: ["App/Resources/**/*.xcassets",
                         "App/Resources/**/*.ttf",
                         "App/Resources/**/*.strings"],
+            // Push Notifications (aps-environment). Butuh Apple Developer Program berbayar.
+            entitlements: .file(path: .relativeToManifest("TryTuist.entitlements")),
             dependencies: dependencies,
             settings: .settings(base: baseSettings.merging([
                 // Dev & Staging bisa terpasang berdampingan dengan Prod di satu device.

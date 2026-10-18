@@ -77,6 +77,7 @@ enum ProfileMapper {
         guard let id = dto.id, let name = dto.name else { return nil }
         let kind: PaymentMethod.Kind
         switch dto.type?.uppercased() {
+        case "ONLINE": kind = .online
         case "COD": kind = .cashOnDelivery
         case "QRIS": kind = .qris
         case "EWALLET": kind = .eWallet(provider: dto.provider ?? "")
@@ -107,6 +108,7 @@ enum ProfileMapper {
 
     private static func defaultIcon(for kind: PaymentMethod.Kind) -> String {
         switch kind {
+        case .online: return "creditcard.fill"
         case .cashOnDelivery: return "banknote"
         case .qris: return "qrcode"
         case .eWallet: return "wallet.pass.fill"

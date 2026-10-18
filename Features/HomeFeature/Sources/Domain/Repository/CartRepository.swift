@@ -16,7 +16,13 @@ protocol CartRepository: AnyObject {
     func add(_ item: CartItem) async throws
     func updateQuantity(itemID: String, quantity: Int) async
     func remove(itemID: String) async
-    func checkout(_ selection: CheckoutSelection) async throws -> PlacedOrder
+    /// Keluarkan item yang produknya tidak ada di `availableIDs` (mis. habis di outlet baru).
+    /// Mengembalikan item yang dikeluarkan.
+    func removeProducts(notIn availableIDs: Set<String>) async -> [CartItem]
+    /// COD → pesanan dibuat & keranjang dikosongkan. Bayar Online → sesi pembayaran;
+    /// keranjang baru dikosongkan lewat `finishPayment(paid: true)`.
+    func checkout(_ selection: CheckoutSelection) async throws -> CheckoutOutcome
+    func finishPayment(paid: Bool) async
 }
 
 enum CartError: LocalizedError, Equatable {

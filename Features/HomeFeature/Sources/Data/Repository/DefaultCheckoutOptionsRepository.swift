@@ -33,18 +33,26 @@ enum CheckoutOptionsMapper {
 
     static func address(from dto: CheckoutAddressDTO) -> CheckoutAddress? {
         guard let id = dto.id, let label = dto.label, let address = dto.address else { return nil }
+        let location = dto.lat.flatMap { lat in dto.lng.map { GeoPoint(lat: lat, lng: $0) } }
         return CheckoutAddress(id: id, label: label, recipient: dto.recipient ?? "", phone: dto.phone ?? "",
-                               address: address, isDefault: dto.isDefault ?? false)
+                               address: address, isDefault: dto.isDefault ?? false, location: location)
     }
 
     static func paymentMethod(from dto: CheckoutPaymentMethodDTO, defaultID: String?) -> CheckoutPaymentMethod? {
         guard let id = dto.id, let name = dto.name,
-              let type = dto.type?.uppercased(), ["COD", "QRIS", "EWALLET"].contains(type) else { return nil }
+              let type = dto.type?.uppercased(), ["ONLINE", "COD", "QRIS", "EWALLET"].contains(type) else { return nil }
         let detail = type == "EWALLET" ? dto.accountMasked : dto.description
-        let fallbackIcon = type == "COD" ? "banknote" : type == "QRIS" ? "qrcode" : "wallet.pass.fill"
+        let fallbackIcon: String
+        switch type {
+        case "ONLINE": fallbackIcon = "creditcard.fill"
+        case "COD": fallbackIcon = "banknote"
+        case "QRIS": fallbackIcon = "qrcode"
+        default: fallbackIcon = "wallet.pass.fill"
+        }
         return CheckoutPaymentMethod(id: id, name: name, detail: detail,
                                      systemImage: dto.icon ?? fallbackIcon,
                                      isEnabled: dto.isEnabled ?? true,
-                                     isDefault: dto.isDefault ?? (id == defaultID))
+                                     isDefault: dto.isDefault ?? (id == defaultID),
+                                     isOnline: type == "ONLINE")
     }
 }

@@ -20,6 +20,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    // MARK: - Push (APNs)
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        MainActor.assumeIsolated { PushRegistrar.shared.didRegister(deviceToken: deviceToken) }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        MainActor.assumeIsolated { PushRegistrar.shared.didFailToRegister(error) }
+    }
+
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
@@ -39,10 +49,11 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             // Handle cancel action
             break
         default:
-            // Handle default action
-            break
+            // Tap notifikasi pesanan / pembayaran dari server → tab Pesanan.
+            let userInfo = response.notification.request.content.userInfo
+            Task { @MainActor in PushRegistrar.shared.handleTap(userInfo: userInfo) }
         }
-        
+
         completionHandler()
     }
     

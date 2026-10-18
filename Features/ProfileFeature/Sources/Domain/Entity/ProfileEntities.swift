@@ -77,6 +77,8 @@ struct AddressDraft: Equatable {
 
 struct PaymentMethod: Identifiable, Equatable {
     enum Kind: Equatable {
+        /// Bayar Online lewat Midtrans (GoPay, QRIS, ShopeePay, VA, kartu).
+        case online
         case cashOnDelivery
         case qris
         case eWallet(provider: String)

@@ -22,11 +22,29 @@ struct FocusesView: View {
 
                 SegmentedTabBar(titles: filters.map { $0?.title ?? "Semua" }, selectedIndex: selectedIndex)
 
+                HStack {
+                    Menu {
+                        Picker("Tanggal", selection: store.binding(\.dateRange, send: OrdersAction.dateRangeChanged)) {
+                            ForEach(OrderDateRange.allCases, id: \.self) { Text($0.title).tag($0) }
+                        }
+                    } label: {
+                        Label(store.state.dateRange.title, systemImage: "calendar")
+                    }
+                    Spacer()
+                    Button { store.send(.sortToggled) } label: {
+                        Label(store.state.newestFirst ? "Terbaru" : "Terlama",
+                              systemImage: store.state.newestFirst ? "arrow.down" : "arrow.up")
+                    }
+                    .accessibilityHint("Ubah urutan berdasarkan jam & tanggal pesanan")
+                }
+                .font(.subheadline.weight(.semibold))
+
                 content
             }
             .padding(Spacing.xl)
         }
         .background(Color.appBackground.ignoresSafeArea())
+        .toast(store.state.toast)
         .refreshable { @MainActor in store.send(.onAppear) }
         .task { @MainActor in store.send(.onAppear) }
     }
@@ -58,7 +76,17 @@ struct FocusesView: View {
             } else {
                 LazyVStack(spacing: Spacing.m) {
                     ForEach(store.state.displayedOrders) { order in
-                        OrderRowView(order: order)
+                        OrderRowView(order: order,
+                                     isReordering: store.state.reorderingID == order.id,
+                                     onTap: { store.send(.orderTapped(order)) },
+                                     onRate: { store.send(.rateTapped(order)) },
+                                     onReorder: { store.send(.reorderTapped(order)) })
+                            .onAppear {
+                                if order.id == store.state.displayedOrders.last?.id { store.send(.lastRowAppeared) }
+                            }
+                    }
+                    if store.state.isLoadingMore {
+                        ProgressView().padding(.vertical, Spacing.m)
                     }
                 }
             }
@@ -75,32 +103,16 @@ struct FocusesView: View {
 
 struct OrderRowView: View {
     let order: Order
+    let isReordering: Bool
+    let onTap: () -> Void
+    let onRate: () -> Void
+    let onReorder: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: Spacing.m) {
-                IconBadge(systemImage: "cup.and.saucer.fill", size: 48)
-
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(order.productName)
-                        .font(.headline)
-                    Label(order.storeName, systemImage: "mappin.and.ellipse")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Label(order.createdAt.shortDateTimeFormatted, systemImage: "clock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: Spacing.s)
-
-                Text(order.status.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(order.status.tint)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, Spacing.xs)
-                    .background(order.status.tint.opacity(0.12), in: Capsule())
-            }
+            Button(action: onTap) { summary }
+                .buttonStyle(.plain)
+                .accessibilityHint("Buka detail pesanan")
 
             Divider()
 
@@ -113,14 +125,46 @@ struct OrderRowView: View {
                         .font(.headline)
                 }
                 Spacer()
-                Button("Beri Nilai") {}
-                    .buttonStyle(CapsuleButtonStyle(.outlined))
-                Button("Pesan Lagi") {}
-                    .buttonStyle(CapsuleButtonStyle(.filled))
+                if order.canRate {
+                    Button("Beri Nilai", action: onRate)
+                        .buttonStyle(CapsuleButtonStyle(.outlined))
+                }
+                Button(action: onReorder) {
+                    if isReordering { ProgressView() } else { Text("Pesan Lagi") }
+                }
+                .buttonStyle(CapsuleButtonStyle(.filled))
+                .disabled(isReordering)
             }
         }
         .padding(Spacing.l)
         .formCard()
+    }
+
+    private var summary: some View {
+        HStack(alignment: .top, spacing: Spacing.m) {
+            IconBadge(systemImage: "cup.and.saucer.fill", size: 48)
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(order.productName)
+                    .font(.headline)
+                Label(order.storeName, systemImage: "mappin.and.ellipse")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Label(order.createdAt.shortDateTimeFormatted, systemImage: "clock")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: Spacing.s)
+
+            Text(order.status.title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(order.status.tint)
+                .padding(.horizontal, 10)
+                .padding(.vertical, Spacing.xs)
+                .background(order.status.tint.opacity(0.12), in: Capsule())
+        }
+        .contentShape(Rectangle())
     }
 }
 
