@@ -27,6 +27,22 @@ struct DefaultAuthRepository: AuthRepository {
         }
     }
 
+    func forgotPassword(email: String) async throws {
+        do {
+            try await remote.forgotPassword(email: email)
+        } catch {
+            throw AuthMapper.toDomainError(error)
+        }
+    }
+
+    func resetPassword(email: String, code: String, newPassword: String) async throws -> UserSession {
+        do {
+            return try AuthMapper.toEntity(try await remote.resetPassword(email: email, code: code, newPassword: newPassword))
+        } catch {
+            throw AuthMapper.toDomainError(error)
+        }
+    }
+
     func signInWithGoogle(idToken: String) async throws -> UserSession {
         do {
             let response = try await remote.google(idToken: idToken)

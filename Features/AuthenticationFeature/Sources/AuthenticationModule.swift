@@ -90,6 +90,7 @@ public final class AuthenticationModule {
         store.onRoute = { [weak self] route in
             switch route {
             case .signUp: self?.showSignUp()
+            case .forgotPassword(let email): self?.showForgotPassword(email: email)
             case .authenticated: self?.onAuthenticated()
             }
         }
@@ -105,6 +106,19 @@ public final class AuthenticationModule {
             }
         }
         router.push(SignUpView(store: store))
+    }
+
+    private func showForgotPassword(email: String) {
+        let store = ForgotPasswordStore(requestReset: RequestPasswordResetUseCase(repository: repository),
+                                        resetPassword: ResetPasswordUseCase(repository: repository),
+                                        email: email)
+        store.onRoute = { [weak self] route in
+            switch route {
+            case .back: self?.router.pop()
+            case .authenticated: self?.onAuthenticated()
+            }
+        }
+        router.push(ForgotPasswordView(store: store))
     }
 
     #if DEBUG

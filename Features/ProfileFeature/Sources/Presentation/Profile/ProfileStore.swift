@@ -16,6 +16,7 @@ struct QuickAction: Identifiable, Equatable {
 /// Menu pengaturan Profil. Urutan di sini = urutan tampil.
 enum ProfileMenuItem: String, CaseIterable, Identifiable {
     case editProfile
+    case security
     case addresses
     case paymentMethods
     case favorites
@@ -28,6 +29,7 @@ enum ProfileMenuItem: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .editProfile: return String(localized: "Edit Profil")
+        case .security: return String(localized: "Keamanan Akun")
         case .addresses: return String(localized: "Alamat Pengiriman")
         case .paymentMethods: return String(localized: "Metode Pembayaran")
         case .favorites: return String(localized: "Menu Favorit")
@@ -40,6 +42,7 @@ enum ProfileMenuItem: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .editProfile: return "person.crop.circle"
+        case .security: return "lock.shield.fill"
         case .addresses: return "location.fill"
         case .paymentMethods: return "creditcard.fill"
         case .favorites: return "heart.fill"
@@ -52,6 +55,7 @@ enum ProfileMenuItem: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .editProfile: return .orange
+        case .security: return .purple
         case .addresses: return .blue
         case .paymentMethods: return .green
         case .favorites: return .pink
@@ -106,6 +110,7 @@ enum ProfileAction {
 
 enum ProfileRoute {
     case editProfile(UserProfile)
+    case security(UserProfile)
     case addresses
     case paymentMethods
     case helpCenter
@@ -159,13 +164,13 @@ final class ProfileStore: Store<ProfileState, ProfileAction> {
 
         case .menuTapped(let item):
             switch item {
-            case .editProfile:
+            case .editProfile, .security:
                 guard let profile = state.profile.value else {
                     let toast = ToastMessage.error(String(localized: "Profil belum termuat. Coba lagi sebentar."))
                     state.toast = toast
                     return dismissToast(id: toast.id) { .toastDismissed($0) }
                 }
-                return route(.editProfile(profile))
+                return route(item == .security ? .security(profile) : .editProfile(profile))
             case .addresses: return route(.addresses)
             case .paymentMethods: return route(.paymentMethods)
             case .helpCenter: return route(.helpCenter)

@@ -428,3 +428,32 @@
 "Hemat %@ dibanding beli satuan (%@)" = "Save %@ vs. buying separately (%@)";
 "Paket combo" = "Combo bundle";
 "PAKET" = "COMBO";
+
+/* Lupa password, verifikasi email, ganti password */
+"Lupa password?" = "Forgot password?";
+"Masukkan email akunmu. Kami kirim kode untuk membuat password baru." = "Enter your account email. We'll send a code to set a new password.";
+"Jika %@ terdaftar, kode 6 digit sudah dikirim ke email tersebut." = "If %@ is registered, a 6-digit code has been sent to it.";
+"Kirim kode" = "Send code";
+"Simpan & masuk" = "Save & sign in";
+"Ingat password?" = "Remember your password?";
+"Kode" = "Code";
+"Password baru" = "New password";
+"Ganti email / kirim ulang kode" = "Change email / resend code";
+"Kode harus 6 digit angka." = "The code must be 6 digits.";
+"Keamanan Akun" = "Account Security";
+"Email belum terverifikasi" = "Email not verified";
+"Email terverifikasi" = "Email verified";
+"Masukkan kode 6 digit yang kami kirim ke email kamu. Verifikasi diperlukan sebelum memesan." = "Enter the 6-digit code we emailed you. Verification is required before ordering.";
+"Kode verifikasi" = "Verification code";
+"Verifikasi" = "Verify";
+"Mengirim…" = "Sending…";
+"Kirim ulang kode" = "Resend code";
+"Ganti password" = "Change password";
+"Buat password" = "Create password";
+"Password saat ini" = "Current password";
+"Akun ini masuk dengan Google. Buat password supaya bisa masuk dengan email juga." = "This account signs in with Google. Create a password to also sign in with email.";
+"Simpan password" = "Save password";
+"Setelah diganti, perangkat lain otomatis dikeluarkan dari akunmu." = "After changing it, other devices are signed out automatically.";
+"Kode baru dikirim ke %@" = "A new code was sent to %@";
+"Password diperbarui. Perangkat lain sudah dikeluarkan." = "Password updated. Other devices have been signed out.";
+"Verifikasi email dulu sebelum memesan: Profil → Keamanan Akun." = "Verify your email before ordering: Profile → Account Security.";

@@ -6,6 +6,7 @@
 //  Satu struct memenuhi keempat protocol karena semuanya memakai data source yang sama.
 //
 import Foundation
+import Utility
 
 struct DefaultProfileRepository {
     let remote: ProfileRemoteDataSource
@@ -72,5 +73,25 @@ extension DefaultProfileRepository: SupportRepository {
 
     func legalDocument(_ kind: LegalDocumentKind) async throws -> LegalDocument {
         try await run { try ProfileMapper.legalDocument(kind, from: await remote.fetchLegalDocument(slug: kind.rawValue)) }
+    }
+}
+
+extension DefaultProfileRepository: AccountSecurityRepository {
+    func changePassword(current: String, new: String) async throws {
+        try await run {
+            guard let session = try await remote.changePassword(current: current, new: new).data,
+                  let accessToken = session.accessToken, !accessToken.isEmpty else { throw ProfileError.unknown }
+            TokenStorage.saveSession(accessToken: accessToken,
+                                     refreshToken: session.refreshToken ?? "",
+                                     expiresAt: session.expiresAt.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? .distantFuture)
+        }
+    }
+
+    func sendEmailVerification() async throws {
+        try await run { _ = try await remote.sendEmailVerification() }
+    }
+
+    func verifyEmail(code: String) async throws {
+        try await run { _ = try await remote.verifyEmail(code: code) }
     }
 }

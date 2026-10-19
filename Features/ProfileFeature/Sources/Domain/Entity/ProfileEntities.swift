@@ -30,6 +30,10 @@ struct UserProfile: Equatable {
     let points: Int
     let voucherCount: Int
     let balance: Decimal
+    /// Wajib `true` untuk memesan.
+    var emailVerified = true
+    /// `false` = akun Google tanpa password (ganti password tanpa password lama).
+    var hasPassword = true
 }
 
 /// Perubahan dari form Edit Profil. `nil` = tidak diubah, `phone == ""` = hapus nomor HP.

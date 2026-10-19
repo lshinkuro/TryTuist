@@ -153,7 +153,10 @@ struct ProfileView: View {
         VStack(spacing: 0) {
             ForEach(Array(state.menu.enumerated()), id: \.element.id) { index, item in
                 Button { store.send(.menuTapped(item)) } label: {
-                    ProfileMenuRow(title: item.title, systemImage: item.systemImage, tint: item.tint)
+                    ProfileMenuRow(title: item.title,
+                                   subtitle: item == .security && state.profile.value?.emailVerified == false
+                                       ? String(localized: "Email belum terverifikasi") : nil,
+                                   systemImage: item.systemImage, tint: item.tint)
                 }
                 .buttonStyle(.plain)
 

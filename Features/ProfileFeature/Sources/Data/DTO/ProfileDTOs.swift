@@ -20,12 +20,16 @@ struct UserProfileDTO: Decodable {
     let points: Int?
     let voucherCount: Int?
     let balance: Int64?
+    let emailVerified: Bool?
+    let hasPassword: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone, points, balance
         case avatarURL = "avatar_url"
         case memberTier = "member_tier"
         case voucherCount = "voucher_count"
+        case emailVerified = "email_verified"
+        case hasPassword = "has_password"
     }
 }
 
@@ -51,6 +55,21 @@ struct AddressDTO: Decodable {
 typealias AddressResponseDTO = APIEnvelope<AddressDTO>
 typealias AddressListResponseDTO = APIEnvelope<[AddressDTO]>
 typealias EmptyResponseDTO = APIEnvelope<EmptyDTO>
+
+/// Sesi baru setelah ganti password (sesi lama dicabut server).
+struct PasswordSessionDTO: Decodable {
+    let accessToken: String?
+    let refreshToken: String?
+    let expiresAt: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case refreshToken = "refresh_token"
+        case expiresAt = "expires_at"
+    }
+}
+
+typealias PasswordSessionResponseDTO = APIEnvelope<PasswordSessionDTO>
 
 // MARK: - Metode pembayaran (§5.21)
 

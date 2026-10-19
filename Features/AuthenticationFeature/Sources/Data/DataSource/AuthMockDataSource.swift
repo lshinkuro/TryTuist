@@ -61,6 +61,20 @@ final class AuthMockDataSource: AuthRemoteDataSource {
         return try successResponse(for: account)
     }
 
+    func forgotPassword(email: String) async throws {
+        try await Task.sleep(for: latency)
+    }
+
+    /// Kode mock selalu `123456`.
+    func resetPassword(email: String, code: String, newPassword: String) async throws -> SessionResponseDTO {
+        try await Task.sleep(for: latency)
+        let email = normalized(email)
+        guard code == "123456", let account = allAccounts.first(where: { normalized($0.email) == email }) else {
+            throw APIServerError(statusCode: 422, type: "INVALID_CODE", message: "Kode salah atau sudah kedaluwarsa.")
+        }
+        return try successResponse(for: account)
+    }
+
     // MARK: - Fixture
 
     private func successResponse(for account: Account, isNewUser: Bool = false) throws -> SessionResponseDTO {

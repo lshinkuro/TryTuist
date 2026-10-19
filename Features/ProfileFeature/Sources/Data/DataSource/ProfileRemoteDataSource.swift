@@ -23,6 +23,10 @@ protocol ProfileRemoteDataSource {
 
     func fetchHelpCenter(query: String?) async throws -> HelpCenterResponseDTO
     func fetchLegalDocument(slug: String) async throws -> LegalDocumentResponseDTO
+
+    func changePassword(current: String, new: String) async throws -> PasswordSessionResponseDTO
+    func sendEmailVerification() async throws -> EmptyResponseDTO
+    func verifyEmail(code: String) async throws -> EmptyResponseDTO
 }
 
 /// Backend asli (Go). Pakai `send` supaya pesan validasi & tipe error dari server ikut terbawa.
@@ -75,5 +79,17 @@ struct ProfileAPIDataSource: ProfileRemoteDataSource {
 
     func fetchLegalDocument(slug: String) async throws -> LegalDocumentResponseDTO {
         try await api.send(.legalDocument(slug: slug))
+    }
+
+    func changePassword(current: String, new: String) async throws -> PasswordSessionResponseDTO {
+        try await api.send(.changePassword(current: current, new: new))
+    }
+
+    func sendEmailVerification() async throws -> EmptyResponseDTO {
+        try await api.send(.sendEmailVerification)
+    }
+
+    func verifyEmail(code: String) async throws -> EmptyResponseDTO {
+        try await api.send(.verifyEmail(code: code))
     }
 }

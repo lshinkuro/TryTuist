@@ -50,6 +50,7 @@ enum AuthMapper {
         case "INVALID_GOOGLE_TOKEN"?: return .googleFailed
         case "GOOGLE_SIGN_IN_DISABLED"?: return .googleNotConfigured
         case "RATE_LIMITED"?: return .rateLimited
+        case "INVALID_CODE"?, "CODE_LOCKED"?: return .server(server.message ?? AuthError.unknown.errorDescription ?? "")
         default: break
         }
         switch server.statusCode {

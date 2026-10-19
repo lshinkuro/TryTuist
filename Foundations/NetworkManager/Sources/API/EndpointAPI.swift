@@ -24,6 +24,14 @@ public enum EndpointAPI {
     case googleSignIn(param: GoogleSignInParam)
     /// Perbarui access token (dipanggil otomatis oleh TokenRefresher, bukan oleh feature).
     case refreshToken(refreshToken: String)
+    /// Kirim kode reset ke email (selalu 200, tidak membocorkan email terdaftar).
+    case forgotPassword(email: String)
+    /// Kode + password baru → sesi baru (semua sesi lama dicabut).
+    case resetPassword(email: String, code: String, newPassword: String)
+    /// Sesi lain dicabut; response berisi sesi baru untuk device ini.
+    case changePassword(current: String, new: String)
+    case sendEmailVerification
+    case verifyEmail(code: String)
     // User / Profil
     case profile
     case updateProfile(param: UpdateProfileParam)
@@ -81,6 +89,11 @@ public enum EndpointAPI {
         case .register: return "/v1/auth/register"
         case .googleSignIn: return "/v1/auth/google"
         case .refreshToken: return "/v1/auth/refresh"
+        case .forgotPassword: return "/v1/auth/password/forgot"
+        case .resetPassword: return "/v1/auth/password/reset"
+        case .changePassword: return "/v1/me/password"
+        case .sendEmailVerification: return "/v1/me/email/verification"
+        case .verifyEmail: return "/v1/me/email/verify"
         case .profile, .updateProfile: return "/v1/me"
         case .addresses, .createAddress: return "/v1/me/addresses"
         case .updateAddress(let id, _), .deleteAddress(let id): return "/v1/me/addresses/\(Self.escape(id))"
@@ -114,7 +127,8 @@ public enum EndpointAPI {
 
     var method: HTTPMethod {
         switch self {
-        case .login, .register, .googleSignIn, .refreshToken, .createOrder, .createAddress, .addEWallet,
+        case .login, .register, .googleSignIn, .refreshToken, .forgotPassword, .resetPassword, .changePassword,
+             .sendEmailVerification, .verifyEmail, .createOrder, .createAddress, .addEWallet,
              .checkout, .quote, .cancelPayment, .simulatePayment, .unregisterDevice, .rateOrder, .cancelOrder: return .post
         case .setDefaultPaymentMethod, .registerDevice: return .put
         case .setFavorite(_, let isFavorite): return isFavorite ? .put : .delete
@@ -128,10 +142,10 @@ public enum EndpointAPI {
     /// Endpoint yang butuh login → kirim `Authorization: Bearer <access_token>`.
     var requiresAuth: Bool {
         switch self {
-        case .profile, .favorites, .setFavorite, .simulatePayment, .orders, .orderDetail, .rateOrder, .cancelOrder, .createOrder, .checkout, .quote, .payment, .payments, .cancelPayment, .registerDevice,
+        case .profile, .changePassword, .sendEmailVerification, .verifyEmail, .favorites, .setFavorite, .simulatePayment, .orders, .orderDetail, .rateOrder, .cancelOrder, .createOrder, .checkout, .quote, .payment, .payments, .cancelPayment, .registerDevice,
              .updateProfile, .addresses, .createAddress, .updateAddress, .deleteAddress,
              .paymentMethods, .addEWallet, .setDefaultPaymentMethod, .deletePaymentMethod: return true
-        case .login, .register, .googleSignIn, .refreshToken, .banners, .categories, .products, .product, .stores, .popupPromotion,
+        case .login, .register, .googleSignIn, .refreshToken, .forgotPassword, .resetPassword, .banners, .categories, .products, .product, .stores, .popupPromotion,
              .helpCenter, .legalDocument, .unregisterDevice: return false
         }
     }
@@ -172,6 +186,14 @@ public enum EndpointAPI {
             return params
         case .refreshToken(let refreshToken):
             return ["refresh_token": refreshToken]
+        case .forgotPassword(let email):
+            return ["email": email]
+        case .resetPassword(let email, let code, let newPassword):
+            return ["email": email, "code": code, "new_password": newPassword]
+        case .changePassword(let current, let new):
+            return ["current_password": current, "new_password": new]
+        case .verifyEmail(let code):
+            return ["code": code]
         case .createOrder(let param, _), .checkout(let param, _), .quote(let param):
             return param.body
         case .registerDevice(let param):

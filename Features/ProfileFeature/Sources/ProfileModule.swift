@@ -39,6 +39,9 @@ public final class ProfileModule: TabFeature {
             switch route {
             case .editProfile(let profile):
                 self.showEditProfile(profile) { store?.send(.profileUpdated($0)) }
+            case .security(let profile):
+                self.router?.push(AccountSecurityView(store: AccountSecurityStore(profile: profile, repository: self.repository)),
+                                  title: String(localized: "Keamanan Akun"))
             case .addresses:
                 self.showAddresses()
             case .paymentMethods:

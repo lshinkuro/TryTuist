@@ -11,6 +11,8 @@ protocol AuthRepository {
     func register(email: String, password: String) async throws -> UserSession
     /// Daftar & masuk dengan Google: kirim ID token ke backend → sesi app.
     func signInWithGoogle(idToken: String) async throws -> UserSession
+    func forgotPassword(email: String) async throws
+    func resetPassword(email: String, code: String, newPassword: String) async throws -> UserSession
 }
 
 /// Hasil Google Sign-In di device (sebelum dikirim ke backend).
@@ -43,6 +45,9 @@ enum AuthError: LocalizedError, Equatable {
     /// Akun dibuat lewat Google (tanpa password) lalu dicoba masuk pakai password.
     case useGoogleSignIn
     case rateLimited
+    case invalidCode
+    /// Pesan dari server apa adanya (mis. kode dikunci karena terlalu banyak salah).
+    case server(String)
 
     var errorDescription: String? {
         switch self {
@@ -58,6 +63,8 @@ enum AuthError: LocalizedError, Equatable {
         case .googleFailed: return String(localized: "Login Google gagal. Coba lagi.")
         case .useGoogleSignIn: return String(localized: "Akun ini terdaftar dengan Google. Silakan pakai tombol Google.")
         case .rateLimited: return String(localized: "Terlalu banyak percobaan. Coba lagi dalam 1 menit.")
+        case .invalidCode: return String(localized: "Kode harus 6 digit angka.")
+        case .server(let message): return message
         }
     }
 }

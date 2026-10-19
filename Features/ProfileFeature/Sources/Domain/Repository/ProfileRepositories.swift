@@ -11,6 +11,13 @@ protocol ProfileRepository {
     func updateProfile(_ changes: ProfileChanges) async throws -> UserProfile
 }
 
+protocol AccountSecurityRepository {
+    /// Server mencabut semua sesi lalu memberi sesi baru → disimpan oleh repository.
+    func changePassword(current: String, new: String) async throws
+    func sendEmailVerification() async throws
+    func verifyEmail(code: String) async throws
+}
+
 protocol AddressRepository {
     func addresses() async throws -> [Address]
     func createAddress(_ draft: AddressDraft) async throws -> Address

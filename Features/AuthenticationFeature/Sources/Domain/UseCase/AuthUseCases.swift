@@ -92,3 +92,39 @@ struct GoogleSignInUseCase {
         return session
     }
 }
+
+/// Lupa password langkah 1: kirim kode ke email. Server selalu sukses walau email tidak terdaftar.
+struct RequestPasswordResetUseCase {
+    let repository: AuthRepository
+
+    func execute(email: String) async throws {
+        let email = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard CredentialValidator.isValidEmail(email) else { throw AuthError.invalidEmail }
+        try await repository.forgotPassword(email: email)
+    }
+}
+
+/// Lupa password langkah 2: kode + password baru → server memberi sesi baru (langsung masuk).
+struct ResetPasswordUseCase {
+    private let repository: AuthRepository
+    private let saveSession: (UserSession) -> Void
+
+    init(repository: AuthRepository, saveSession: @escaping (UserSession) -> Void = SessionStore.save) {
+        self.repository = repository
+        self.saveSession = saveSession
+    }
+
+    func execute(email: String, code: String, newPassword: String) async throws -> UserSession {
+        let code = code.trimmingCharacters(in: .whitespaces)
+        guard code.count == 6, code.allSatisfy(\.isASCIIDigit) else { throw AuthError.invalidCode }
+        guard CredentialValidator.isStrongPassword(newPassword) else { throw AuthError.weakPassword }
+        let session = try await repository.resetPassword(email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                                                         code: code, newPassword: newPassword)
+        saveSession(session)
+        return session
+    }
+}
+
+private extension Character {
+    var isASCIIDigit: Bool { ("0"..."9").contains(self) }
+}

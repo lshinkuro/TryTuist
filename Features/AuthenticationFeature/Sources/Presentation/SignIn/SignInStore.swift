@@ -23,6 +23,7 @@ enum SignInAction {
     case passwordChanged(String)
     case submitTapped
     case signUpTapped
+    case forgotPasswordTapped
     // Hasil effect
     case loginResponse(Result<UserSession, AuthError>)
     case googleTapped
@@ -31,6 +32,7 @@ enum SignInAction {
 
 enum SignInRoute {
     case signUp
+    case forgotPassword(email: String)
     case authenticated(UserSession)
 }
 
@@ -74,6 +76,10 @@ final class SignInStore: Store<SignInState, SignInAction> {
 
         case .signUpTapped:
             return .run { [weak self] in self?.onRoute?(.signUp) }
+
+        case .forgotPasswordTapped:
+            let email = state.email
+            return .run { [weak self] in self?.onRoute?(.forgotPassword(email: email)) }
 
         case .loginResponse(.success(let session)):
             state.isLoading = false

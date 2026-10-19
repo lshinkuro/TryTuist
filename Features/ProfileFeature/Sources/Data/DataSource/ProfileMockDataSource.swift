@@ -77,6 +77,30 @@ struct ProfileMockDataSource: ProfileRemoteDataSource {
         return try envelope(doc)
     }
 
+    func changePassword(current: String, new: String) async throws -> PasswordSessionResponseDTO {
+        try await wait()
+        guard current == "12345678" else {
+            throw APIServerError(statusCode: 400, type: "VALIDATION_ERROR", message: "Password saat ini salah.",
+                                 fieldErrors: ["current_password": "salah"])
+        }
+        return try envelope(["access_token": "mock-access-\(UUID().uuidString)", "refresh_token": "mock-refresh-\(UUID().uuidString)",
+                             "expires_at": Int(Date().addingTimeInterval(7 * 24 * 3600).timeIntervalSince1970)])
+    }
+
+    func sendEmailVerification() async throws -> EmptyResponseDTO {
+        try await wait()
+        return try envelope(NSNull())
+    }
+
+    /// Akun mock sudah terverifikasi; kode `123456` selalu diterima.
+    func verifyEmail(code: String) async throws -> EmptyResponseDTO {
+        try await wait()
+        guard code == "123456" else {
+            throw APIServerError(statusCode: 422, type: "INVALID_CODE", message: "Kode salah atau sudah kedaluwarsa.")
+        }
+        return try envelope(NSNull())
+    }
+
     // MARK: - Helpers
 
     private func wait() async throws {

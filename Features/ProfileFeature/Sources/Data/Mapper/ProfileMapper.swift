@@ -23,7 +23,9 @@ enum ProfileMapper {
             tier: UserProfile.Tier(rawValue: dto.memberTier?.uppercased() ?? "") ?? .silver,
             points: max(dto.points ?? 0, 0),
             voucherCount: max(dto.voucherCount ?? 0, 0),
-            balance: Decimal(dto.balance ?? 0)
+            balance: Decimal(dto.balance ?? 0),
+            emailVerified: dto.emailVerified ?? true,
+            hasPassword: dto.hasPassword ?? true
         )
     }
 
@@ -190,7 +192,7 @@ enum ProfileMapper {
         case 401: return .sessionExpired
         case 404: return .notFound
         case 409: return .conflict(message ?? "Data sudah ada.")
-        case 422: return .rejected(message ?? "Permintaan tidak bisa diproses.")
+        case 422, 429: return .rejected(message ?? "Permintaan tidak bisa diproses.")
         default: return .unknown
         }
     }

@@ -2191,6 +2191,7 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] iOS: pilih outlet di Beranda, stok Menu ikut outlet, keranjang dibersihkan dari menu yang habis, `store_id` di checkout
 - [x] Admin per outlet → Fase 4c
 - [x] Ongkir per jarak, estimasi waktu antar (migrasi `0012_delivery_distance`, `order_rules`, `TestDeliveryFee`, `TestDeliveryETA`, `TestMultiOutlet`)
+- [x] Lupa password, ganti password, verifikasi email (kode 6 digit lewat Resend, migrasi `0016`, `TestEmailVerificationAndPasswords`); checkout wajib email terverifikasi
 - [x] Detail pesanan untuk pelanggan: `refund` (`PENDING`/`PARTIAL`/`COMPLETED`) untuk Bayar Online yang batal / di-refund (`TestAdminPayments`, `TestRefundInfo`); iOS: redesign detail (status & progres, rute, rincian, timeline), tombol Batalkan, Pesan Lagi, struk PDF
 - [x] Menu combo (paket isi tetap): `product_bundle_items`, `combo` di ProductDTO (isi, harga satuan, hemat), habis bila isi habis, stok isi ikut terpotong/kembali, snapshot `bundle_items` di pesanan (`TestCombosAndBanners`); web admin: editor isi paket di form menu; iOS: label PAKET, isi & hemat di detail, isi di keranjang/pesanan/struk
 - [ ] Combo dengan pilihan (mis. pilih 1 minuman)

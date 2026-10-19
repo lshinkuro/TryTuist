@@ -80,6 +80,8 @@ enum CheckoutMapper {
             return .productUnavailable
         case (_, "INVALID_QUANTITY"?): return .invalidQuantity
         case (_, "EMPTY_CART"?): return .emptyCart
+        case (_, "EMAIL_NOT_VERIFIED"?):
+            return .rejected(String(localized: "Verifikasi email dulu sebelum memesan: Profil → Keamanan Akun."))
         case (_, "FREE_DELIVERY_QUOTA_EXCEEDED"?), (_, "FREE_DELIVERY_UNAVAILABLE"?):
             return .freeDeliveryUnavailable(server.message ?? "Kupon gratis ongkir tidak bisa dipakai.")
         case (_, "PAYMENT_GATEWAY_ERROR"?), (502, _):

@@ -42,6 +42,9 @@ struct SignInView: View {
                            systemImage: "lock",
                            isSecure: true,
                            contentType: .password)
+            Button(String(localized: "Lupa password?")) { store.send(.forgotPasswordTapped) }
+                .font(.footnote.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 }
