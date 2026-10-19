@@ -364,7 +364,7 @@ Mencari akun:
 | `400 VALIDATION_ERROR` | `id_token` kosong |
 | `401 INVALID_GOOGLE_TOKEN` | token palsu / kedaluwarsa / bukan untuk app ini / email belum diverifikasi |
 | `409 EMAIL_ALREADY_REGISTERED` | email sudah tertaut ke akun Google **lain** |
-| `429 RATE_LIMITED` | > `LOGIN_RATE_LIMIT` percobaan / menit / IP |
+| `429 RATE_LIMITED` | > `LOGIN_RATE_LIMIT` percobaan / menit / IP (rate limit lain: lihat README "Penjagaan penyalahgunaan") |
 | `503 GOOGLE_SIGN_IN_DISABLED` | `GOOGLE_CLIENT_IDS` belum diisi |
 
 `POST /v1/auth/register` & `/login` juga mengirim `is_new_user` (register = `true`).
