@@ -77,16 +77,18 @@ final class CatalogContainer {
     }
     var getMenu: GetMenuUseCase { GetMenuUseCase(repository: catalogRepository) }
     var addToCart: AddToCartUseCase { AddToCartUseCase(cart: cartRepository) }
-    var getFavorites: GetFavoritesUseCase { GetFavoritesUseCase(repository: catalogRepository) }
+    var getFavorites: GetFavoritesUseCase { GetFavoritesUseCase(repository: catalogRepository, outlets: outletSelection) }
     var setFavorite: SetFavoriteUseCase { SetFavoriteUseCase(repository: catalogRepository) }
     var reorder: ReorderUseCase {
         ReorderUseCase(repository: catalogRepository, selection: outletSelection, addToCart: addToCart)
     }
+    var getProduct: GetProductUseCase { GetProductUseCase(repository: catalogRepository, outlets: outletSelection) }
     var getPromoPopup: GetPromoPopupUseCase {
-        GetPromoPopupUseCase(repository: catalogRepository, dismissals: promoPopupDismissals)
+        GetPromoPopupUseCase(repository: catalogRepository, dismissals: promoPopupDismissals, outlets: outletSelection)
     }
     var checkPayment: CheckPaymentUseCase { CheckPaymentUseCase(repository: paymentRepository) }
     var cancelPayment: CancelPaymentUseCase { CancelPaymentUseCase(repository: paymentRepository) }
+    var simulatePayment: SimulatePaymentUseCase { SimulatePaymentUseCase(repository: paymentRepository) }
     var getPendingPayment: GetPendingPaymentUseCase { GetPendingPaymentUseCase(repository: paymentRepository) }
     var finishPayment: FinishPaymentUseCase { FinishPaymentUseCase(cart: cartRepository) }
     var dismissPromoPopup: DismissPromoPopupUseCase { DismissPromoPopupUseCase(dismissals: promoPopupDismissals) }

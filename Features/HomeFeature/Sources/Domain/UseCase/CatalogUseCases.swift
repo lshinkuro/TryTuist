@@ -87,15 +87,30 @@ struct ChangeOutletUseCase {
     }
 }
 
+/// Satu produk di outlet yang sedang dipilih (mis. tujuan banner).
+@MainActor
+struct GetProductUseCase {
+    let repository: CatalogRepository
+    let outlets: OutletSelectionRepository
+
+    func execute(id: String) async throws -> Product {
+        try await repository.fetchProduct(id: id, storeID: outlets.selected?.id ?? outlets.savedOutletID)
+    }
+}
+
 /// Popup promo Beranda. Tidak ditampilkan bila sudah ditutup hari ini, produknya habis,
 /// atau promonya sudah lewat. Gagal memuat = tidak ada popup (bukan error di layar).
+@MainActor
 struct GetPromoPopupUseCase {
     let repository: CatalogRepository
     let dismissals: PromoPopupDismissalStore
+    /// Promo bisa khusus outlet (§5.29).
+    let outlets: OutletSelectionRepository
     var now: () -> Date = Date.init
 
     func execute() async -> PromoPopup? {
-        guard let popup = try? await repository.fetchPromoPopup() else { return nil }
+        let storeID = outlets.selected?.id ?? outlets.savedOutletID
+        guard let popup = try? await repository.fetchPromoPopup(storeID: storeID) else { return nil }
         let today = now()
         guard popup.product.isAvailable, popup.product.isOnDeal,
               popup.endsAt.map({ $0 > today }) ?? true,
@@ -169,12 +184,14 @@ struct ReorderUseCase {
     }
 }
 
-/// Menu Favorit (`/v1/me/favorites`). Butuh login.
+/// Menu Favorit (`/v1/me/favorites`) dengan harga & stok outlet yang dipilih. Butuh login.
+@MainActor
 struct GetFavoritesUseCase {
     let repository: CatalogRepository
+    let outlets: OutletSelectionRepository
 
     func execute() async throws -> [Product] {
-        try await repository.fetchFavorites()
+        try await repository.fetchFavorites(storeID: outlets.selected?.id ?? outlets.savedOutletID)
     }
 }
 

@@ -43,25 +43,33 @@ public enum EndpointAPI {
     case categories
     /// `storeID` nil = stok pusat; diisi = `is_available` mengikuti stok outlet itu.
     case products(storeID: String?)
+    /// Satu produk (mis. dari banner); harga & stok mengikuti outlet.
+    case product(id: String, storeID: String?)
     /// Outlet aktif; dengan koordinat alamat → diurutkan yang buka & menjangkau lebih dulu, lalu terdekat.
     case stores(lat: Double?, lng: Double?)
     /// Popup promo harga produk di Beranda (`data: null` bila tidak ada).
-    case popupPromotion
+    case popupPromotion(storeID: String?)
     // Favorit (§5.17)
-    case favorites
+    case favorites(storeID: String?)
     case setFavorite(productID: String, isFavorite: Bool)
     // Pesanan
     /// `GET /v1/orders` (§5.12). `statuses` kosong = semua; `from`/`to` = rentang [from, to).
     case orders(statuses: [String], from: Date?, to: Date?, oldestFirst: Bool, page: Int, limit: Int)
     case orderDetail(id: String)
     case rateOrder(id: String, rating: Int, comment: String)
+    /// Hanya pesanan PENDING (COD belum diproses outlet).
+    case cancelOrder(id: String)
     case createOrder(param: CreateOrderParam, idempotencyKey: String)
+    /// `POST /v1/orders/quote` (§5.10): subtotal, ongkir per jarak, estimasi tiba dari server, tanpa menyimpan.
+    case quote(param: CreateOrderParam)
     /// `POST /v1/checkout` (§5.27): COD → pesanan; Bayar Online → sesi Midtrans.
     case checkout(param: CreateOrderParam, idempotencyKey: String)
     // Pembayaran online
     case payment(id: String)
     case payments(status: String?)
     case cancelPayment(id: String)
+    /// Hanya backend `APP_ENV=dev`: status seolah dari Midtrans (debugger).
+    case simulatePayment(id: String, status: String)
     // Notifikasi push (§5.28)
     case registerDevice(param: RegisterDeviceParam)
     /// Tanpa login: dipanggil setelah sesi dihapus.
@@ -84,6 +92,7 @@ public enum EndpointAPI {
         case .banners: return "/v1/banners"
         case .categories: return "/v1/categories"
         case .products: return "/v1/products"
+        case .product(let id, _): return "/v1/products/\(Self.escape(id))"
         case .stores: return "/v1/stores"
         case .popupPromotion: return "/v1/promotions/popup"
         case .favorites: return "/v1/me/favorites"
@@ -91,10 +100,13 @@ public enum EndpointAPI {
         case .orders, .createOrder: return "/v1/orders"
         case .orderDetail(let id): return "/v1/orders/\(Self.escape(id))"
         case .rateOrder(let id, _, _): return "/v1/orders/\(Self.escape(id))/rating"
+        case .cancelOrder(let id): return "/v1/orders/\(Self.escape(id))/cancel"
         case .checkout: return "/v1/checkout"
+        case .quote: return "/v1/orders/quote"
         case .payments: return "/v1/payments"
         case .payment(let id): return "/v1/payments/\(Self.escape(id))"
         case .cancelPayment(let id): return "/v1/payments/\(Self.escape(id))/cancel"
+        case .simulatePayment(let id, _): return "/v1/dev/payments/\(Self.escape(id))/simulate"
         case .registerDevice: return "/v1/me/devices"
         case .unregisterDevice: return "/v1/devices/unregister"
         }
@@ -103,12 +115,12 @@ public enum EndpointAPI {
     var method: HTTPMethod {
         switch self {
         case .login, .register, .googleSignIn, .refreshToken, .createOrder, .createAddress, .addEWallet,
-             .checkout, .cancelPayment, .unregisterDevice, .rateOrder: return .post
+             .checkout, .quote, .cancelPayment, .simulatePayment, .unregisterDevice, .rateOrder, .cancelOrder: return .post
         case .setDefaultPaymentMethod, .registerDevice: return .put
         case .setFavorite(_, let isFavorite): return isFavorite ? .put : .delete
         case .updateProfile, .updateAddress: return .patch
         case .deleteAddress, .deletePaymentMethod: return .delete
-        case .profile, .banners, .categories, .products, .stores, .popupPromotion, .favorites, .orders, .orderDetail, .payment, .payments,
+        case .profile, .banners, .categories, .products, .product, .stores, .popupPromotion, .favorites, .orders, .orderDetail, .payment, .payments,
              .addresses, .paymentMethods, .helpCenter, .legalDocument: return .get
         }
     }
@@ -116,10 +128,10 @@ public enum EndpointAPI {
     /// Endpoint yang butuh login → kirim `Authorization: Bearer <access_token>`.
     var requiresAuth: Bool {
         switch self {
-        case .profile, .favorites, .setFavorite, .orders, .orderDetail, .rateOrder, .createOrder, .checkout, .payment, .payments, .cancelPayment, .registerDevice,
+        case .profile, .favorites, .setFavorite, .simulatePayment, .orders, .orderDetail, .rateOrder, .cancelOrder, .createOrder, .checkout, .quote, .payment, .payments, .cancelPayment, .registerDevice,
              .updateProfile, .addresses, .createAddress, .updateAddress, .deleteAddress,
              .paymentMethods, .addEWallet, .setDefaultPaymentMethod, .deletePaymentMethod: return true
-        case .login, .register, .googleSignIn, .refreshToken, .banners, .categories, .products, .stores, .popupPromotion,
+        case .login, .register, .googleSignIn, .refreshToken, .banners, .categories, .products, .product, .stores, .popupPromotion,
              .helpCenter, .legalDocument, .unregisterDevice: return false
         }
     }
@@ -160,7 +172,7 @@ public enum EndpointAPI {
             return params
         case .refreshToken(let refreshToken):
             return ["refresh_token": refreshToken]
-        case .createOrder(let param, _), .checkout(let param, _):
+        case .createOrder(let param, _), .checkout(let param, _), .quote(let param):
             return param.body
         case .registerDevice(let param):
             return param.body
@@ -173,6 +185,8 @@ public enum EndpointAPI {
             if let from { params["from"] = from.ISO8601Format() }
             if let to { params["to"] = to.ISO8601Format() }
             return params
+        case .simulatePayment(_, let status):
+            return ["status": status]
         case .rateOrder(_, let rating, let comment):
             return ["rating": rating, "comment": comment]
         case .payments(let status):
@@ -186,7 +200,8 @@ public enum EndpointAPI {
             return param.body
         case .setDefaultPaymentMethod(let id):
             return ["id": id]
-        case .products(let storeID):
+        // Menu, harga, stok & promo mengikuti outlet (§5.29).
+        case .products(let storeID), .product(_, let storeID), .popupPromotion(let storeID), .favorites(let storeID):
             guard let storeID, !storeID.isEmpty else { return nil }
             return ["store_id": storeID]
         case .stores(let lat, let lng):

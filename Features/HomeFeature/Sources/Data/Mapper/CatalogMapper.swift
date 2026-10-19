@@ -33,8 +33,18 @@ enum CatalogMapper {
             isBestSeller: dto.tags?.contains("best_seller") ?? false,
             options: (dto.options ?? []).compactMap { option(from: $0) },
             // Harga normal yang tidak lebih mahal dari harga sekarang = bukan promo.
-            originalPrice: dto.originalPrice.flatMap { $0 > price ? Decimal($0) : nil }
+            originalPrice: dto.originalPrice.flatMap { $0 > price ? Decimal($0) : nil },
+            combo: combo(from: dto.combo)
         )
+    }
+
+    private static func combo(from dto: ProductDTO.ComboDTO?) -> Combo? {
+        let items = (dto?.items ?? []).compactMap { item -> Combo.Item? in
+            guard let name = item.productName, !name.isEmpty else { return nil }
+            return Combo.Item(name: name, optionName: item.optionName, quantity: max(item.quantity ?? 1, 1))
+        }
+        guard let dto, !items.isEmpty else { return nil }
+        return Combo(items: items, separatePrice: Decimal(dto.separatePrice ?? 0), savings: Decimal(max(dto.savings ?? 0, 0)))
     }
 
     // MARK: Promo popup
@@ -93,7 +103,19 @@ enum CatalogMapper {
     static func banners(from response: BannerListResponseDTO) -> [Banner] {
         (response.data ?? []).compactMap { (dto) -> Banner? in
             guard let id = dto.id, let title = dto.title else { return nil }
-            return Banner(id: id, title: title, subtitle: dto.subtitle ?? "", imageURL: url(from: dto.imageURL))
+            return Banner(id: id, title: title, subtitle: dto.subtitle ?? "", imageURL: url(from: dto.imageURL),
+                          action: bannerAction(from: dto.action))
+        }
+    }
+
+    /// Aksi tak dikenal (backend lebih baru) = banner tidak bisa di-tap.
+    private static func bannerAction(from dto: BannerDTO.ActionDTO?) -> BannerAction {
+        let value = dto?.value?.trimmingCharacters(in: .whitespaces) ?? ""
+        switch dto?.type {
+        case "PRODUCT" where !value.isEmpty: return .product(id: value)
+        case "CATEGORY" where !value.isEmpty: return .category(id: value)
+        case "FREE_DELIVERY": return .freeDelivery
+        default: return .none
         }
     }
 

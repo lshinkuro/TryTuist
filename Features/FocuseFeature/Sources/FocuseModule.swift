@@ -24,6 +24,13 @@ public final class FocusModule: TabFeature {
         let store = OrdersStore(getOrders: GetOrdersUseCase(repository: repository), getDetail: getDetail)
         let onReorder = self.onReorder
         let rateOrder = RateOrderUseCase(repository: repository)
+        let cancelOrder = CancelOrderUseCase(repository: repository)
+        let reorder = { (items: [OrderDetail.Item]) in
+            onReorder(items.map {
+                OrderReorderItem(productID: $0.productID, optionID: $0.optionID, name: $0.name,
+                                 quantity: $0.quantity, note: $0.note ?? "")
+            })
+        }
         let presentRating = { [weak router] (target: RatingTarget, onSubmitted: @escaping (String, Int) -> Void) in
             let rateStore = RateOrderStore(target: target, rateOrder: rateOrder)
             rateStore.onRoute = { route in
@@ -38,7 +45,7 @@ public final class FocusModule: TabFeature {
         store.onRoute = { [weak router, weak store] route in
             switch route {
             case .detail(let id):
-                let detailStore = OrderDetailStore(orderID: id, getDetail: getDetail)
+                let detailStore = OrderDetailStore(orderID: id, getDetail: getDetail, cancelOrder: cancelOrder)
                 detailStore.onRoute = { [weak detailStore] route in
                     switch route {
                     case .rate(let target):
@@ -46,6 +53,10 @@ public final class FocusModule: TabFeature {
                             detailStore?.send(.ratingSubmitted)
                             store?.send(.ratingSubmitted(orderID: orderID, rating: rating))
                         }
+                    case .reorder(let items):
+                        reorder(items)
+                    case .cancelled:
+                        store?.send(.retryTapped)
                     }
                 }
                 router?.push(OrderDetailView(store: detailStore), title: String(localized: "Detail Pesanan"))
@@ -54,10 +65,7 @@ public final class FocusModule: TabFeature {
                     store?.send(.ratingSubmitted(orderID: orderID, rating: rating))
                 }
             case .reorder(let items):
-                onReorder(items.map {
-                    OrderReorderItem(productID: $0.productID, optionID: $0.optionID, name: $0.name,
-                                     quantity: $0.quantity, note: $0.note ?? "")
-                })
+                reorder(items)
             }
         }
         router.setRoot(FocusesView(store: store), hidesNavigationBar: true)

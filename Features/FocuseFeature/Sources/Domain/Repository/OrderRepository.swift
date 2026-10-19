@@ -8,6 +8,8 @@ protocol OrderRepository {
     func fetchOrders(_ query: OrderListQuery) async throws -> [Order]
     func fetchOrderDetail(id: String) async throws -> OrderDetail
     func rate(orderID: String, rating: Int, comment: String) async throws
+    /// Batalkan pesanan yang belum diproses outlet; mengembalikan detail terbaru.
+    func cancel(orderID: String) async throws -> OrderDetail
 }
 
 enum OrderError: LocalizedError, Equatable {

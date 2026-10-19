@@ -4,6 +4,7 @@
 //
 //  Keranjang + pilihan "Antar ke" & "Pembayaran". Defaultnya alamat & metode utama user
 //  (dari tab Profil); pilihan di sini hanya berlaku untuk pesanan ini.
+//  Ongkir & total dihitung server (`POST /v1/orders/quote`) setiap isi atau pilihan berubah.
 //
 import Foundation
 import TTUI
@@ -30,11 +31,23 @@ struct CartState: Equatable {
     /// Outlet asal pesanan (dipilih di Beranda).
     var outlet: Outlet?
 
-    static let standardDeliveryFee: Decimal = 10000
+    /// Harga resmi dari server untuk isi & pilihan saat ini; `nil` = belum / gagal dihitung.
+    var quote: CartQuote?
+    var isQuoting = false
+    var quoteError: String?
+    /// Naik setiap isi / pilihan berubah; hasil quote yang lebih lama diabaikan.
+    var quoteVersion = 0
+    /// Kupon gratis ongkir diaktifkan user untuk pesanan ini.
+    var useFreeDelivery = false
+    /// Pesan saat kupon otomatis dimatikan (habis / fitur dinonaktifkan).
+    var freeDeliveryNote: String?
 
     var subtotal: Decimal { items.reduce(0) { $0 + $1.subtotal } }
-    var deliveryFee: Decimal { items.isEmpty ? 0 : Self.standardDeliveryFee }
-    var total: Decimal { subtotal + deliveryFee }
+    /// Selama menghitung ulang, ongkir lama tetap ditampilkan supaya angka tidak berkedip.
+    var total: Decimal {
+        guard let quote else { return subtotal }
+        return isQuoting ? subtotal + quote.deliveryFee - quote.discount : quote.total
+    }
     var itemCount: Int { items.reduce(0) { $0 + $1.quantity } }
 
     var addresses: [CheckoutAddress] { options.value?.addresses ?? [] }
@@ -46,8 +59,9 @@ struct CartState: Equatable {
     var needsAddress: Bool { options.value != nil && addresses.isEmpty }
 
     /// Bila pilihan gagal dimuat, checkout tetap boleh: server memakai default user.
+    /// Harga harus sudah dihitung server, supaya total di tombol = yang ditagih.
     var canCheckout: Bool {
-        !items.isEmpty && !isCheckingOut && !options.isLoading && !needsAddress
+        !items.isEmpty && !isCheckingOut && !options.isLoading && !needsAddress && quote != nil && !isQuoting
     }
 
     var checkoutHint: String? {
@@ -62,7 +76,8 @@ struct CartState: Equatable {
     }
 
     var selection: CheckoutSelection {
-        CheckoutSelection(addressID: selectedAddressID, paymentMethodID: selectedPaymentID, storeID: outlet?.id)
+        CheckoutSelection(addressID: selectedAddressID, paymentMethodID: selectedPaymentID, storeID: outlet?.id,
+                          useFreeDelivery: useFreeDelivery)
     }
 }
 
@@ -70,6 +85,9 @@ enum CartAction {
     case onAppear
     case retryOptionsTapped
     case optionsResponse(Result<CheckoutOptions, CartError>)
+    case quoteResponse(version: Int, Result<CartQuote, CartError>)
+    case retryQuoteTapped
+    case freeDeliveryToggled(Bool)
     case itemsChanged([CartItem])
     case outletChanged(Outlet?)
     case incrementTapped(CartItem)
@@ -136,20 +154,50 @@ final class CartStore: Store<CartState, CartAction> {
             if !options.paymentMethods.contains(where: { $0.id == state.selectedPaymentID && $0.isEnabled }) {
                 state.selectedPaymentID = options.defaultPaymentMethod?.id
             }
-            return nil
+            return requestQuote(&state)
 
         case .optionsResponse(.failure(let error)):
             // Pilihan yang sudah tampil tidak dihapus bila refresh gagal.
             if state.options.value == nil { state.options = .failed(error.errorDescription ?? "") }
+            return requestQuote(&state)
+
+        case .quoteResponse(let version, let result):
+            guard version == state.quoteVersion else { return nil }
+            state.isQuoting = false
+            switch result {
+            case .success(let quote):
+                state.quote = quote
+                state.quoteError = nil
+            case .failure(.freeDeliveryUnavailable(let message)):
+                // Kupon habis / dimatikan: matikan toggle & hitung ulang tanpa kupon.
+                state.useFreeDelivery = false
+                state.freeDeliveryNote = message
+                return requestQuote(&state)
+            case .failure(let error):
+                // Mis. OUT_OF_DELIVERY_AREA / STORE_CLOSED: user perlu ganti alamat atau outlet.
+                state.quote = nil
+                state.quoteError = error.errorDescription
+            }
             return nil
+
+        case .freeDeliveryToggled(let isOn):
+            guard isOn != state.useFreeDelivery else { return nil }
+            state.useFreeDelivery = isOn
+            state.freeDeliveryNote = nil
+            state.errorMessage = nil
+            return requestQuote(&state)
+
+        case .retryQuoteTapped:
+            return requestQuote(&state)
 
         case .itemsChanged(let items):
             state.items = items
-            return nil
+            return requestQuote(&state)
 
         case .outletChanged(let outlet):
+            let changed = outlet?.id != state.outlet?.id
             state.outlet = outlet
-            return nil
+            return changed ? requestQuote(&state) : nil
 
         case .incrementTapped(let item):
             return updateQuantity(item, to: item.quantity + 1)
@@ -169,10 +217,11 @@ final class CartStore: Store<CartState, CartAction> {
             return nil
 
         case .addressSelected(let id):
+            let changed = id != state.selectedAddressID
             state.selectedAddressID = id
             state.activeSheet = nil
             state.errorMessage = nil
-            return nil
+            return changed ? requestQuote(&state) : nil
 
         case .paymentSelected(let id):
             guard state.paymentMethods.first(where: { $0.id == id })?.isEnabled == true else { return nil }
@@ -206,6 +255,7 @@ final class CartStore: Store<CartState, CartAction> {
         case .checkoutResponse(.success(.placed(let order))):
             state.isCheckingOut = false
             state.placedOrder = order
+            state.useFreeDelivery = false   // kupon dipilih ulang untuk pesanan berikutnya
             return nil
 
         case .checkoutResponse(.success(.payment(let session))):
@@ -214,6 +264,7 @@ final class CartStore: Store<CartState, CartAction> {
 
         case .paymentFinished(.paid(let order)):
             state.placedOrder = order
+            state.useFreeDelivery = false
             state.errorMessage = nil
             return nil
 
@@ -225,6 +276,13 @@ final class CartStore: Store<CartState, CartAction> {
             state.errorMessage = String(localized: "Pembayaran masih menunggu. Tekan Bayar lagi untuk melanjutkan.")
             return nil
 
+        case .checkoutResponse(.failure(.freeDeliveryUnavailable(let message))):
+            // Kupon terpakai di perangkat lain sejak harga dihitung: matikan, user cek total baru lalu bayar lagi.
+            state.isCheckingOut = false
+            state.useFreeDelivery = false
+            state.freeDeliveryNote = message
+            return requestQuote(&state)
+
         case .checkoutResponse(.failure(let error)):
             state.isCheckingOut = false
             state.errorMessage = error.errorDescription
@@ -233,6 +291,33 @@ final class CartStore: Store<CartState, CartAction> {
 
         case .closeTapped:
             return .run { [weak self] in self?.onRoute?(.close) }
+        }
+    }
+
+    /// Ongkir bergantung alamat, jadi quote baru dikirim setelah pilihan alamat diketahui.
+    private func requestQuote(_ state: inout CartState) -> Effect<CartAction>? {
+        state.quoteVersion += 1
+        guard !state.items.isEmpty else {
+            state.quote = nil
+            state.isQuoting = false
+            state.quoteError = nil
+            return nil
+        }
+        guard !state.options.isIdle, !state.options.isLoading else { return nil }
+        state.isQuoting = true
+        state.quoteError = nil
+        let version = state.quoteVersion
+        let selection = state.selection
+        let cart = self.cart
+        return .task { [weak self] in
+            // Tap +/− beruntun: tunggu sebentar, lalu hanya permintaan terakhir yang dikirim.
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self, await self.state.quoteVersion == version else { return nil }
+            do {
+                return .quoteResponse(version: version, .success(try await cart.quote(selection)))
+            } catch {
+                return .quoteResponse(version: version, .failure(error as? CartError ?? .network))
+            }
         }
     }
 

@@ -9,6 +9,8 @@ protocol PaymentRemoteDataSource {
     func status(id: String) async throws -> PaymentResponseDTO
     func cancel(id: String) async throws -> PaymentResponseDTO
     func pending() async throws -> PaymentListResponseDTO
+    /// `status`: transaction_status Midtrans (settlement | deny | expire | cancel).
+    func simulate(id: String, status: String) async throws -> PaymentResponseDTO
 }
 
 /// Backend asli: `/v1/payments` (§5.27).
@@ -25,6 +27,10 @@ struct PaymentAPIDataSource: PaymentRemoteDataSource {
 
     func pending() async throws -> PaymentListResponseDTO {
         try await api.send(.payments(status: "PENDING"))
+    }
+
+    func simulate(id: String, status: String) async throws -> PaymentResponseDTO {
+        try await api.send(.simulatePayment(id: id, status: status))
     }
 }
 
@@ -62,6 +68,20 @@ actor PaymentMockStore {
     func cancel(id: String) -> [String: Any]? {
         guard var s = sessions[id] else { return nil }
         if s.status == "PENDING" { s.status = "CANCELLED" }
+        sessions[id] = s
+        return json(s)
+    }
+
+    func simulate(id: String, status: String) -> [String: Any]? {
+        guard var s = sessions[id], s.status == "PENDING" else { return nil }
+        switch status {
+        case "settlement":
+            s.status = "PAID"
+            s.orderNumber = "ORD-MOCK-\(Int.random(in: 1000...9999))"
+        case "deny": s.status = "FAILED"
+        case "expire": s.status = "EXPIRED"
+        default: s.status = "CANCELLED"
+        }
         sessions[id] = s
         return json(s)
     }
@@ -104,6 +124,12 @@ struct PaymentMockDataSource: PaymentRemoteDataSource {
         try await Task.sleep(for: latency)
         let list = await PaymentMockStore.shared.pending()
         return try decode(list)
+    }
+
+    func simulate(id: String, status: String) async throws -> PaymentResponseDTO {
+        try await Task.sleep(for: latency)
+        guard let data = await PaymentMockStore.shared.simulate(id: id, status: status) else { throw PaymentError.alreadyFinal }
+        return try decode(data)
     }
 
     private func decode<T: Decodable>(_ data: Any) throws -> APIEnvelope<T> {

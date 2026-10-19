@@ -21,6 +21,8 @@ struct Product: Identifiable, Hashable {
     let options: [ProductOption]
     /// Harga normal sebelum promo; `nil` = tidak sedang promo (API_PLAN.md §5.24).
     var originalPrice: Decimal? = nil
+    /// Paket combo: isi & hemat dibanding beli satuan; `nil` untuk produk biasa.
+    var combo: Combo? = nil
 
     var defaultOption: ProductOption? { options.first }
 
@@ -32,6 +34,25 @@ struct Product: Identifiable, Hashable {
         let percent = (originalPrice - price) * 100 / originalPrice
         return Int(NSDecimalNumber(decimal: percent).doubleValue.rounded(.down))
     }
+}
+
+/// Isi paket combo (isi tetap, diatur admin).
+struct Combo: Hashable {
+    struct Item: Hashable {
+        let name: String
+        let optionName: String?
+        let quantity: Int
+
+        /// "1× Es Kopi Susu (Large)".
+        var label: String { "\(quantity)× \(name)" + (optionName.map { " (\($0))" } ?? "") }
+    }
+
+    let items: [Item]
+    /// Total bila isinya dibeli satuan.
+    let separatePrice: Decimal
+    let savings: Decimal
+
+    var summary: String { items.map(\.label).joined(separator: ", ") }
 }
 
 struct ProductOption: Identifiable, Hashable {

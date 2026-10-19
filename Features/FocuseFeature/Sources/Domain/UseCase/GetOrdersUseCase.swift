@@ -21,6 +21,14 @@ struct GetOrderDetailUseCase {
     }
 }
 
+struct CancelOrderUseCase {
+    let repository: OrderRepository
+
+    func execute(id: String) async throws -> OrderDetail {
+        try await repository.cancel(orderID: id)
+    }
+}
+
 struct RateOrderUseCase {
     let repository: OrderRepository
     static let ratingRange = 1...5

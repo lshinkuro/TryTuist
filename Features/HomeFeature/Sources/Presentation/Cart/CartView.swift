@@ -103,8 +103,25 @@ struct CartView: View {
                 paymentSection
 
                 VStack(spacing: Spacing.m) {
-                    summaryRow(String(localized: "Subtotal (\(state.itemCount) item)"), state.subtotal.rupiahFormatted)
-                    summaryRow(String(localized: "Ongkos kirim"), state.deliveryFee.rupiahFormatted)
+                    summaryRow(String(localized: "Subtotal (\(state.itemCount) item)"), (state.quote?.subtotal ?? state.subtotal).rupiahFormatted)
+                    deliveryFeeRow
+                    freeDeliveryRow
+                    if let discount = state.quote?.discount, discount > 0 {
+                        summaryRow(String(localized: "Diskon"), "−\(discount.rupiahFormatted)")
+                    }
+                    if let eta = state.quote?.eta {
+                        summaryRow(String(localized: "Estimasi tiba"), String(localized: "\(eta.lowerBound)–\(eta.upperBound) menit"))
+                    }
+                    if let error = state.quoteError {
+                        HStack(alignment: .top) {
+                            Label(error, systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                            Spacer()
+                            Button(String(localized: "Coba lagi")) { store.send(.retryQuoteTapped) }
+                                .font(.footnote.bold())
+                        }
+                    }
                     Divider()
                     HStack {
                         Text("Total").font(.headline)
@@ -196,6 +213,60 @@ struct CartView: View {
         }
     }
 
+    /// Kupon gratis ongkir mingguan: tampil bila fiturnya aktif; dipakai hanya bila user menyalakannya.
+    @ViewBuilder
+    private var freeDeliveryRow: some View {
+        if let coupon = state.quote?.freeDelivery, coupon.isEnabled {
+            let canUse = coupon.isApplied || coupon.remaining > 0 || state.useFreeDelivery
+            Toggle(isOn: store.binding(\.useFreeDelivery, send: { .freeDeliveryToggled($0) })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Label(String(localized: "Pakai kupon gratis ongkir"), systemImage: "ticket.fill")
+                        .font(.subheadline.weight(.semibold))
+                    Text(canUse
+                         ? String(localized: "Sisa \(coupon.remaining) dari \(coupon.weeklyQuota) kupon minggu ini")
+                         : String(localized: "Kupon minggu ini habis. Kuota baru mulai Senin."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .tint(Color.brand)
+            .disabled(!canUse || state.isQuoting)
+        }
+        if let note = state.freeDeliveryNote {
+            Label(note, systemImage: "info.circle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Ongkir dari server (per jarak alamat → outlet); spinner saat dihitung ulang.
+    private var deliveryFeeRow: some View {
+        HStack {
+            Group {
+                if let km = state.quote?.distanceKm {
+                    Text("Ongkos kirim (\(km.formatted(.number.precision(.fractionLength(1)))) km)")
+                } else {
+                    Text("Ongkos kirim")
+                }
+            }
+            .foregroundStyle(.secondary)
+            Spacer()
+            if state.isQuoting {
+                ProgressView().controlSize(.small)
+            } else if let coupon = state.quote?.freeDelivery, coupon.isApplied {
+                HStack(spacing: Spacing.xs) {
+                    Text(coupon.feeWaived.rupiahFormatted).strikethrough().foregroundStyle(.secondary)
+                    Text("Gratis").foregroundStyle(Color.brand).bold()
+                }
+            } else if let fee = state.quote?.deliveryFee {
+                Text(fee == 0 ? String(localized: "Gratis") : fee.rupiahFormatted)
+            } else {
+                Text("–")
+            }
+        }
+        .font(.subheadline)
+    }
+
     private func summaryRow(_ title: String, _ value: String) -> some View {
         HStack {
             Text(title).foregroundStyle(.secondary)
@@ -223,6 +294,9 @@ private struct CartItemRow: View {
                     .font(.subheadline.weight(.semibold))
                 if let option = item.option {
                     Text(option.name).font(.caption).foregroundStyle(.secondary)
+                }
+                if let combo = item.product.combo {
+                    Text(combo.summary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 if !item.note.isEmpty {
                     Label(item.note, systemImage: "note.text")

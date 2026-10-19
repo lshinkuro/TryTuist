@@ -9,6 +9,8 @@ import Utility
 struct HomeState: Equatable {
     var userName = "Ishinkuro"  // placeholder nama, bukan teks UI
     var content: Loadable<HomeContent> = .idle
+    /// Pull-to-refresh berjalan: konten lama tetap tampil.
+    var isRefreshing = false
     var bannerPage = 0
     var cart: CartSummary = .empty
     var toast: ToastMessage?
@@ -36,6 +38,10 @@ struct HomeState: Equatable {
     var locationPermission: LocationPermission?
 
     var delivery: DeliveryLocation? { deliveryChoice.selected }
+    /// Banner produk yang sedang dimuat (tap ganda diabaikan).
+    var openingBannerID: String?
+    /// Info kupon gratis ongkir mingguan (banner FREE_DELIVERY).
+    var isFreeDeliveryInfoPresented = false
 
     var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
@@ -50,8 +56,13 @@ struct HomeState: Equatable {
 enum HomeAction {
     case onAppear
     case retryTapped
+    case refreshPulled
     case contentResponse(Result<HomeContent, CatalogError>)
     case bannerPageChanged(Int)
+    case bannerTapped(Banner)
+    case bannerProductResponse(Result<Product, CatalogError>)
+    case freeDeliveryInfoChanged(Bool)
+    case freeDeliveryCartTapped
     case productTapped(Product)
     case quickAddTapped(Product)
     case quickAddResponse(Result<Product, CartError>)
@@ -99,6 +110,8 @@ struct HomeLocationUseCases {
 enum HomeRoute {
     case productDetail(Product)
     case category(MenuCategory)
+    /// Kategori dari banner (mungkin belum ada di daftar kategori Beranda).
+    case menu(categoryID: String, title: String)
     case allMenu
     case cart
     case showPromoPopup(PromoPopup)
@@ -122,12 +135,13 @@ final class HomeStore: Store<HomeState, HomeAction> {
     private let changeOutlet: ChangeOutletUseCase
     private let getPendingPayment: GetPendingPaymentUseCase
     private let location: HomeLocationUseCases
+    private let getProduct: GetProductUseCase
     var onRoute: ((HomeRoute) -> Void)?
 
     init(getHomeContent: GetHomeContentUseCase, addToCart: AddToCartUseCase, cart: CartRepository,
          getPromoPopup: GetPromoPopupUseCase, dismissPromoPopup: DismissPromoPopupUseCase,
          changeOutlet: ChangeOutletUseCase, getPendingPayment: GetPendingPaymentUseCase,
-         location: HomeLocationUseCases) {
+         location: HomeLocationUseCases, getProduct: GetProductUseCase) {
         self.getHomeContent = getHomeContent
         self.addToCart = addToCart
         self.getPromoPopup = getPromoPopup
@@ -135,6 +149,7 @@ final class HomeStore: Store<HomeState, HomeAction> {
         self.changeOutlet = changeOutlet
         self.getPendingPayment = getPendingPayment
         self.location = location
+        self.getProduct = getProduct
         super.init(initialState: HomeState())
         bind(cart.summaryPublisher) { .cartChanged($0) }
     }
@@ -148,7 +163,13 @@ final class HomeStore: Store<HomeState, HomeAction> {
         case .retryTapped:
             return load(&state)
 
+        case .refreshPulled:
+            guard !state.isRefreshing, !state.content.isLoading else { return nil }
+            state.isRefreshing = true
+            return load(&state, silently: true)
+
         case .contentResponse(.success(let content)):
+            state.isRefreshing = false
             state.content = .loaded(content)
             if !content.outlet.outlets.isEmpty || state.outletChoice.selected == nil {
                 state.outletChoice = content.outlet
@@ -164,7 +185,13 @@ final class HomeStore: Store<HomeState, HomeAction> {
             let getPromoPopup = self.getPromoPopup
             return .task { .promoPopupResponse(await getPromoPopup.execute()) }
 
+        case .contentResponse(.failure(let error)) where state.isRefreshing && state.content.value != nil:
+            // Refresh gagal: Beranda lama tetap tampil, cukup kabari lewat toast.
+            state.isRefreshing = false
+            return showToast(&state, .error(error.errorDescription ?? ""))
+
         case .contentResponse(.failure(let error)):
+            state.isRefreshing = false
             state.content = .failed(error.errorDescription ?? "")
             if let toastID = state.toastAwaitingReload {
                 state.toastAwaitingReload = nil
@@ -198,6 +225,45 @@ final class HomeStore: Store<HomeState, HomeAction> {
 
         case .categoryTapped(let category):
             return route(.category(category))
+
+        case .bannerTapped(let banner):
+            switch banner.action {
+            case .none:
+                return nil
+            case .freeDelivery:
+                state.isFreeDeliveryInfoPresented = true
+                return nil
+            case .category(let id):
+                let title = state.content.value?.categories.first { $0.id == id }?.name ?? banner.title
+                return route(.menu(categoryID: id, title: title))
+            case .product(let id):
+                guard state.openingBannerID == nil else { return nil }
+                state.openingBannerID = banner.id
+                let getProduct = self.getProduct
+                return .task {
+                    do {
+                        return .bannerProductResponse(.success(try await getProduct.execute(id: id)))
+                    } catch {
+                        return .bannerProductResponse(.failure(error as? CatalogError ?? .unknown))
+                    }
+                }
+            }
+
+        case .bannerProductResponse(.success(let product)):
+            state.openingBannerID = nil
+            return route(.productDetail(product))
+
+        case .bannerProductResponse(.failure(let error)):
+            state.openingBannerID = nil
+            return showToast(&state, .error(error.errorDescription ?? ""))
+
+        case .freeDeliveryInfoChanged(let isPresented):
+            state.isFreeDeliveryInfoPresented = isPresented
+            return nil
+
+        case .freeDeliveryCartTapped:
+            state.isFreeDeliveryInfoPresented = false
+            return route(.cart)
 
         case .seeAllTapped:
             return route(.allMenu)
@@ -401,8 +467,9 @@ final class HomeStore: Store<HomeState, HomeAction> {
 
     // MARK: - Helpers
 
-    private func load(_ state: inout HomeState) -> Effect<HomeAction> {
-        state.content = .loading
+    /// `silently`: untuk pull-to-refresh, konten lama tidak diganti skeleton.
+    private func load(_ state: inout HomeState, silently: Bool = false) -> Effect<HomeAction> {
+        if !silently || state.content.value == nil { state.content = .loading }
         let getHomeContent = self.getHomeContent
         return .task {
             do {

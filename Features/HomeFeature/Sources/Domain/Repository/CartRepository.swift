@@ -23,6 +23,8 @@ protocol CartRepository: AnyObject {
     /// keranjang baru dikosongkan lewat `finishPayment(paid: true)`.
     func checkout(_ selection: CheckoutSelection) async throws -> CheckoutOutcome
     func finishPayment(paid: Bool) async
+    /// Hitung ulang harga isi keranjang di server untuk pilihan ini (tanpa membuat pesanan).
+    func quote(_ selection: CheckoutSelection) async throws -> CartQuote
 }
 
 enum CartError: LocalizedError, Equatable {
@@ -36,6 +38,8 @@ enum CartError: LocalizedError, Equatable {
     case selectionNotFound
     /// Ditolak server dengan pesan sendiri (mis. metode bayar dimatikan, outlet tutup).
     case rejected(String)
+    /// Kupon gratis ongkir habis minggu ini / fitur dimatikan.
+    case freeDeliveryUnavailable(String)
 
     var errorDescription: String? {
         switch self {
@@ -46,7 +50,7 @@ enum CartError: LocalizedError, Equatable {
         case .network: return String(localized: "Tidak ada koneksi ke server. Coba lagi.")
         case .checkoutFailed: return String(localized: "Pesanan gagal dibuat. Coba lagi.")
         case .selectionNotFound: return String(localized: "Alamat atau metode pembayaran tidak ditemukan. Pilih ulang ya.")
-        case .rejected(let message): return message
+        case .rejected(let message), .freeDeliveryUnavailable(let message): return message
         }
     }
 }

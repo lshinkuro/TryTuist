@@ -2,7 +2,7 @@
 //  DebugMenu.swift
 //  Debugger
 //
-//  Pintu masuk Debugger. Muncul saat device di-shake (lihat ShakeWindow).
+//  Pintu masuk Debugger. Muncul saat device di-shake atau tombol 🐞 mengambang di-tap (lihat ShakeWindow).
 //  Simulator: menu Device ▸ Shake (⌃⌘Z).
 //
 //  App (AppRouter) mengisi:

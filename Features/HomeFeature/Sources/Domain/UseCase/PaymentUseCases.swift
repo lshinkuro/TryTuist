@@ -50,3 +50,14 @@ struct FinishPaymentUseCase {
         }
     }
 }
+
+/// Debugger: terapkan hasil ke pembayaran yang sedang menunggu (paling baru). Layar Pembayaran
+/// yang terbuka menangkap hasilnya lewat polling.
+struct SimulatePaymentUseCase {
+    let repository: PaymentRepository
+
+    func execute(_ outcome: PaymentSimulation) async throws -> PaymentSession {
+        guard let pending = try await repository.pending().first else { throw PaymentError.notFound }
+        return try await repository.simulate(id: pending.id, outcome: outcome)
+    }
+}

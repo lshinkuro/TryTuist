@@ -827,6 +827,10 @@ Beranda: GetPendingPaymentUseCase → kartu "Menunggu pembayaran" → HomeRoute.
 - Idempotency-Key dipertahankan selama sesi `PENDING` (tekan Bayar lagi = sesi yang sama), lalu diganti setelah sesi selesai (`CartRepository.finishPayment`).
 - Mock (`USE_MOCK_DATA = YES`): metode "Bayar Online" default. `PaymentMockStore` tidak punya halaman Snap; sesi otomatis lunas 4 detik setelah dibuat.
 
+Debugger (shake) → Navigasi → **Simulator Midtrans (sandbox)**: halaman simulator Midtrans (QRIS, GoPay, deeplink, VA BCA/BNI/BRI/Permata/CIMB, Mandiri Bill) dibuka di dalam app (`SFSafariViewController`), jadi kode bayar dari Snap bisa langsung ditempel tanpa pindah ke Safari.
+
+Debugger → Navigasi → **Simulasi Midtrans**: Lunas / Ditolak / Kedaluwarsa / Dibatalkan untuk pembayaran yang sedang menunggu, lewat `POST /v1/dev/payments/{id}/simulate` (backend `APP_ENV=dev`) atau `PaymentMockStore` (mode mock). Layar Pembayaran menangkap hasilnya lewat polling, jadi tidak perlu membuka simulator Midtrans di browser.
+
 ### 11.6 Notifikasi push (APNs)
 
 - `App/Sources/PushRegistrar.swift` (App target, `@MainActor`): menyimpan device token APNs (`UserDefaults`), mendaftarkannya ke backend setelah login (`PUT /v1/me/devices`), dan melepasnya saat sesi berakhir (`POST /v1/devices/unregister`, tanpa login).

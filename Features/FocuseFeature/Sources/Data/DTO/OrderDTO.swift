@@ -52,6 +52,18 @@ struct OrderDetailDTO: Decodable {
     let statusHistory: [StatusEventDTO]?
     let canRate: Bool?
     let rating: RatingDTO?
+    let distanceKm: Double?
+    let etaMinMinutes: Int?
+    let etaMaxMinutes: Int?
+    let canCancel: Bool?
+    let freeDeliveryCoupon: Bool?
+    let deliveryFeeWaived: Int?
+    let refund: RefundDTO?
+
+    struct RefundDTO: Decodable {
+        let status: String?
+        let amount: Int?
+    }
 
     struct RatingDTO: Decodable {
         let rating: Int?
@@ -66,6 +78,20 @@ struct OrderDetailDTO: Decodable {
         let quantity: Int?
         let note: String?
         let subtotal: Int?
+        /// Isi combo (per 1 paket); nil untuk produk biasa.
+        let bundleItems: [BundleItemDTO]?
+
+        struct BundleItemDTO: Decodable {
+            let productName: String?
+            let optionName: String?
+            let quantity: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case productName = "product_name"
+                case optionName = "option_name"
+                case quantity
+            }
+        }
 
         enum CodingKeys: String, CodingKey {
             case productID = "product_id"
@@ -73,6 +99,7 @@ struct OrderDetailDTO: Decodable {
             case productName = "product_name"
             case optionName = "option_name"
             case quantity, note, subtotal
+            case bundleItems = "bundle_items"
         }
     }
 
@@ -108,6 +135,13 @@ struct OrderDetailDTO: Decodable {
         case statusHistory = "status_history"
         case canRate = "can_rate"
         case rating
+        case distanceKm = "distance_km"
+        case etaMinMinutes = "eta_min_minutes"
+        case etaMaxMinutes = "eta_max_minutes"
+        case canCancel = "can_cancel"
+        case freeDeliveryCoupon = "free_delivery_coupon"
+        case deliveryFeeWaived = "delivery_fee_waived"
+        case refund
     }
 }
 

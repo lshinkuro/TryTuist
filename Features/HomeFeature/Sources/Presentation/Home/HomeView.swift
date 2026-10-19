@@ -42,6 +42,13 @@ struct HomeView: View {
         }
         .animation(.snappy, value: state.cart)
         .toast(state.toast)
+        .alert(String(localized: "Kupon gratis ongkir mingguan"),
+               isPresented: store.binding(\.isFreeDeliveryInfoPresented, send: { .freeDeliveryInfoChanged($0) })) {
+            Button(String(localized: "Buka Keranjang")) { store.send(.freeDeliveryCartTapped) }
+            Button(String(localized: "Oke"), role: .cancel) {}
+        } message: {
+            Text("Setiap minggu kamu dapat kupon gratis ongkir. Nyalakan \"Pakai kupon gratis ongkir\" di keranjang saat checkout; sisa kupon terlihat di sana. Kuota baru setiap Senin.")
+        }
         .sheet(isPresented: store.binding(\.isOutletPickerPresented, send: { $0 ? .outletPickerTapped : .outletPickerDismissed })) {
             OutletPickerView(choice: state.outletChoice,
                              switchingOutletID: state.switchingOutletID) { store.send(.outletSelected($0)) }
@@ -58,6 +65,12 @@ struct HomeView: View {
                                onOpenSettings: { store.send(.openSettingsTapped) })
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .refreshable { @MainActor in
+            store.send(.refreshPulled)
+            store.send(.refreshPendingPayment)
+            // Spinner bawaan tetap tampil sampai data baru datang.
+            while store.state.isRefreshing { try? await Task.sleep(for: .milliseconds(100)) }
         }
         .task { @MainActor in
             store.send(.onAppear)
@@ -208,7 +221,9 @@ struct HomeView: View {
     private func loaded(_ content: HomeContent) -> some View {
         if !content.banners.isEmpty {
             PromoCarouselView(banners: content.banners,
-                              currentPage: store.binding(\.bannerPage, send: { .bannerPageChanged($0) }))
+                              currentPage: store.binding(\.bannerPage, send: { .bannerPageChanged($0) }),
+                              openingBannerID: store.state.openingBannerID,
+                              onTap: { store.send(.bannerTapped($0)) })
         }
 
         if !content.categories.isEmpty {
@@ -303,6 +318,8 @@ private struct CartIconButton: View {
 private struct PromoCarouselView: View {
     let banners: [Banner]
     @Binding var currentPage: Int
+    let openingBannerID: String?
+    let onTap: (Banner) -> Void
 
     var body: some View {
         VStack(spacing: Spacing.m) {
@@ -330,10 +347,26 @@ private struct PromoCarouselView: View {
                             .foregroundStyle(.white)
                             .padding(Spacing.l)
                         }
+                        .overlay(alignment: .bottomTrailing) {
+                            if banner.action != .none {
+                                Group {
+                                    if openingBannerID == banner.id {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Image(systemName: "arrow.right.circle.fill").font(.title2)
+                                    }
+                                }
+                                .foregroundStyle(.white)
+                                .padding(Spacing.l)
+                            }
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                        .contentShape(Rectangle())
+                        .onTapGesture { onTap(banner) }
                         .padding(.horizontal, Spacing.xl)
                         .tag(index)
                         .accessibilityElement(children: .combine)
+                        .accessibilityAddTraits(banner.action == .none ? [] : .isButton)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))

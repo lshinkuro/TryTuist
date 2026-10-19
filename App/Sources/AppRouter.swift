@@ -7,6 +7,7 @@
 //  Juga menyediakan shortcut navigasi untuk Debugger (shake device, non-Prod).
 //
 import UIKit
+import SafariServices
 import Navigation
 import TTUI
 import Utility
@@ -271,6 +272,73 @@ private extension AppRouter {
             }
         ])
 
-        return [main, auth, session]
+        // Simulator sandbox Midtrans di dalam app: salin kode bayar (VA / QRIS / link GoPay) dari layar
+        // Snap, tempel di sini, bayar. Layar Pembayaran menangkap hasilnya lewat polling.
+        let simulatorBase = "https://simulator.sandbox.midtrans.com"
+        let simulators = DebugShortcutSection(
+            "Simulator Midtrans (sandbox)",
+            footer: "Buka di dalam app (tidak pindah ke Safari). Salin kode bayar dari layar Snap → buka simulator yang sesuai → tempel → bayar → tutup. "
+                + "Status di layar Pembayaran berubah dalam beberapa detik.",
+            items: [
+                ("QRIS", "Tempel URL gambar QR dari Snap", "qrcode", "/v2/qris/index"),
+                ("GoPay", "Tempel URL QR GoPay", "wallet.pass.fill", "/gopay/ui/index"),
+                ("GoPay / ShopeePay (deeplink)", "Tempel link deeplink dari Snap", "link", "/v2/deeplink/index"),
+                ("BCA Virtual Account", "Tempel nomor VA", "building.columns.fill", "/bca/va/index"),
+                ("BNI Virtual Account", "Tempel nomor VA", "building.columns.fill", "/bni/va/index"),
+                ("BRI Virtual Account", "Tempel nomor VA", "building.columns.fill", "/openapi/va/index?bank=bri"),
+                ("Mandiri Bill", "Tempel kode perusahaan & nomor tagihan", "building.columns.fill", "/openapi/va/index?bank=mandiri"),
+                ("Permata Virtual Account", "Tempel nomor VA", "building.columns.fill", "/permata/va/index"),
+                ("CIMB Virtual Account", "Tempel nomor VA", "building.columns.fill", "/openapi/va/index?bank=cimb"),
+                ("Semua simulator", "Daftar lengkap simulator sandbox", "list.bullet", "/")
+            ].map { title, subtitle, icon, path in
+                DebugShortcut(title, subtitle: subtitle, systemImage: icon) { [weak self] in
+                    if let url = URL(string: simulatorBase + path) { self?.openInAppBrowser(url) }
+                }
+            }
+        )
+
+        let midtrans = DebugShortcutSection(
+            "Simulasi Midtrans",
+            footer: "Untuk pembayaran online yang sedang menunggu (paling baru), tanpa membuka simulator Midtrans di browser. "
+                + "Layar Pembayaran yang terbuka ikut berubah dalam ±3 detik. Butuh backend APP_ENV=dev (atau mode mock).",
+            items: [
+                (PaymentSimulation.paid, "Bayar lunas", "Pesanan dibuat & push \"Pembayaran berhasil\"", "checkmark.seal.fill", DebugShortcut.Role.normal),
+                (.denied, "Ditolak", "Seperti kartu / e-wallet menolak", "xmark.octagon.fill", .destructive),
+                (.expired, "Kedaluwarsa", "Batas waktu bayar habis", "clock.badge.xmark", .destructive),
+                (.cancelled, "Dibatalkan", "Dibatalkan dari sisi Midtrans", "nosign", .destructive)
+            ].map { outcome, title, subtitle, icon, role in
+                DebugShortcut(title, subtitle: subtitle, systemImage: icon, role: role) { [weak self] in
+                    self?.simulatePayment(outcome, title: title)
+                }
+            }
+        )
+
+        return [main, simulators, midtrans, auth, session]
+    }
+
+    func simulatePayment(_ outcome: PaymentSimulation, title: String) {
+        Task { @MainActor [weak self] in
+            let message: String
+            do {
+                let orderNumber = try await CatalogSession.simulatePendingPayment(outcome)
+                message = orderNumber.map { "Pesanan \($0) dibuat." } ?? "Status pembayaran diperbarui."
+            } catch {
+                message = error.localizedDescription
+            }
+            self?.showDebugAlert("Simulasi Midtrans: \(title)", message: message)
+        }
+    }
+
+    /// Browser di dalam app (cookie & clipboard tetap jalan), di atas layar yang sedang tampil.
+    func openInAppBrowser(_ url: URL) {
+        guard let presenter = BottomSheetPresenter.topController(in: window) else { return }
+        presenter.present(SFSafariViewController(url: url), animated: true)
+    }
+
+    func showDebugAlert(_ title: String, message: String) {
+        guard let presenter = BottomSheetPresenter.topController(in: window) else { return }
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        presenter.present(alert, animated: true)
     }
 }

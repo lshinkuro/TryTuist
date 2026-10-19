@@ -31,19 +31,23 @@ public struct CreateOrderParam {
     public let addressID: String?
     public let items: [Item]
     public let note: String?
+    /// Pakai kupon gratis ongkir mingguan (`use_free_delivery`).
+    public let useFreeDelivery: Bool
 
     public init(storeID: String? = nil,
                 paymentMethod: String? = nil,
                 paymentMethodID: String? = nil,
                 addressID: String? = nil,
                 items: [Item],
-                note: String? = nil) {
+                note: String? = nil,
+                useFreeDelivery: Bool = false) {
         self.storeID = storeID
         self.paymentMethod = paymentMethod
         self.paymentMethodID = paymentMethodID
         self.addressID = addressID
         self.items = items
         self.note = note
+        self.useFreeDelivery = useFreeDelivery
     }
 
     var body: [String: Any] {
@@ -63,6 +67,7 @@ public struct CreateOrderParam {
         if let paymentMethodID { body["payment_method_id"] = paymentMethodID }
         if let addressID { body["address_id"] = addressID }
         if let note, !note.isEmpty { body["note"] = note }
+        if useFreeDelivery { body["use_free_delivery"] = true }
         return body
     }
 }

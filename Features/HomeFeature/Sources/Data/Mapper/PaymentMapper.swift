@@ -54,6 +54,16 @@ enum PaymentMapper {
         }
     }
 
+    /// transaction_status Midtrans yang disimulasikan backend dev.
+    static func midtransStatus(_ outcome: PaymentSimulation) -> String {
+        switch outcome {
+        case .paid: return "settlement"
+        case .denied: return "deny"
+        case .expired: return "expire"
+        case .cancelled: return "cancel"
+        }
+    }
+
     static func toDomainError(_ error: Error) -> PaymentError {
         switch error {
         case let error as PaymentError:

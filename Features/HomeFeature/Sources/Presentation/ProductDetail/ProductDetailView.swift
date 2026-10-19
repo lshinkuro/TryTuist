@@ -66,6 +66,27 @@ struct ProductDetailView: View {
 
     // MARK: - Sections
 
+    /// Isi paket + hemat dibanding membeli isinya satuan.
+    private func comboContents(_ combo: Combo) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Text("Isi paket").font(.subheadline.weight(.semibold))
+            ForEach(combo.items, id: \.self) { item in
+                Label(item.label, systemImage: "checkmark.circle.fill")
+                    .font(.subheadline)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(Color.brand, Color.primary)
+            }
+            if combo.savings > 0 {
+                Text("Hemat \(combo.savings.rupiahFormatted) dibanding beli satuan (\(combo.separatePrice.rupiahFormatted))")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.brand)
+            }
+        }
+        .padding(Spacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+    }
+
     private var info: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             HStack(alignment: .firstTextBaseline) {
@@ -74,6 +95,8 @@ struct ProductDetailView: View {
                 Spacer(minLength: Spacing.s)
                 if product.isOnDeal {
                     DiscountBadge(percent: product.discountPercent)
+                } else if product.combo != nil {
+                    ComboBadge()
                 } else if product.isBestSeller {
                     BestSellerBadge()
                 }
@@ -82,6 +105,9 @@ struct ProductDetailView: View {
             Text(product.description)
                 .font(.body)
                 .foregroundStyle(.secondary)
+            if let combo = product.combo {
+                comboContents(combo)
+            }
             PriceLabel(price: state.unitPrice, originalPrice: state.originalUnitPrice, font: .title2.bold())
                 .contentTransition(.numericText())
                 .animation(.snappy, value: state.unitPrice)

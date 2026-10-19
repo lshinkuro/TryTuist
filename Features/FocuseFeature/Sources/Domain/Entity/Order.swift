@@ -37,6 +37,14 @@ struct OrderListQuery: Equatable {
     var page = 1
 }
 
+/// Pengembalian dana pesanan Bayar Online.
+enum OrderRefund: Equatable {
+    /// Batal/gagal, toko belum mengembalikan dana.
+    case pending
+    case partial(Decimal)
+    case completed(Decimal)
+}
+
 /// `GET /v1/orders/{id}`: isi pesanan lengkap.
 struct OrderDetail: Equatable {
     struct Item: Equatable {
@@ -47,6 +55,8 @@ struct OrderDetail: Equatable {
         let quantity: Int
         let note: String?
         let subtotal: Decimal
+        /// Isi paket combo, mis. ["1× Es Kopi Susu (Large)", "1× Croissant"]; kosong untuk produk biasa.
+        var bundle: [String] = []
     }
 
     struct StatusEvent: Equatable {
@@ -75,4 +85,32 @@ struct OrderDetail: Equatable {
     let canRate: Bool
     let rating: Int?
     let ratingComment: String?
+    /// "COD" | "ONLINE" | "QRIS" | "EWALLET".
+    let paymentType: String
+    /// Mis. "GOPAY"; `nil` untuk COD.
+    let paymentProvider: String?
+    /// Masih bisa dibatalkan pelanggan (belum diproses outlet).
+    let canCancel: Bool
+    let freeDeliveryCoupon: Bool
+    /// Ongkir yang ditanggung toko karena kupon.
+    let deliveryFeeWaived: Decimal
+    let refund: OrderRefund?
+    /// Jarak alamat → outlet saat dipesan; `nil` bila alamat tanpa titik lokasi / pesanan lama.
+    let distanceKm: Double?
+    /// Estimasi tiba (menit sejak `createdAt`).
+    let eta: ClosedRange<Int>?
+
+    var isOnlinePayment: Bool { paymentType != "COD" }
+
+    /// Alasan batal/gagal dari outlet (catatan riwayat terakhir dengan status itu).
+    var closingNote: String? {
+        guard rawStatus == "CANCELLED" || rawStatus == "FAILED" else { return nil }
+        return history.last(where: { $0.rawStatus == rawStatus })?.note
+    }
+
+    /// Mis. 14.25...14.35; hanya bermakna selama pesanan masih berjalan.
+    var estimatedArrival: ClosedRange<Date>? {
+        guard status == .pending, let eta else { return nil }
+        return createdAt.addingTimeInterval(TimeInterval(eta.lowerBound * 60))...createdAt.addingTimeInterval(TimeInterval(eta.upperBound * 60))
+    }
 }

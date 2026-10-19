@@ -72,5 +72,42 @@ struct CheckoutDTO: Decodable {
 }
 
 typealias CheckoutResponseDTO = APIEnvelope<CheckoutDTO>
+
+/// `data` dari `POST /v1/orders/quote` (§5.10).
+struct QuoteDTO: Decodable {
+    let subtotal: Int?
+    let deliveryFee: Int?
+    let discount: Int?
+    let total: Int?
+    let distanceKm: Double?
+    let etaMinMinutes: Int?
+    let etaMaxMinutes: Int?
+    let freeDelivery: FreeDeliveryDTO?
+
+    struct FreeDeliveryDTO: Decodable {
+        let enabled: Bool?
+        let weeklyQuota: Int?
+        let remaining: Int?
+        let applied: Bool?
+        let feeWaived: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case enabled, remaining, applied
+            case weeklyQuota = "weekly_quota"
+            case feeWaived = "fee_waived"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case subtotal, discount, total
+        case freeDelivery = "free_delivery"
+        case deliveryFee = "delivery_fee"
+        case distanceKm = "distance_km"
+        case etaMinMinutes = "eta_min_minutes"
+        case etaMaxMinutes = "eta_max_minutes"
+    }
+}
+
+typealias QuoteResponseDTO = APIEnvelope<QuoteDTO>
 typealias PaymentResponseDTO = APIEnvelope<PaymentDTO>
 typealias PaymentListResponseDTO = APIEnvelope<[PaymentDTO]>

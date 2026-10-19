@@ -41,13 +41,16 @@ final class CatalogFlow {
                               location: HomeLocationUseCases(resolveDelivery: container.resolveDelivery,
                                                              useCurrentLocation: container.useCurrentLocation,
                                                              changeDelivery: container.changeDeliveryLocation,
-                                                             offerPermission: container.offerLocationPermission))
+                                                             offerPermission: container.offerLocationPermission),
+                              getProduct: container.getProduct)
         store.onRoute = { [weak self, weak store] route in
             switch route {
             case .productDetail(let product):
                 self?.showProductDetail(product) { store?.send(.toastRequested($0)) }
             case .category(let category):
                 self?.showMenu(categoryID: category.id, title: category.name)
+            case .menu(let categoryID, let title):
+                self?.showMenu(categoryID: categoryID, title: title)
             case .allMenu:
                 self?.showMenu(categoryID: nil, title: String(localized: "Semua Menu"))
             case .cart:

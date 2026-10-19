@@ -52,7 +52,11 @@ enum OrderMapper {
                 optionName: item.optionName?.nonEmpty,
                 quantity: max(item.quantity ?? 1, 1),
                 note: item.note?.nonEmpty,
-                subtotal: Decimal(item.subtotal ?? 0)
+                subtotal: Decimal(item.subtotal ?? 0),
+                bundle: (item.bundleItems ?? []).compactMap { b in
+                    guard let name = b.productName?.nonEmpty else { return nil }
+                    return "\(max(b.quantity ?? 1, 1))× \(name)" + (b.optionName?.nonEmpty.map { " (\($0))" } ?? "")
+                }
             )
         }
         let history = (dto.statusHistory ?? []).compactMap { event -> OrderDetail.StatusEvent? in
@@ -81,8 +85,30 @@ enum OrderMapper {
             history: history.sorted { $0.at < $1.at },
             canRate: dto.canRate ?? false,
             rating: dto.rating?.rating,
-            ratingComment: dto.rating?.comment?.nonEmpty
+            ratingComment: dto.rating?.comment?.nonEmpty,
+            paymentType: dto.paymentMethod?.uppercased() ?? "COD",
+            paymentProvider: dto.paymentProvider?.nonEmpty,
+            canCancel: dto.canCancel ?? false,
+            freeDeliveryCoupon: dto.freeDeliveryCoupon ?? false,
+            deliveryFeeWaived: Decimal(dto.deliveryFeeWaived ?? 0),
+            refund: refund(from: dto.refund),
+            distanceKm: dto.distanceKm,
+            eta: eta(min: dto.etaMinMinutes, max: dto.etaMaxMinutes)
         )
+    }
+
+    private static func refund(from dto: OrderDetailDTO.RefundDTO?) -> OrderRefund? {
+        switch dto?.status {
+        case "PENDING": return .pending
+        case "PARTIAL": return .partial(Decimal(dto?.amount ?? 0))
+        case "COMPLETED": return .completed(Decimal(dto?.amount ?? 0))
+        default: return nil
+        }
+    }
+
+    private static func eta(min: Int?, max: Int?) -> ClosedRange<Int>? {
+        guard let min, let max, min <= max else { return nil }
+        return min...max
     }
 
     /// Kebalikan `status(from:)`: tab status → nilai `?status=` backend.

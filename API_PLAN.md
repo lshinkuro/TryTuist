@@ -22,6 +22,8 @@ Rencana backend untuk aplikasi iOS **TryTuist** (pesan makanan & minuman). Dokum
 
 ---
 
+> **Dokumentasi interaktif:** Swagger UI di `GET /docs` (dev & staging), spec `docs/openapi.yaml` di repo `trytuist-api`.
+
 ## 1. Ringkasan & stack
 
 | Kebutuhan | Pilihan | Alasan |
@@ -213,12 +215,15 @@ Query: `?page=1&limit=20` (default `page=1`, `limit=20`, maksimal `100`). Respon
 | 44 | `GET` | `/v1/payments/{id}` · `/v1/payments?status=PENDING` | 🔒 | 5 | Layar Pembayaran (polling), kartu "Menunggu pembayaran" |
 | 45 | `POST` | `/v1/payments/{id}/cancel` | 🔒 | 5 | Batalkan pembayaran |
 | 46 | `POST` | `/v1/payments/midtrans/notification` | publik (signature) | 5 | Webhook Midtrans |
-| 47 | `GET` | `/v1/payments/finish` · `/v1/admin/payments` | publik · 🛡 | 5 | Finish URL Snap · Web admin → Pembayaran (*belum*, fase 5b) |
+| 47 | `GET` | `/v1/payments/finish` · `/v1/admin/payments[/{id}]` · `POST /v1/admin/payments/{id}/refund` | publik · 🛡 | 5 | Finish URL Snap · Web admin → Pembayaran & refund (fase 5b, §5.27.11) |
 | 48 | `PUT` | `/v1/me/devices` | 🔒 | 5c | Setelah login: daftarkan device token APNs (§5.28) |
 | 49 | `POST` | `/v1/devices/unregister` | (API key saja) | 5c | Logout / sesi habis / cold start: berhenti menerima push |
 | 50 | `POST` | `/v1/dev/push-test` | 🔒 dev | 5c | Kirim notifikasi contoh ke device sendiri (`APP_ENV=dev`) |
+| 50b | `POST` | `/v1/dev/payments/{id}/simulate` | 🔒 dev | 5 | Debugger iOS → Simulasi Midtrans: `{ status: settlement \| deny \| expire \| cancel }` diproses seperti webhook (`TestPaymentDevSimulate`) |
+| 51 | `GET` `POST` · `PATCH` | `/v1/admin/categories[/{id}]` | 🛡 (tulis 👑) | 4c | Web admin → Kategori (§5.29) |
+| 52 | `GET` `POST` · `PATCH` | `/v1/admin/staff[/{id}]` | 👑 | 4c | Web admin → Akun admin (§5.29) |
 
-🛡 = 🔒 + akun ber-role `ADMIN` (403 `FORBIDDEN` untuk akun biasa). Dipakai web admin `trytuistadmin` (§5.25).
+🛡 = 🔒 + akun ber-role `SUPER_ADMIN` atau `OUTLET_ADMIN` (403 `FORBIDDEN` untuk akun biasa). Admin outlet dipaksa ke outletnya (§5.29). 👑 = khusus `SUPER_ADMIN`. Dipakai web admin `trytuistadmin` (§5.25).
 
 🔒* = token **opsional**. Tanpa token, response tetap berhasil tetapi bagian yang personal (nama, poin, alamat) kosong.
 
@@ -239,7 +244,7 @@ Dengan `USE_MOCK_DATA = NO`, banner, kategori, dan produk di Beranda & Menu **su
 | Detail produk | Varian, harga | ✅ API (bagian dari `/v1/products`) | — |
 | Detail produk | Batas jumlah (1–20) & catatan (100) | `AddToCartUseCase`, `ProductDetailState` | `/v1/app-config` → `order_rules` |
 | Detail produk, Profil → Menu Favorit | Status favorit ❤️ | ✅ API (`/v1/me/favorites`) | — |
-| Keranjang | Ongkir Rp 10.000 | `CartState.standardDeliveryFee` | `POST /v1/orders/quote` (§5.10) |
+| Keranjang | Ongkir, diskon, total, jarak, estimasi tiba | ✅ API (`POST /v1/orders/quote`, §5.10) | — |
 | Keranjang | Bayar online sebelum pesanan dibuat | ✅ API (`POST /v1/checkout` + Midtrans Snap, §5.27) | — |
 | Keranjang | Alamat & metode bayar | ✅ API (`/v1/me/addresses`, `/v1/me/payment-methods`) → `address_id`, `payment_method_id` | — |
 | Beranda, Menu, Keranjang | Outlet & stok per outlet | ✅ API (`/v1/stores?lat=&lng=`, `/v1/products?store_id=`, `store_id` di checkout) | — |
@@ -506,10 +511,16 @@ Response:
     "subtotal": 96000,
     "delivery_fee": 10000,
     "discount": 9600,
-    "total": 96400
+    "total": 96400,
+    "distance_km": 2.4,
+    "eta_min_minutes": 25,
+    "eta_max_minutes": 35
   }
 }
 ```
+
+- `delivery_fee` dihitung dari **jarak** alamat → outlet (§7, migrasi `0012`). Tanpa `address_id` / alamat tanpa koordinat → tarif dasar, dan `distance_km` + `eta_*` = `null`.
+- `distance_km`, `eta_min_minutes`, `eta_max_minutes` juga disimpan di pesanan dan dikirim di detail pesanan (§5.11), jadi riwayat tidak berubah bila aturan ongkir diubah.
 
 ### 5.11 `POST /v1/orders` 🔒
 
@@ -1135,7 +1146,9 @@ Pemetaan `transaction_status` Midtrans:
 | `POST` | `/v1/payments/{id}/cancel` | 🔒 pemilik | Batalkan sesi `PENDING` (expire ke Midtrans). Sudah final → `409 PAYMENT_ALREADY_FINAL` |
 | `POST` | `/v1/payments/midtrans/notification` | **publik**, tanpa `X-API-Key`, divalidasi `signature_key` | Webhook Midtrans. Dibalas `200` secepatnya |
 | `GET` | `/v1/payments/finish` | publik | Finish URL Snap. Halaman HTML kecil "Kembali ke aplikasi"; di iOS URL ini dicegat WebView sehingga tidak pernah benar-benar dimuat |
-| `GET` | `/v1/admin/payments?status=&q=&from=&to=` | 🛡 | Web admin → Pembayaran (fase 5b) |
+| `GET` | `/v1/admin/payments?status=&q=&from=&to=&store_id=&refund=1` | 🛡 | Web admin → Pembayaran (§5.27.11) |
+| `GET` | `/v1/admin/payments/{id}` | 🛡 | Detail + riwayat refund + event Midtrans |
+| `POST` | `/v1/admin/payments/{id}/refund` | 🛡 `SUPER_ADMIN` | Refund penuh / sebagian / manual (§5.27.11) |
 
 `POST /v1/orders` lama tetap ada untuk COD. Saat Midtrans aktif, dipanggil dengan `ONLINE` / `QRIS` / e-wallet (termasuk metode utama user) → `422 PAYMENT_REQUIRED`, supaya pesanan online tidak bisa dibuat tanpa bayar. Tanpa Midtrans, `QRIS`/e-wallet tetap seperti dulu; `ONLINE` → `422 PAYMENT_METHOD_UNAVAILABLE`.
 
@@ -1185,6 +1198,8 @@ Pemetaan `transaction_status` Midtrans:
 Idempotency: `Idempotency-Key` yang sama + isi keranjang sama → sesi yang sama dikembalikan (200, status apa pun), tanpa memanggil Midtrans lagi. Setelah sesi gagal / dibatalkan, iOS memakai key baru.
 
 #### 5.27.6 Panggilan ke Midtrans (server → Midtrans)
+
+(Refund: lihat §5.27.11.)
 
 Header semua panggilan: `Authorization: Basic base64("<MIDTRANS_SERVER_KEY>:")`, `Accept` & `Content-Type: application/json`.
 
@@ -1369,9 +1384,31 @@ COD_ENABLED=true
   - `POST /v1/orders` ONLINE → 422.
 - **Produksi:** `MIDTRANS_IS_PRODUCTION=true` + server key produksi + `PUBLIC_BASE_URL` https asli. Notification URL diisi di dashboard produksi.
 
-#### 5.27.11 Di luar cakupan tahap ini
+#### 5.27.11 Web admin: Pembayaran & refund (fase 5b)
 
-- Refund otomatis (Refund API). Sementara: admin menandai pesanan `FAILED`/`CANCELLED` → `refund_status = REQUIRED` tampil di admin, refund dilakukan manual dari dashboard Midtrans.
+**`GET /v1/admin/payments`**: filter `status` (koma), `q` (ID Midtrans, nomor pesanan, nama/email), `from`/`to`, `store_id`, `refund=1` (hanya yang punya `refund_status`). Admin outlet hanya melihat outletnya. Item: `id, provider_order_id, status, amount, refunded_amount, refund_status, payment_type, store_id, store_name, customer, order {id, order_number, status} | null, created_at, paid_at, expires_at`.
+
+**`GET /v1/admin/payments/{id}`**: bentuk §5.27.5 + `provider_txn_id`, `customer`, `refunded_amount`, `refundable_amount`, `can_refund_online`, `refunds[]` (`amount, reason, method MIDTRANS|MANUAL, status PENDING|SUCCEEDED|FAILED, message, admin_name, created_at`), `events[]` (isi `payment_events`). Detail pesanan admin (`GET /v1/admin/orders/{id}`) mendapat `payment: { id, provider_order_id, status, payment_type, refund_status, paid_at } | null`.
+
+**`POST /v1/admin/payments/{id}/refund`** (`SUPER_ADMIN`) body `{ "amount": 20000, "reason": "Menu habis", "manual": false }`. `amount` 0 / kosong = seluruh sisa.
+
+- Baris `payment_refunds` ditulis `PENDING` dulu di bawah lock `payments`, lalu `POST {api}/v2/{order_id}/refund` dengan `refund_key = id refund`. Dua klik bersamaan tidak bisa melebihi total.
+- Berhasil → `SUCCEEDED`, `refund_status` = `REFUND` (lunas penuh) / `PARTIAL_REFUND`. Notifikasi `refund` dari Midtrans tetap diterapkan (§5.27.7).
+- Status pesanan **tidak** diubah otomatis; admin membatalkan pesanan sendiri bila perlu. Setiap percobaan dicatat di audit log (`PAYMENT_REFUND`).
+- VA (`bank_transfer`, `echannel`) dan gerai (`cstore`) tidak bisa direfund lewat API → `manual: true` (admin sudah transfer balik; Midtrans tidak dipanggil).
+
+| Kode | Kapan |
+|---|---|
+| `409 PAYMENT_NOT_PAID` | Status bukan `PAID` |
+| `422 REFUND_AMOUNT_INVALID` | Jumlah ≤ 0 atau melebihi sisa |
+| `422 REFUND_NOT_SUPPORTED` | Channel VA / gerai tanpa `manual` |
+| `422 PAYMENT_METHOD_UNAVAILABLE` | Midtrans nonaktif tanpa `manual` |
+| `422 REFUND_REJECTED` | Midtrans menolak (pesan Midtrans di `message`); tercatat `FAILED`, sisa tidak berkurang |
+| `502 PAYMENT_GATEWAY_ERROR` | Timeout / jaringan; tercatat `FAILED`. Bila ternyata berhasil, webhook `refund` tetap mengisi `refund_status` |
+
+#### 5.27.12 Di luar cakupan tahap ini
+
+- Refund otomatis saat pesanan dibatalkan. Refund tetap keputusan admin dari halaman Pembayaran (§5.27.11).
 - Simpan kartu / GoPay tokenization (one-click).
 - Pembayaran di web admin (kasir).
 
@@ -1428,6 +1465,43 @@ Payload APNs:
 5. Tes tanpa backend: `xcrun simctl push booted com.lshinkuro.try-tuist.dev payload.apns`.
 
 ---
+
+### 5.29 Admin per outlet: stok, harga & promo per outlet
+
+Migrasi `0011_outlet_admin`. Tes: `TestOutletAdmin`, `TestBuildLines_Stock`.
+
+**Role.** `users.role`: `CUSTOMER` | `SUPER_ADMIN` (dulu `ADMIN`) | `OUTLET_ADMIN`. Admin outlet wajib punya `users.store_id`. Role dicek ke DB tiap request, jadi mencabut akses langsung berlaku.
+
+| | Super admin | Admin outlet |
+|---|---|---|
+| Pesanan, dashboard | semua outlet (`?store_id=` opsional) | outletnya saja; `store_id` lain → 403, pesanan outlet lain → 404 |
+| Menu di outlet (`PUT /v1/admin/stores/{id}/products/{product_id}`) | semua outlet | outletnya |
+| Tambah menu (`POST /v1/admin/products`) | dijual di semua outlet | dijual di outletnya saja |
+| Ubah data menu (`PATCH /v1/admin/products/{id}`) | semua | hanya menu yang dijual **khusus** di outletnya |
+| Promo | semua outlet atau outlet tertentu (`store_id`) | outletnya; promo pusat terbaca, `can_edit: false` |
+| Outlet | tambah, ubah semua field | jam buka, tutup sementara, radius, telepon outletnya |
+| Kategori, akun admin, pelanggan, aktivitas | ✅ | ✗ 403 |
+
+**Menu per outlet** (`store_products`, satu baris = menu dijual di outlet itu):
+
+```json
+PUT /v1/admin/stores/ST02/products/P01
+{ "is_listed": true, "is_available": true, "stock": 12, "price": 20000 }
+```
+
+- PUT mengganti seluruh keadaan: `is_listed` & `is_available` default `true`; `stock: null` = tidak dihitung; `price: null` = harga pusat. `is_listed: false` = berhenti dijual (baris dihapus).
+- Respons & `GET /v1/admin/products?store_id=` (selalu untuk admin outlet) berisi `store: { store_id, is_listed, is_sold_out, stock, price, deal_price, effective_price, is_available }`.
+- Outlet baru menjual semua menu; menu baru dari super admin dijual di semua outlet.
+
+**Untuk aplikasi.** `GET /v1/products`, `/v1/home`, `/v1/products/{id}`, `/v1/promotions/popup`, `/v1/me/favorites` menerima `?store_id=`: hanya menu yang dijual di outlet itu, harga = promo (pusat atau outlet) → harga outlet → harga pusat, `is_available` = dijual, tidak ditandai habis, dan stok > 0. Quote & checkout memakai aturan yang sama.
+
+**Stok.** Dicek saat quote (`422 OUT_OF_STOCK` "Stok X tinggal N"), dikurangi saat pesanan dibuat (satu transaksi, `CHECK stock >= 0` mencegah rebutan), dikembalikan saat batal/gagal. Pesanan online yang sudah lunas tetap dibuat; stok berhenti di 0.
+
+**Kategori** (`/v1/admin/categories`): `GET` semua admin (termasuk yang disembunyikan), `POST { name, icon, sort_order }` (id dari nama, `409 CATEGORY_EXISTS`), `PATCH { name, icon, sort_order, is_active }`. Tidak ada hapus: sembunyikan dengan `is_active: false`.
+
+**Akun admin** (`/v1/admin/staff`): `POST { name, email, password (≥ 8), role, store_id }` (`409 EMAIL_ALREADY_EXISTS`), `PATCH { name, password, role, store_id }`; `role: "CUSTOMER"` = cabut akses. Tidak bisa mengubah role akun sendiri.
+
+`GET /v1/admin/me` → `{ id, name, email, role, store_id, store_name }` (`store_*` null untuk super admin).
 
 ## 6. Skema database (PostgreSQL)
 
@@ -1791,7 +1865,9 @@ ALTER TABLE users ADD CONSTRAINT users_has_login_method
 | Harga **selalu dihitung ulang di server** dari tabel `products` + `product_options`. Harga dari client diabaikan. | | |
 | Jumlah per item | 1–20 | `AddToCartUseCase.quantityRange` |
 | Panjang catatan item | ≤ 100 karakter | `ProductDetailState.noteLimit` |
-| Ongkir | flat Rp 10.000 | `CartState.standardDeliveryFee` |
+| Ongkir | Per jarak alamat → outlet: Rp 10.000 sampai 3 km, + Rp 2.000 per km berikutnya (dibulatkan ke atas), maks. Rp 30.000. Alamat tanpa koordinat → Rp 10.000. Diatur di `app_config.order_rules` (`delivery_fee`, `delivery_base_km`, `delivery_fee_per_km`, `delivery_fee_max`) tanpa deploy; super admin mengubahnya di web admin → Ongkir | Keranjang menampilkan hasil `POST /v1/orders/quote` |
+| Kupon gratis ongkir mingguan | Tiap user dapat `free_delivery_coupon_weekly` (default 2) kupon per minggu (reset Senin 00:00 WIB). Dipakai **hanya bila user mengaktifkannya** saat checkout (`use_free_delivery: true` di quote/checkout) → `delivery_fee = 0`, ongkir asli dicatat di `orders.delivery_fee_waived`. Tidak terpakai bila ongkir sudah 0. Pesanan batal/gagal → kupon kembali; sesi bayar online PENDING ikut dihitung. Habis → 422 `FREE_DELIVERY_QUOTA_EXCEEDED`; fitur mati (`free_delivery_coupon_enabled: false`) → 422 `FREE_DELIVERY_UNAVAILABLE`. Diatur super admin di web admin → Ongkir (migrasi `0014`) | Keranjang: toggle "Pakai kupon gratis ongkir" + sisa kupon |
+| Estimasi waktu antar | `prep_minutes` (15) + jarak ÷ `courier_speed_kmh` (20 km/jam), dibulatkan ke atas ke 5 menit; rentang +10 menit (mis. 25–35 menit) | Keranjang: "Estimasi tiba" |
 | Gratis ongkir | subtotal ≥ Rp 50.000 dengan voucher/banner promo B2 | (belum di iOS) |
 | Produk habis | `is_available = false` (pusat) atau habis di outlet (§5.26) → 422 `PRODUCT_UNAVAILABLE` | `CartError.productUnavailable` / pesan server |
 | Outlet | tutup → 422 `STORE_CLOSED`; alamat di luar radius → 422 `OUT_OF_DELIVERY_AREA`; harga sama di semua outlet | `CartError.rejected(pesan)` |
@@ -2066,7 +2142,7 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] `POST /v1/orders/quote`, `POST /v1/orders` (transaksi + idempotency)
 - [x] `GET /v1/orders`, `/v1/orders/{id}`, `POST /v1/orders/{id}/cancel`
 - [x] iOS: checkout via API (`CheckoutAPIDataSource` → `POST /v1/checkout`, keranjang tetap lokal) + tab Pesanan dari API
-- [ ] iOS: Keranjang memakai `POST /v1/orders/quote` (ongkir & diskon dari server, bukan `CartState.standardDeliveryFee`)
+- [x] iOS: Keranjang memakai `POST /v1/orders/quote` (ongkir per jarak, diskon & total dari server; dihitung ulang saat isi / alamat / outlet berubah; tombol bayar menunggu hasil quote)
 
 **Fase 3: Profil & fitur tambahan**
 
@@ -2102,7 +2178,8 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] Migrasi `0007_admin` (role, alasan & pengubah status, audit log) + seed akun admin
 - [x] `/v1/admin/*`: dashboard, pesanan + ubah status (sukses/gagal/batal), tambah & ubah menu (varian, foto), promo, pelanggan, audit log (`TestAdmin`)
 - [x] Web Next.js 16 (port 3000), login biasa + role ADMIN, BFF cookie httpOnly; lihat `trytuistadmin/WEBPLAN.md`
-- [ ] Ekspor CSV, notifikasi pesanan baru, kelola kategori/banner/voucher
+- [x] Kelola banner dari web admin (aksi tap: menu / kategori / info kupon; banner yang tujuannya tidak berlaku disembunyikan otomatis) — migrasi `0015`, `TestAdminBannersAndCombos`
+- [ ] Ekspor CSV, notifikasi pesanan baru, kelola voucher
 - [ ] Pembelian bahan baku (stok & HPP)
 
 **Fase 4b: Multi-outlet (§5.26)**
@@ -2112,8 +2189,25 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] Admin: `/v1/admin/stores`, stok per outlet, filter outlet di pesanan & dashboard (`by_store`)
 - [x] Web admin: halaman Outlet, pilih outlet di Menu / Pesanan / Dashboard
 - [x] iOS: pilih outlet di Beranda, stok Menu ikut outlet, keranjang dibersihkan dari menu yang habis, `store_id` di checkout
-- [ ] Admin per outlet (role `OUTLET_STAFF` yang hanya melihat outletnya)
-- [ ] Ongkir per jarak, estimasi waktu antar
+- [x] Admin per outlet → Fase 4c
+- [x] Ongkir per jarak, estimasi waktu antar (migrasi `0012_delivery_distance`, `order_rules`, `TestDeliveryFee`, `TestDeliveryETA`, `TestMultiOutlet`)
+- [x] Detail pesanan untuk pelanggan: `refund` (`PENDING`/`PARTIAL`/`COMPLETED`) untuk Bayar Online yang batal / di-refund (`TestAdminPayments`, `TestRefundInfo`); iOS: redesign detail (status & progres, rute, rincian, timeline), tombol Batalkan, Pesan Lagi, struk PDF
+- [x] Menu combo (paket isi tetap): `product_bundle_items`, `combo` di ProductDTO (isi, harga satuan, hemat), habis bila isi habis, stok isi ikut terpotong/kembali, snapshot `bundle_items` di pesanan (`TestCombosAndBanners`); web admin: editor isi paket di form menu; iOS: label PAKET, isi & hemat di detail, isi di keranjang/pesanan/struk
+- [ ] Combo dengan pilihan (mis. pilih 1 minuman)
+- [x] Kupon gratis ongkir mingguan: kuota per user, aktif bila dipilih saat checkout, bisa dimatikan & diatur jumlahnya dari web admin (migrasi `0014_free_delivery_coupon`, `TestFreeDeliveryCoupon`, `TestWeekStart`); iOS toggle di Keranjang
+- [x] Web admin → Ongkir (super admin): `GET/PATCH /v1/admin/delivery-settings`, `POST …/preview` (contoh dihitung server), audit log `DELIVERY_SETTINGS` (`TestAdminDeliverySettings`)
+- [x] iOS: jarak & estimasi tiba di Keranjang
+- [x] iOS: jarak & perkiraan jam tiba di detail pesanan (jam tiba hanya selama pesanan berjalan)
+
+**Fase 4c: Admin per outlet (§5.29)**
+
+- [x] Migrasi `0011_outlet_admin`: role `SUPER_ADMIN` / `OUTLET_ADMIN` + `users.store_id`, `store_products` (dijual, stok, harga outlet), `product_deals.store_id`
+- [x] Katalog, Beranda, popup, favorit, quote & checkout mengikuti menu/harga/promo/stok outlet; stok berkurang & kembali (`TestOutletAdmin`, `TestBuildLines_Stock`)
+- [x] Admin: scope outlet di pesanan, dashboard, produk, promo, outlet; kategori & akun admin (super admin)
+- [x] Web: login per role, menu khusus pusat disembunyikan, dialog "Atur di outlet", promo per outlet, halaman Kategori & Akun admin
+- [x] iOS: `store_id` di popup promo & Menu Favorit
+- [ ] Riwayat stok (stock movement) & peringatan stok menipis
+- [ ] Audit log per outlet untuk admin outlet
 
 **Fase 5: Pembayaran online Midtrans (§5.27)**
 
@@ -2123,9 +2217,10 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [x] Pesanan dibuat saat lunas dari snapshot (idempotent); `POST /v1/orders` menolak metode online (`PAYMENT_REQUIRED`)
 - [x] `TestPayments` + `TestPaymentsDisabled` dengan fake Midtrans; unit test signature & klien HTTP
 - [x] iOS: `PaymentView` (Snap di `WKWebView`, deeplink e-wallet, cegat finish URL), polling, layar hasil, kartu "Menunggu pembayaran" di Beranda, metode "Bayar Online"
-- [ ] Uji end-to-end di sandbox: GoPay/QRIS (simulator), VA BCA, kartu 3DS, kedaluwarsa, batal
-- [ ] Fase 5b: web admin → Pembayaran + info pembayaran di detail pesanan; tanda `refund_status`
-- [ ] Nanti: Refund API, pindah QRIS/GoPay ke Core API bila ingin UI native
+- [ ] Uji end-to-end di sandbox: GoPay/QRIS (simulator), VA BCA, kartu 3DS, kedaluwarsa, batal, refund (checklist di README "Uji Midtrans sandbox")
+- [x] Fase 5b: web admin → Pembayaran (daftar, detail, event Midtrans) + info pembayaran di detail pesanan; tanda `refund_status`
+- [x] Refund API dari web admin: penuh / sebagian / manual (migrasi `0013_payment_refunds`, `TestAdminPayments`)
+- [ ] Nanti: pindah QRIS/GoPay ke Core API bila ingin UI native
 
 **Fase 5c: Notifikasi push (§5.28)**
 
@@ -2135,11 +2230,12 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 - [ ] Uji di device asli dengan key `.p8` (butuh Apple Developer Program berbayar)
 - [ ] Badge jumlah pesanan aktif, notifikasi promo (opt-in), Android (FCM)
 
-**Siap staging/prod**
+**Siap staging/prod** (§12)
 
-- [ ] Dockerfile multi-stage (`distroless`), deploy (Fly.io / Railway / VPS + Nginx)
-- [ ] HTTPS, `API_KEYS` & `JWT_SECRET` dari secret manager, `LOG_LEVEL=info`
-- [ ] Backup harian Postgres prod, migrasi dijalankan di pipeline CI sebelum deploy
+- [x] Dockerfile multi-stage (`distroless`), deploy VPS + Docker Compose (`deploy/`)
+- [x] HTTPS otomatis (Caddy), secret di `.env.prod` server (chmod 600) + GitHub Environment secrets; `API_KEYS` contoh/kosong ditolak di staging/prod; `LOG_LEVEL=info`
+- [x] Backup harian Postgres (`deploy/backup.sh` + cron, salinan luar server via rclone opsional); CI: test → build image → backup → migrasi → deploy → cek `/healthz`
+- [ ] Deploy pertama: sewa VPS, DNS, isi `.env.prod` & GitHub secrets, pasang cron backup, uji restore
 - [x] Rate limit login, timeout request 30 detik, batas ukuran body 1 MB
 
 ---
@@ -2180,3 +2276,13 @@ Harga berlaku dihitung di query katalog: `COALESCE((SELECT min(deal_price) … d
 | *(belum ada)* | `GET /v1/promotions/featured` | `ProfileAPIDataSource` (fase 3) | `FeaturedPromotionDTO` |
 
 5. Yang masih perlu ditambah di iOS: `EndpointAPI` case untuk `home`, `appConfig`, `quote`, `featuredPromotion`, dan `favorites`; lalu mengganti data hardcoded di [§4.1](#41-status-data-per-screen-dari-api-atau-masih-di-aplikasi).
+
+---
+
+## 12. Deploy produksi (VPS)
+
+Satu VPS menjalankan `db` (Postgres 16), `api`, dan `caddy` (HTTPS Let's Encrypt) lewat `deploy/docker-compose.prod.yml`. Langkah lengkap ada di README → "Deploy ke VPS".
+
+- **Secret**: semua di `/opt/trytuist/.env.prod` (tidak di-commit, `chmod 600`). Akses SSH CI ada di GitHub → Environments → `production` (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`).
+- **Pipeline** (`.github/workflows/ci.yml`): PR → `make lint` + `make test` (Postgres service; semua migrasi dijalankan ke DB kosong). Push `main` → build image `ghcr.io/<repo>:<sha>` → `deploy.sh`: backup → `migrate up` → ganti `api` → tunggu `/healthz`. Migrasi gagal → API lama tetap jalan.
+- **Backup**: `backup.sh` tiap 02:00 + sebelum setiap deploy, simpan 14 hari, salin ke luar server bila `BACKUP_RCLONE_REMOTE` diisi.

@@ -10,9 +10,10 @@ protocol CatalogRemoteDataSource {
     func fetchCategories() async throws -> CategoryListResponseDTO
     /// `storeID` nil = stok pusat.
     func fetchProducts(storeID: String?) async throws -> ProductListResponseDTO
+    func fetchProduct(id: String, storeID: String?) async throws -> ProductResponseDTO
     func fetchStores(near point: GeoPoint?) async throws -> StoreListResponseDTO
-    func fetchPromoPopup() async throws -> PromoPopupResponseDTO
-    func fetchFavorites() async throws -> ProductListResponseDTO
+    func fetchPromoPopup(storeID: String?) async throws -> PromoPopupResponseDTO
+    func fetchFavorites(storeID: String?) async throws -> ProductListResponseDTO
     func setFavorite(productID: String, isFavorite: Bool) async throws
 }
 
@@ -33,16 +34,20 @@ struct CatalogAPIDataSource: CatalogRemoteDataSource {
         try await api.request(.products(storeID: storeID))
     }
 
+    func fetchProduct(id: String, storeID: String?) async throws -> ProductResponseDTO {
+        try await api.request(.product(id: id, storeID: storeID))
+    }
+
     func fetchStores(near point: GeoPoint?) async throws -> StoreListResponseDTO {
         try await api.request(.stores(lat: point?.lat, lng: point?.lng))
     }
 
-    func fetchPromoPopup() async throws -> PromoPopupResponseDTO {
-        try await api.request(.popupPromotion)
+    func fetchPromoPopup(storeID: String?) async throws -> PromoPopupResponseDTO {
+        try await api.request(.popupPromotion(storeID: storeID))
     }
 
-    func fetchFavorites() async throws -> ProductListResponseDTO {
-        try await api.request(.favorites)
+    func fetchFavorites(storeID: String?) async throws -> ProductListResponseDTO {
+        try await api.request(.favorites(storeID: storeID))
     }
 
     func setFavorite(productID: String, isFavorite: Bool) async throws {
@@ -66,18 +71,23 @@ struct CatalogMockDataSource: CatalogRemoteDataSource {
         try await decode(CatalogFixtures.productsJSON(storeID: storeID))
     }
 
+    func fetchProduct(id: String, storeID: String?) async throws -> ProductResponseDTO {
+        let all: ProductListResponseDTO = try await decode(CatalogFixtures.productsJSON(storeID: storeID))
+        return ProductResponseDTO(code: all.code, message: all.message, data: all.data?.first { $0.id == id })
+    }
+
     func fetchStores(near point: GeoPoint?) async throws -> StoreListResponseDTO {
         try await decode(CatalogFixtures.stores)
     }
 
-    func fetchPromoPopup() async throws -> PromoPopupResponseDTO {
+    func fetchPromoPopup(storeID: String?) async throws -> PromoPopupResponseDTO {
         try await decode(CatalogFixtures.promoPopup)
     }
 
     /// Favorit mock hanya di memori (hilang saat app ditutup).
     nonisolated(unsafe) private static var favoriteIDs: Set<String> = ["P01"]
 
-    func fetchFavorites() async throws -> ProductListResponseDTO {
+    func fetchFavorites(storeID: String?) async throws -> ProductListResponseDTO {
         let all: ProductListResponseDTO = try await decode(CatalogFixtures.products)
         return ProductListResponseDTO(code: all.code, message: all.message,
                                       data: all.data?.filter { Self.favoriteIDs.contains($0.id ?? "") })

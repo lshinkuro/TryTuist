@@ -18,7 +18,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        // ShakeWindow: shake device (Simulator: ⌃⌘Z) → buka Debugger. Tidak aktif di build Prod.
+        // ShakeWindow: shake device (Simulator: ⌃⌘Z) atau tap tombol 🐞 mengambang → buka Debugger.
+        // Tidak aktif di build Prod.
         let window = ShakeWindow(windowScene: windowScene)
         self.window = window
 

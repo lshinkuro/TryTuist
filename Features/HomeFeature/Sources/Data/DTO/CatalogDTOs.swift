@@ -23,6 +23,30 @@ struct ProductDTO: Decodable {
     let isAvailable: Bool?
     let tags: [String]?
     let options: [ProductOptionDTO]?
+    let combo: ComboDTO?
+
+    struct ComboDTO: Decodable {
+        let items: [ItemDTO]?
+        let separatePrice: Int?
+        let savings: Int?
+
+        struct ItemDTO: Decodable {
+            let productName: String?
+            let optionName: String?
+            let quantity: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case productName = "product_name"
+                case optionName = "option_name"
+                case quantity
+            }
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case items, savings
+            case separatePrice = "separate_price"
+        }
+    }
 
     enum CodingKeys: String, CodingKey {
         case id = "product_id"
@@ -38,6 +62,7 @@ struct ProductDTO: Decodable {
         case isAvailable = "is_available"
         case tags
         case options
+        case combo
     }
 }
 
@@ -64,12 +89,19 @@ struct BannerDTO: Decodable {
     let title: String?
     let subtitle: String?
     let imageURL: String?
+    let action: ActionDTO?
+
+    struct ActionDTO: Decodable {
+        let type: String?
+        let value: String?
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
         case title
         case subtitle
         case imageURL = "image_url"
+        case action
     }
 }
 
@@ -120,5 +152,6 @@ struct StoreDTO: Decodable {
 typealias StoreListResponseDTO = APIEnvelope<[StoreDTO]>
 typealias PromoPopupResponseDTO = APIEnvelope<PromoPopupDTO>
 typealias ProductListResponseDTO = APIEnvelope<[ProductDTO]>
+typealias ProductResponseDTO = APIEnvelope<ProductDTO>
 typealias CategoryListResponseDTO = APIEnvelope<[CategoryDTO]>
 typealias BannerListResponseDTO = APIEnvelope<[BannerDTO]>

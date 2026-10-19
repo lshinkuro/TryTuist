@@ -9,11 +9,14 @@ protocol CatalogRepository {
     func fetchCategories() async throws -> [MenuCategory]
     /// `storeID` nil = stok pusat; diisi = ketersediaan mengikuti outlet itu (harga tetap sama).
     func fetchProducts(storeID: String?) async throws -> [Product]
+    func fetchProduct(id: String, storeID: String?) async throws -> Product
     /// Outlet aktif, yang buka & menjangkau `point` lebih dulu.
     func fetchOutlets(near point: GeoPoint?) async throws -> [Outlet]
     /// `nil` = tidak ada promo popup yang berlaku.
-    func fetchPromoPopup() async throws -> PromoPopup?
-    func fetchFavorites() async throws -> [Product]
+    /// Promo pusat + promo outlet `storeID` (nil = promo pusat saja).
+    func fetchPromoPopup(storeID: String?) async throws -> PromoPopup?
+    /// Harga & stok mengikuti outlet `storeID`.
+    func fetchFavorites(storeID: String?) async throws -> [Product]
     func setFavorite(productID: String, isFavorite: Bool) async throws
 }
 

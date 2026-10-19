@@ -69,6 +69,17 @@ public enum CatalogSession {
     public static func reset() {
         CatalogContainer.reset()
     }
+
+    /// Debugger: lunasi / tolak pembayaran online yang sedang menunggu tanpa membuka simulator
+    /// Midtrans. Mengembalikan nomor pesanan bila lunas. Butuh backend `APP_ENV=dev` (atau mode mock).
+    public static func simulatePendingPayment(_ outcome: PaymentSimulation) async throws -> String? {
+        try await CatalogContainer.shared.simulatePayment.execute(outcome).order?.orderNumber
+    }
+}
+
+/// Hasil pembayaran yang bisa disimulasikan dari Debugger.
+public enum PaymentSimulation: CaseIterable {
+    case paid, denied, expired, cancelled
 }
 
 /// Satu item pesanan lama untuk "Pesan Lagi" (dirakit AppRouter dari tab Pesanan).

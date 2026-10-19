@@ -23,6 +23,8 @@ struct ProductCardView: View {
                 .overlay(alignment: .topLeading) {
                     if product.isOnDeal {
                         DiscountBadge(percent: product.discountPercent).padding(Spacing.s)
+                    } else if product.combo != nil {
+                        ComboBadge().padding(Spacing.s)
                     } else if product.isBestSeller {
                         BestSellerBadge().padding(Spacing.s)
                     }
@@ -76,11 +78,14 @@ struct ProductRowView: View {
                         .lineLimit(1)
                     if product.isOnDeal {
                         DiscountBadge(percent: product.discountPercent)
+                    } else if product.combo != nil {
+                        ComboBadge()
                     } else if product.isBestSeller {
                         BestSellerBadge()
                     }
                 }
-                Text(product.description)
+                // Combo: isi paket lebih berguna daripada deskripsi.
+                Text(product.combo?.summary ?? product.description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -150,6 +155,19 @@ struct BestSellerBadge: View {
 }
 
 /// Badge potongan harga, mis. "-37%".
+/// Label paket combo.
+struct ComboBadge: View {
+    var body: some View {
+        Text("PAKET")
+            .font(.caption2.weight(.heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.brand, in: Capsule())
+            .accessibilityLabel(String(localized: "Paket combo"))
+    }
+}
+
 struct DiscountBadge: View {
     let percent: Int
 

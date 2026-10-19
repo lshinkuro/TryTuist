@@ -20,8 +20,30 @@ enum CheckoutMapper {
                                       optionID: $0.option?.id,
                                       quantity: $0.quantity,
                                       note: $0.note)
-            }
+            },
+            useFreeDelivery: selection.useFreeDelivery
         )
+    }
+
+    /// Request quote = request checkout tanpa metode bayar (ongkir tidak bergantung metode bayar).
+    static func quoteRequest(from items: [CartItem], selection: CheckoutSelection) -> CreateOrderParam {
+        let full = request(from: items, selection: selection)
+        return CreateOrderParam(storeID: full.storeID, addressID: full.addressID, items: full.items,
+                                useFreeDelivery: full.useFreeDelivery)
+    }
+
+    static func quote(from dto: QuoteDTO) throws -> CartQuote {
+        guard let subtotal = dto.subtotal, let fee = dto.deliveryFee, let total = dto.total else {
+            throw CartError.checkoutFailed
+        }
+        var eta: ClosedRange<Int>?
+        if let low = dto.etaMinMinutes, let high = dto.etaMaxMinutes, low <= high { eta = low...high }
+        let coupon = dto.freeDelivery.map {
+            FreeDeliveryCoupon(isEnabled: $0.enabled ?? false, weeklyQuota: $0.weeklyQuota ?? 0, remaining: $0.remaining ?? 0,
+                               isApplied: $0.applied ?? false, feeWaived: Decimal($0.feeWaived ?? 0))
+        }
+        return CartQuote(subtotal: Decimal(subtotal), deliveryFee: Decimal(fee), discount: Decimal(dto.discount ?? 0),
+                         total: Decimal(total), distanceKm: dto.distanceKm, eta: eta, freeDelivery: coupon)
     }
 
     /// `fallbackTotal` dipakai bila server (atau mock) tidak mengirim total.
@@ -58,6 +80,8 @@ enum CheckoutMapper {
             return .productUnavailable
         case (_, "INVALID_QUANTITY"?): return .invalidQuantity
         case (_, "EMPTY_CART"?): return .emptyCart
+        case (_, "FREE_DELIVERY_QUOTA_EXCEEDED"?), (_, "FREE_DELIVERY_UNAVAILABLE"?):
+            return .freeDeliveryUnavailable(server.message ?? "Kupon gratis ongkir tidak bisa dipakai.")
         case (_, "PAYMENT_GATEWAY_ERROR"?), (502, _):
             return .rejected(server.message ?? "Pembayaran sedang gangguan. Coba lagi sebentar lagi.")
         case (422, _), (409, _):

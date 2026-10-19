@@ -31,6 +31,17 @@ struct DefaultCatalogRepository: CatalogRepository {
         }
     }
 
+    func fetchProduct(id: String, storeID: String?) async throws -> Product {
+        let dto: ProductResponseDTO
+        do {
+            dto = try await remote.fetchProduct(id: id, storeID: storeID)
+        } catch {
+            throw CatalogMapper.toDomainError(error)
+        }
+        guard let data = dto.data, let product = CatalogMapper.product(from: data) else { throw CatalogError.invalidResponse }
+        return product
+    }
+
     func fetchOutlets(near point: GeoPoint?) async throws -> [Outlet] {
         do {
             return CatalogMapper.outlets(from: try await remote.fetchStores(near: point))
@@ -39,17 +50,17 @@ struct DefaultCatalogRepository: CatalogRepository {
         }
     }
 
-    func fetchPromoPopup() async throws -> PromoPopup? {
+    func fetchPromoPopup(storeID: String?) async throws -> PromoPopup? {
         do {
-            return CatalogMapper.promoPopup(from: try await remote.fetchPromoPopup())
+            return CatalogMapper.promoPopup(from: try await remote.fetchPromoPopup(storeID: storeID))
         } catch {
             throw CatalogMapper.toDomainError(error)
         }
     }
 
-    func fetchFavorites() async throws -> [Product] {
+    func fetchFavorites(storeID: String?) async throws -> [Product] {
         do {
-            return CatalogMapper.products(from: try await remote.fetchFavorites())
+            return CatalogMapper.products(from: try await remote.fetchFavorites(storeID: storeID))
         } catch {
             throw CatalogMapper.toDomainError(error)
         }

@@ -19,6 +19,10 @@ struct MenuView: View {
             topBar
             content
         }
+        .refreshable { @MainActor in
+            store.send(.refreshPulled)
+            while store.state.isRefreshing { try? await Task.sleep(for: .milliseconds(100)) }
+        }
         .background(Color.appBackground.ignoresSafeArea())
         .overlay(alignment: .bottom) {
             if !state.cart.isEmpty {

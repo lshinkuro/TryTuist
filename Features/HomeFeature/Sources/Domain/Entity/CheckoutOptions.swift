@@ -49,6 +49,8 @@ struct CheckoutSelection: Equatable {
     var paymentMethodID: String?
     /// Outlet yang dipilih di Beranda. nil = server memilih outlet terbaik untuk alamat.
     var storeID: String?
+    /// Pakai kupon gratis ongkir mingguan untuk pesanan ini.
+    var useFreeDelivery = false
 
     static let serverDefault = CheckoutSelection()
 }

@@ -23,6 +23,10 @@ struct DefaultPaymentRepository: PaymentRepository {
         }
     }
 
+    func simulate(id: String, outcome: PaymentSimulation) async throws -> PaymentSession {
+        try await map { try await remote.simulate(id: id, status: PaymentMapper.midtransStatus(outcome)) }
+    }
+
     private func map(_ call: () async throws -> PaymentResponseDTO) async throws -> PaymentSession {
         do {
             guard let dto = try await call().data, let session = PaymentMapper.session(from: dto) else {

@@ -9,6 +9,7 @@ protocol OrderRemoteDataSource {
     func fetchOrders(_ query: OrderListQuery) async throws -> OrderListResponseDTO
     func fetchOrderDetail(id: String) async throws -> OrderDetailResponseDTO
     func rate(orderID: String, rating: Int, comment: String) async throws -> OrderDetailResponseDTO
+    func cancel(orderID: String) async throws -> OrderDetailResponseDTO
 }
 
 /// Backend asli (Go). Kontrak: API_PLAN.md → `GET /v1/orders`.
@@ -28,6 +29,11 @@ struct OrderAPIDataSource: OrderRemoteDataSource {
     /// `send`: 409 ALREADY_RATED / 422 ORDER_NOT_RATABLE membawa pesan dari server.
     func rate(orderID: String, rating: Int, comment: String) async throws -> OrderDetailResponseDTO {
         try await api.send(.rateOrder(id: orderID, rating: rating, comment: comment))
+    }
+
+    /// `send`: 422 ORDER_NOT_CANCELLABLE (mis. sudah diproses outlet) membawa pesan dari server.
+    func cancel(orderID: String) async throws -> OrderDetailResponseDTO {
+        try await api.send(.cancelOrder(id: orderID))
     }
 }
 
@@ -54,6 +60,13 @@ struct OrderMockDataSource: OrderRemoteDataSource {
         try await fetchOrderDetail(id: orderID)
     }
 
+    func cancel(orderID: String) async throws -> OrderDetailResponseDTO {
+        try await Task.sleep(for: latency)
+        let json = Self.detailJSON.replacingOccurrences(of: "{{ID}}", with: orderID)
+            .replacingOccurrences(of: "\"status\": \"PROCESSING\"", with: "\"status\": \"CANCELLED\", \"can_cancel\": false")
+        return try JSONDecoder().decode(OrderDetailResponseDTO.self, from: Data(json.utf8))
+    }
+
     /// Isi detail sama untuk semua id; cukup untuk mencoba layar Detail tanpa backend.
     func fetchOrderDetail(id: String) async throws -> OrderDetailResponseDTO {
         try await Task.sleep(for: latency)
@@ -69,6 +82,7 @@ struct OrderMockDataSource: OrderRemoteDataSource {
         "order_id": "{{ID}}", "order_number": "{{ID}}", "status": "PROCESSING",
         "created_at": "2024-08-20T12:46:00+07:00",
         "subtotal": 40000, "delivery_fee": 10000, "discount": 4000, "total": 46000,
+        "distance_km": 2.4, "eta_min_minutes": 25, "eta_max_minutes": 35,
         "payment_method": "COD", "payment_provider": null, "voucher_code": "HEMAT10",
         "items": [
           { "product_id": "P01", "option_id": "large", "product_name": "TOMORO Oat Latte", "option_name": "Large", "quantity": 2, "note": "less sugar", "subtotal": 30000 },

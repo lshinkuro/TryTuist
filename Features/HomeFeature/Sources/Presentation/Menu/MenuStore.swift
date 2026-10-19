@@ -22,6 +22,8 @@ struct MenuState: Equatable {
     /// nil = semua kategori
     var selectedCategoryID: String?
     var content: Loadable<MenuContent> = .idle
+    /// Pull-to-refresh berjalan: daftar lama tetap tampil.
+    var isRefreshing = false
     var cart: CartSummary = .empty
     var toast: ToastMessage?
     /// Outlet yang stoknya sedang ditampilkan (nil = stok pusat).
@@ -48,6 +50,7 @@ struct MenuState: Equatable {
 enum MenuAction {
     case onAppear
     case retryTapped
+    case refreshPulled
     case contentResponse(Result<MenuContent, CatalogError>)
     case queryChanged(String)
     case categorySelected(String?)
@@ -96,11 +99,22 @@ final class MenuStore: Store<MenuState, MenuAction> {
         case .retryTapped:
             return load(&state)
 
+        case .refreshPulled:
+            guard !state.isRefreshing, !state.content.isLoading else { return nil }
+            state.isRefreshing = true
+            return load(&state, silently: true)
+
         case .contentResponse(.success(let content)):
+            state.isRefreshing = false
             state.content = .loaded(content)
             return nil
 
+        case .contentResponse(.failure(let error)) where state.isRefreshing && state.content.value != nil:
+            state.isRefreshing = false
+            return showToast(&state, .error(error.errorDescription ?? ""))
+
         case .contentResponse(.failure(let error)):
+            state.isRefreshing = false
             state.content = .failed(error.errorDescription ?? "")
             return nil
 
@@ -154,8 +168,8 @@ final class MenuStore: Store<MenuState, MenuAction> {
         }
     }
 
-    private func load(_ state: inout MenuState) -> Effect<MenuAction> {
-        state.content = .loading
+    private func load(_ state: inout MenuState, silently: Bool = false) -> Effect<MenuAction> {
+        if !silently || state.content.value == nil { state.content = .loading }
         let getMenu = self.getMenu
         let storeID = state.outletID
         return .task {

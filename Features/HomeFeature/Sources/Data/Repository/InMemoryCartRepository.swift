@@ -3,7 +3,7 @@
 //  HomeFeature · Data
 //
 //  Isi keranjang disimpan di memori (hilang saat app ditutup).
-//  Checkout dikirim lewat `CheckoutRemoteDataSource` → API (`POST /v1/orders`) atau Mock.
+//  Harga (`POST /v1/orders/quote`) & checkout dikirim lewat `CheckoutRemoteDataSource` → API atau Mock.
 //
 import Combine
 import Foundation
@@ -76,6 +76,20 @@ final class InMemoryCartRepository: CartRepository {
         if paid { items.send([]) }
     }
 
+    func quote(_ selection: CheckoutSelection) async throws -> CartQuote {
+        let current = items.value
+        guard !current.isEmpty else { throw CartError.emptyCart }
+        let subtotal = current.reduce(Decimal(0)) { $0 + $1.subtotal }
+        do {
+            let response = try await checkoutSource.quote(CheckoutMapper.quoteRequest(from: current, selection: selection),
+                                                          localSubtotal: NSDecimalNumber(decimal: subtotal).intValue)
+            guard let dto = response.data else { throw CartError.checkoutFailed }
+            return try CheckoutMapper.quote(from: dto)
+        } catch {
+            throw CheckoutMapper.toDomainError(error)
+        }
+    }
+
     func checkout(_ selection: CheckoutSelection) async throws -> CheckoutOutcome {
         let current = items.value
         guard !current.isEmpty else { throw CartError.emptyCart }
@@ -86,7 +100,7 @@ final class InMemoryCartRepository: CartRepository {
         pendingSelection = selection
 
         let request = CheckoutMapper.request(from: current, selection: selection)
-        // Total resmi dari server; fallback (subtotal + ongkir flat) hanya untuk mock.
+        // Total resmi dari server; fallback (subtotal + tarif dasar) hanya untuk mock.
         let fallbackTotal = current.reduce(Decimal(0)) { $0 + $1.subtotal } + 10000
         do {
             let response = try await checkoutSource.checkout(request, idempotencyKey: key,
