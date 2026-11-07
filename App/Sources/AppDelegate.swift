@@ -7,6 +7,7 @@
 
 import UIKit
 import UserNotifications
+import HomeFeature
 
 @main
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -51,6 +52,11 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         default:
             // Tap notifikasi pesanan / pembayaran dari server → tab Pesanan.
             let userInfo = response.notification.request.content.userInfo
+            // Pengingat beli ulang (notifikasi lokal) → detail produk.
+            if let productID = userInfo[CatalogNotifications.restockProductIDKey] as? String {
+                Task { @MainActor in IntentActionCenter.shared.send(.openProduct(id: productID)) }
+                break
+            }
             Task { @MainActor in PushRegistrar.shared.handleTap(userInfo: userInfo) }
         }
 

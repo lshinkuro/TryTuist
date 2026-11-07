@@ -36,7 +36,7 @@ final class AppRouter {
         var title: String {
             switch self {
             case .home: return String(localized: "Beranda")
-            case .menu: return String(localized: "Menu")
+            case .menu: return String(localized: "Belanja")
             case .orders: return String(localized: "Pesanan")
             case .profile: return String(localized: "Profil")
             }
@@ -45,7 +45,7 @@ final class AppRouter {
         var systemImage: String {
             switch self {
             case .home: return "house.fill"
-            case .menu: return "menucard.fill"
+            case .menu: return "basket.fill"
             case .orders: return "clock.arrow.circlepath"
             case .profile: return "person.fill"
             }
@@ -55,6 +55,7 @@ final class AppRouter {
     init(window: UIWindow) {
         self.window = window
         window.tintColor = UIColor.brand
+        UITabBarItem.appearance().setTitleTextAttributes([.font: UIFont.omoSemiBold(10)], for: .normal)
         configureDebugMenu()
         observeSessionExpired()
         PushRegistrar.shared.onOpenOrders = { [weak self] in self?.showTab(.orders) }
@@ -73,6 +74,7 @@ final class AppRouter {
     // MARK: - Flows
 
     private func showAuth(at entry: AuthenticationModule.Entry) {
+        IntentActionCenter.shared.detach()
         let router = Router()
         let auth = AuthenticationModule(router: router) { [weak self] in
             self?.showMain()
@@ -107,6 +109,20 @@ final class AppRouter {
         setRoot(tabBar, animated: true)
         // Hanya user yang login yang didaftarkan (token sesi wajib).
         if TokenStorage.hasToken { PushRegistrar.shared.sessionStarted() }
+        IntentActionCenter.shared.attach { [weak self] in self?.handleIntent($0) }
+        // Nama produk di frasa Siri "Tambah <produk> ke keranjang" diambil dari katalog terbaru.
+        TryTuistShortcuts.updateAppShortcutParameters()
+    }
+
+    /// Siri / Shortcuts / Visual Intelligence → Beranda.
+    private func handleIntent(_ action: IntentActionCenter.Action) {
+        showTab(.home)
+        switch action {
+        case .addToCart(let productID, let name, let quantity):
+            homeModule?.addToCart(productID: productID, name: name, quantity: quantity)
+        case .openProduct(let id):
+            homeModule?.openProduct(id: id)
+        }
     }
 
     /// Pindah tab; bila sedang di flow Auth, tab bar dibuat dulu (tanpa login).

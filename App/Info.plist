@@ -47,8 +47,16 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Kamera dipakai untuk memotret catatan belanja supaya langsung jadi daftar belanja.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon dipakai untuk mencari produk dengan suara.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Ucapanmu diubah jadi teks untuk mencari produk.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Lokasi dipakai untuk menemukan outlet TryTuist terdekat dan memperkirakan jangkauan antar ke tempatmu.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
