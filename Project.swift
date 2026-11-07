@@ -69,8 +69,10 @@ let project = Project(
                     .AuthenticationFeature,
                     .HomeFeature,
                     .FocuseFeature,
-                    .ProfileFeature
+                    .ProfileFeature,
+                    .Widget
                  ]),
+        .widget(appName),
         //MARK: Foundations
         .framework(.TTUI,
                    sources: ["Foundations/TTUI/Sources/**/*.swift"],
@@ -163,6 +165,26 @@ public extension ProjectDescription.Target {
         )
     }
 
+    /// Widget "Kopdes Terlaris" (WidgetKit). Bundle ID wajib berawalan bundle ID app, termasuk suffix env.
+    static func widget(_ appName: String) -> ProjectDescription.Target {
+        .target(
+            name: .Widget,
+            destinations: .iOS,
+            product: .appExtension,
+            bundleId: "\(prefixBundleID).\(appName.dashSeparator).widget",
+            deploymentTargets: .iOS(minimumIOSVersion),
+            infoPlist: .file(path: .relativeToManifest("Widget/Info.plist")),
+            sources: [
+                "Widget/Sources/**/*.swift",
+                // Tipe Live Activity harus sama persis dengan yang dipakai app.
+                "Foundations/Utility/Sources/LiveActivity/OrderActivityAttributes.swift"
+            ],
+            settings: .settings(base: baseSettings.merging([
+                "PRODUCT_BUNDLE_IDENTIFIER": .string("\(prefixBundleID).\(appName.dashSeparator)$(BUNDLE_ID_SUFFIX).widget")
+            ]) { _, new in new })
+        )
+    }
+
     static func framework(_ targetName: String, sources: SourceFilesList?, resources: ResourceFileElements?, dependencies: [TargetDependency]) -> ProjectDescription.Target {
         .target(
             name: targetName,
@@ -193,6 +215,7 @@ internal extension String {
     static let FocuseFeature = "FocuseFeature"
     static let CoreDataManager = "CoreDataManager"
     static let Debugger = "Debugger"
+    static let Widget = "TryTuistWidget"
 }
 
 extension TargetDependency {
@@ -207,6 +230,7 @@ extension TargetDependency {
     static let FocuseFeature = TargetDependency.target(name: "FocuseFeature")
     static let CoreDataManager = TargetDependency.target(name: "CoreDataManager")
     static let Debugger = TargetDependency.target(name: "Debugger")
+    static let Widget = TargetDependency.target(name: .Widget)
 
     /// Google Sign-In (SPM bawaan Xcode, lihat `packages:` di atas).
     static let GoogleSignIn = TargetDependency.package(product: "GoogleSignIn")
