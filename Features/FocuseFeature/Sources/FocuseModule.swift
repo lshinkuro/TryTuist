@@ -69,7 +69,8 @@ public final class FocusModule: TabFeature {
             case .reorder(let items):
                 reorder(items)
             case .assistant:
-                let chatStore = SupportChatStore(chat: assistant.makeChat())
+                let chatStore = SupportChatStore(chat: assistant.makeChat(), speaker: SystemSpeechSpeaker(),
+                                                 voiceInput: SpeechVoiceSearch())
                 router?.present(SupportChatView(store: chatStore), title: String(localized: "Asisten"))
             }
         }

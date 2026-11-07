@@ -2,6 +2,7 @@
 //  OrderRepository.swift
 //  FocuseFeature · Domain
 //
+import Combine
 import Foundation
 
 protocol OrderRepository {
@@ -19,6 +20,13 @@ protocol OrderAssistant {
     func describe(_ spending: MonthlySpending) async -> String?
     /// Percakapan bantuan baru; riwayat chat disimpan di objek ini.
     func makeChat() -> SupportChat
+}
+
+/// Membacakan teks (balasan asisten).
+protocol SpeechSpeaker: AnyObject {
+    var isSpeakingPublisher: AnyPublisher<Bool, Never> { get }
+    func speak(_ text: String)
+    func stop()
 }
 
 protocol SupportChat: AnyObject {

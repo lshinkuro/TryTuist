@@ -17,6 +17,15 @@ struct SupportChatState: Equatable {
                                 text: String(localized: "Halo! Aku bisa bantu cek status pesanan, kupon ongkir, pembayaran, atau pembatalan. Mau tanya apa?"))]
     var input = ""
     var isReplying = false
+    var isSpeaking = false
+    /// Mic aktif: pertanyaan diucapkan, lalu terkirim otomatis.
+    var isListening = false
+    /// Balasan dibacakan dengan suara.
+    var isVoiceEnabled = true
+
+    var orbMood: AssistantOrb.Mood {
+        isListening ? .listening : isReplying ? .thinking : isSpeaking ? .speaking : .idle
+    }
 
     var canSend: Bool { !isReplying && !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     var showsSuggestions: Bool { messages.count == 1 }
@@ -27,14 +36,25 @@ enum SupportChatAction {
     case sendTapped
     case suggestionTapped(String)
     case replyResponse(String?)
+    case speakingChanged(Bool)
+    case voiceToggled
+    case micTapped
+    case voiceEvent(VoiceSearchEvent)
+    case closed
 }
 
 final class SupportChatStore: Store<SupportChatState, SupportChatAction> {
     private let chat: SupportChat
+    private let speaker: SpeechSpeaker
+    private let voiceInput: VoiceSearch
 
-    init(chat: SupportChat) {
+    init(chat: SupportChat, speaker: SpeechSpeaker, voiceInput: VoiceSearch) {
         self.chat = chat
+        self.speaker = speaker
+        self.voiceInput = voiceInput
         super.init(initialState: SupportChatState())
+        bind(speaker.isSpeakingPublisher) { .speakingChanged($0) }
+        bind(voiceInput.events) { .voiceEvent($0) }
     }
 
     override func reduce(state: inout SupportChatState, action: SupportChatAction) -> Effect<SupportChatAction>? {
@@ -52,9 +72,55 @@ final class SupportChatStore: Store<SupportChatState, SupportChatAction> {
 
         case .replyResponse(let reply):
             state.isReplying = false
-            state.messages.append(ChatMessage(role: .assistant,
-                                              text: reply ?? String(localized: "Maaf, aku belum bisa menjawab. Coba lagi ya.")))
+            let text = reply ?? String(localized: "Maaf, aku belum bisa menjawab. Coba lagi ya.")
+            state.messages.append(ChatMessage(role: .assistant, text: text))
+            guard state.isVoiceEnabled else { return nil }
+            let speaker = self.speaker
+            return .run { speaker.speak(text) }
+
+        case .speakingChanged(let isSpeaking):
+            state.isSpeaking = isSpeaking
             return nil
+
+        case .voiceToggled:
+            state.isVoiceEnabled.toggle()
+            guard !state.isVoiceEnabled else { return nil }
+            let speaker = self.speaker
+            return .run { speaker.stop() }
+
+        case .micTapped:
+            let voiceInput = self.voiceInput
+            if state.isListening {
+                return .run { voiceInput.finish() }
+            }
+            guard !state.isReplying else { return nil }
+            state.isListening = true
+            state.input = ""
+            speaker.stop()
+            return .task {
+                await voiceInput.start()
+                return nil
+            }
+
+        case .voiceEvent(.transcript(let text, let isFinal)):
+            guard state.isListening else { return nil }
+            state.input = String(text.prefix(SupportChatState.messageLimit))
+            guard isFinal else { return nil }
+            state.isListening = false
+            return send(&state)
+
+        case .voiceEvent(.failed(let message)):
+            state.isListening = false
+            state.messages.append(ChatMessage(role: .assistant, text: message))
+            return nil
+
+        case .closed:
+            let (speaker, voiceInput, isListening) = (self.speaker, self.voiceInput, state.isListening)
+            state.isListening = false
+            return .run {
+                speaker.stop()
+                if isListening { voiceInput.finish() }
+            }
         }
     }
 
@@ -64,6 +130,7 @@ final class SupportChatStore: Store<SupportChatState, SupportChatAction> {
         state.messages.append(ChatMessage(role: .user, text: text))
         state.input = ""
         state.isReplying = true
+        speaker.stop()   // pertanyaan baru memotong balasan yang sedang dibacakan
         let chat = self.chat
         return .task { .replyResponse(await chat.reply(to: text)) }
     }

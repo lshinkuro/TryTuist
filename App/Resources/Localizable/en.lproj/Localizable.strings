@@ -523,3 +523,10 @@
 "Pencarian suara sedang tidak tersedia. Coba lagi nanti." = "Voice search is unavailable right now. Try again later.";
 "Mikrofon tidak bisa dipakai saat ini." = "The microphone can't be used right now.";
 "Suaranya belum terdengar. Coba lagi." = "Didn't catch that. Try again.";
+"Siap membantu" = "Ready to help";
+"Sedang berpikir…" = "Thinking…";
+"Berbicara…" = "Speaking…";
+"Matikan suara balasan" = "Turn off spoken replies";
+"Nyalakan suara balasan" = "Turn on spoken replies";
+"Tanya dengan suara" = "Ask by voice";
+"Mikrofon tidak tersedia di perangkat ini." = "No microphone is available on this device.";

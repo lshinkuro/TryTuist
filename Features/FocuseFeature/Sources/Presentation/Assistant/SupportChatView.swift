@@ -26,11 +26,6 @@ struct SupportChatView: View {
                     ForEach(state.messages) { message in
                         bubble(message).id(message.id)
                     }
-                    if state.isReplying {
-                        ProgressView()
-                            .padding(Spacing.m)
-                            .accessibilityLabel("Asisten sedang mengetik")
-                    }
                     if state.showsSuggestions {
                         ForEach(SupportChatState.suggestions, id: \.self) { suggestion in
                             Button(suggestion) { store.send(.suggestionTapped(suggestion)) }
@@ -47,7 +42,40 @@ struct SupportChatView: View {
             }
         }
         .background(Color.appBackground.ignoresSafeArea())
+        .safeAreaInset(edge: .top, spacing: 0) { orbHeader }
         .safeAreaInset(edge: .bottom) { inputBar }
+        .onDisappear { store.send(.closed) }
+    }
+
+    private var orbHeader: some View {
+        VStack(spacing: Spacing.xs) {
+            AssistantOrb(mood: state.orbMood, size: 72)
+            Text(moodText)
+                .font(.appCaption)
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+                .accessibilityAddTraits(.updatesFrequently)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.s)
+        .overlay(alignment: .topTrailing) {
+            Button { store.send(.voiceToggled) } label: {
+                Image(systemName: state.isVoiceEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                    .font(.title3)
+                    .padding(Spacing.m)
+            }
+            .accessibilityLabel(state.isVoiceEnabled ? String(localized: "Matikan suara balasan") : String(localized: "Nyalakan suara balasan"))
+        }
+        .background(.bar)
+    }
+
+    private var moodText: String {
+        switch state.orbMood {
+        case .idle: return String(localized: "Siap membantu")
+        case .listening: return String(localized: "Mendengarkan…")
+        case .thinking: return String(localized: "Sedang berpikir…")
+        case .speaking: return String(localized: "Berbicara…")
+        }
     }
 
     private func bubble(_ message: ChatMessage) -> some View {
@@ -65,7 +93,18 @@ struct SupportChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: Spacing.s) {
-            TextField("Tulis pertanyaan…", text: store.binding(\.input, send: { .inputChanged($0) }), axis: .vertical)
+            Button { store.send(.micTapped) } label: {
+                Image(systemName: state.isListening ? "waveform" : "mic.fill")
+                    .font(.title3)
+                    .foregroundStyle(state.isListening ? Color.brand : Color.secondary)
+                    .symbolEffect(.variableColor.iterative, isActive: state.isListening)
+                    .frame(width: 36, height: 36)
+            }
+            .disabled(state.isReplying)
+            .accessibilityLabel(state.isListening ? String(localized: "Berhenti mendengarkan") : String(localized: "Tanya dengan suara"))
+
+            TextField(state.isListening ? String(localized: "Mendengarkan…") : String(localized: "Tulis pertanyaan…"),
+                      text: store.binding(\.input, send: { .inputChanged($0) }), axis: .vertical)
                 .lineLimit(1...4)
                 .padding(Spacing.m)
                 .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
