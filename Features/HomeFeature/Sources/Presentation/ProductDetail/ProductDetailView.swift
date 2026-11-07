@@ -23,16 +23,17 @@ struct ProductDetailView: View {
                 Color.clear
                     .frame(height: 300)
                     .overlay { RemoteImage(url: product.imageURL) }
-                    .clipped()
+                    .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 28, bottomTrailingRadius: 28, style: .continuous))
 
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     info
                     if !product.options.isEmpty { options }
                     quantity
                     note
+                    if state.isAssistantAvailable { assistant }
                     if let error = state.errorMessage {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
+                            .font(.appCaption)
                             .foregroundStyle(.red)
                     }
                 }
@@ -69,16 +70,16 @@ struct ProductDetailView: View {
     /// Isi paket + hemat dibanding membeli isinya satuan.
     private func comboContents(_ combo: Combo) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            Text("Isi paket").font(.subheadline.weight(.semibold))
+            Text("Isi paket").font(.appSubheadStrong)
             ForEach(combo.items, id: \.self) { item in
                 Label(item.label, systemImage: "checkmark.circle.fill")
-                    .font(.subheadline)
+                    .font(.appSubhead)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(Color.brand, Color.primary)
             }
             if combo.savings > 0 {
                 Text("Hemat \(combo.savings.rupiahFormatted) dibanding beli satuan (\(combo.separatePrice.rupiahFormatted))")
-                    .font(.footnote.weight(.semibold))
+                    .font(.appCaptionStrong)
                     .foregroundStyle(Color.brand)
             }
         }
@@ -91,7 +92,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             HStack(alignment: .firstTextBaseline) {
                 Text(product.name)
-                    .font(.title.bold())
+                    .font(.appTitle)
                 Spacer(minLength: Spacing.s)
                 if product.isOnDeal {
                     DiscountBadge(percent: product.discountPercent)
@@ -103,17 +104,17 @@ struct ProductDetailView: View {
             }
             RatingLabel(rating: product.rating, soldCount: product.soldCount)
             Text(product.description)
-                .font(.body)
+                .font(.appBody)
                 .foregroundStyle(.secondary)
             if let combo = product.combo {
                 comboContents(combo)
             }
-            PriceLabel(price: state.unitPrice, originalPrice: state.originalUnitPrice, font: .title2.bold())
+            PriceLabel(price: state.unitPrice, originalPrice: state.originalUnitPrice, font: .appTitle)
                 .contentTransition(.numericText())
                 .animation(.snappy, value: state.unitPrice)
             if state.totalSavings > 0 {
                 Label("Kamu hemat \(state.totalSavings.rupiahFormatted)", systemImage: "tag.fill")
-                    .font(.footnote.weight(.semibold))
+                    .font(.appCaptionStrong)
                     .foregroundStyle(Color.red)
                     .padding(.horizontal, Spacing.m)
                     .padding(.vertical, 6)
@@ -126,7 +127,7 @@ struct ProductDetailView: View {
 
     private var options: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
-            Text("Pilih varian").font(.headline)
+            Text("Pilih varian").font(.appHeadline)
             VStack(spacing: 0) {
                 ForEach(product.options) { option in
                     let isSelected = option.id == state.selectedOptionID
@@ -138,7 +139,7 @@ struct ProductDetailView: View {
                                 .foregroundStyle(.primary)
                             Spacer()
                             Text(option.extraPrice == 0 ? String(localized: "Gratis") : "+\(option.extraPrice.rupiahFormatted)")
-                                .font(.subheadline)
+                                .font(.appSubhead)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, Spacing.l)
@@ -159,13 +160,13 @@ struct ProductDetailView: View {
 
     private var quantity: some View {
         HStack {
-            Text("Jumlah").font(.headline)
+            Text("Jumlah").font(.appHeadline)
             Spacer()
             HStack(spacing: Spacing.l) {
                 stepperButton("minus", enabled: state.canDecrease) { store.send(.decrementTapped) }
                     .accessibilityLabel("Kurangi")
                 Text("\(state.quantity)")
-                    .font(.title3.bold())
+                    .font(.appTitle3)
                     .frame(minWidth: 28)
                     .contentTransition(.numericText())
                     .animation(.snappy, value: state.quantity)
@@ -178,14 +179,14 @@ struct ProductDetailView: View {
     private var note: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             HStack {
-                Text("Catatan").font(.headline)
-                Text("(opsional)").font(.subheadline).foregroundStyle(.secondary)
+                Text("Catatan").font(.appHeadline)
+                Text("(opsional)").font(.appSubhead).foregroundStyle(.secondary)
                 Spacer()
                 Text("\(state.note.count)/\(ProductDetailState.noteLimit)")
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
             }
-            TextField("Contoh: less sugar, tanpa bawang",
+            TextField("Contoh: pilih yang matang, jangan penyok",
                       text: store.binding(\.note, send: { .noteChanged($0) }),
                       axis: .vertical)
                 .lineLimit(2...4)
@@ -194,10 +195,60 @@ struct ProductDetailView: View {
         }
     }
 
+    private var assistant: some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Label("Tanya AI", systemImage: "sparkles").font(.appHeadline)
+            Text("Dijawab Apple Intelligence di perangkatmu. Bisa keliru, cek lagi info penting.")
+                .font(.appCaption)
+                .foregroundStyle(.secondary)
+
+            ScrollView(.horizontal) {
+                HStack(spacing: Spacing.s) {
+                    ForEach(ProductDetailState.suggestedQuestions, id: \.self) { question in
+                        Button(question) { store.send(.suggestedQuestionTapped(question)) }
+                            .font(.appCaption)
+                            .padding(.horizontal, Spacing.m)
+                            .padding(.vertical, Spacing.s)
+                            .background(Color.brand.opacity(0.12), in: Capsule())
+                            .disabled(state.isAsking)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+
+            HStack(spacing: Spacing.s) {
+                TextField("Tanya seputar produk ini…",
+                          text: store.binding(\.assistantQuestion, send: { .assistantQuestionChanged($0) }))
+                    .submitLabel(.send)
+                    .onSubmit { store.send(.askTapped) }
+                if state.isAsking {
+                    ProgressView()
+                } else {
+                    Button { store.send(.askTapped) } label: {
+                        Image(systemName: "arrow.up.circle.fill").font(.title2)
+                    }
+                    .disabled(!state.canAsk)
+                    .accessibilityLabel("Kirim pertanyaan")
+                }
+            }
+            .padding(Spacing.m)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+
+            if let answer = state.assistantAnswer {
+                Text(answer)
+                    .font(.appSubhead)
+                    .textSelection(.enabled)
+                    .padding(Spacing.m)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.brand.opacity(0.06), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            }
+        }
+    }
+
     private func stepperButton(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.subheadline.weight(.bold))
+                .font(.appSubheadStrong)
                 .foregroundStyle(enabled ? Color.brand : Color.secondary)
                 .frame(width: 36, height: 36)
                 .background((enabled ? Color.brand : Color.secondary).opacity(0.12), in: Circle())

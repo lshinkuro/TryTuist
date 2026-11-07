@@ -41,6 +41,15 @@ struct CartState: Equatable {
     var useFreeDelivery = false
     /// Pesan saat kupon otomatis dimatikan (habis / fitur dinonaktifkan).
     var freeDeliveryNote: String?
+    /// Isi keranjang saat checkout ditekan; keranjang sudah kosong saat pesanan berhasil.
+    var checkoutItems: [CartItem] = []
+    /// "Sekalian beli?" (Apple Intelligence); diminta sekali per keranjang dibuka.
+    var complements: [Product] = []
+    var didRequestComplements = false
+
+    var visibleComplements: [Product] {
+        complements.filter { product in !items.contains { $0.product.id == product.id } }
+    }
 
     var subtotal: Decimal { items.reduce(0) { $0 + $1.subtotal } }
     /// Selama menghitung ulang, ongkir lama tetap ditampilkan supaya angka tidak berkedip.
@@ -103,6 +112,9 @@ enum CartAction {
     /// Layar Pembayaran ditutup.
     case paymentFinished(PaymentOutcome)
     case closeTapped
+    case complementsRequested
+    case complementsResponse([Product])
+    case complementAddTapped(Product)
 }
 
 enum CartRoute {
@@ -119,13 +131,22 @@ final class CartStore: Store<CartState, CartAction> {
     private let options: CheckoutOptionsRepository
     /// "Antar ke" di Beranda: alamat tersimpan yang dipilih jadi default di sini.
     private let delivery: DeliveryLocationRepository
+    private let catalog: CatalogRepository
+    private let assistant: ProductAssistant
+    private let addToCart: AddToCartUseCase
+    private let recordPurchase: RecordPurchaseUseCase
     var onRoute: ((CartRoute) -> Void)?
 
     init(cart: CartRepository, options: CheckoutOptionsRepository, outlets: OutletSelectionRepository,
-         delivery: DeliveryLocationRepository) {
+         delivery: DeliveryLocationRepository, catalog: CatalogRepository, assistant: ProductAssistant,
+         addToCart: AddToCartUseCase, recordPurchase: RecordPurchaseUseCase) {
         self.cart = cart
         self.options = options
         self.delivery = delivery
+        self.catalog = catalog
+        self.assistant = assistant
+        self.addToCart = addToCart
+        self.recordPurchase = recordPurchase
         super.init(initialState: CartState())
         // Daftar item selalu sinkron dengan repository (sumber kebenaran keranjang).
         bind(cart.itemsPublisher) { .itemsChanged($0) }
@@ -241,6 +262,7 @@ final class CartStore: Store<CartState, CartAction> {
         case .checkoutTapped:
             guard state.canCheckout else { return nil }
             state.isCheckingOut = true
+            state.checkoutItems = state.items
             state.errorMessage = nil
             let cart = self.cart
             let selection = state.selection
@@ -256,6 +278,7 @@ final class CartStore: Store<CartState, CartAction> {
             state.isCheckingOut = false
             state.placedOrder = order
             state.useFreeDelivery = false   // kupon dipilih ulang untuk pesanan berikutnya
+            orderPlaced(order, state: state)
             return nil
 
         case .checkoutResponse(.success(.payment(let session))):
@@ -266,6 +289,7 @@ final class CartStore: Store<CartState, CartAction> {
             state.placedOrder = order
             state.useFreeDelivery = false
             state.errorMessage = nil
+            orderPlaced(order, state: state)
             return nil
 
         case .paymentFinished(.notPaid(let message)):
@@ -291,7 +315,37 @@ final class CartStore: Store<CartState, CartAction> {
 
         case .closeTapped:
             return .run { [weak self] in self?.onRoute?(.close) }
+
+        case .complementsRequested:
+            guard !state.didRequestComplements, !state.items.isEmpty, assistant.isAvailable else { return nil }
+            state.didRequestComplements = true
+            let (catalog, assistant, storeID) = (self.catalog, self.assistant, state.outlet?.id)
+            let cartProducts = state.items.map(\.product)
+            return .task {
+                guard let products = try? await catalog.fetchProducts(storeID: storeID),
+                      let ids = await assistant.complements(for: cartProducts, from: products) else { return nil }
+                return .complementsResponse(ids.compactMap { id in products.first { $0.id == id && $0.isAvailable } })
+            }
+
+        case .complementsResponse(let products):
+            state.complements = products
+            return nil
+
+        case .complementAddTapped(let product):
+            let addToCart = self.addToCart
+            return .task {
+                // Gagal (mis. stok habis) → produk tetap di saran, user bisa coba lagi.
+                try? await addToCart.execute(product: product, option: nil, quantity: 1)
+                return nil
+            }
         }
+    }
+
+    /// Pesanan berhasil: catat untuk pengingat beli ulang & mulai Live Activity status pesanan.
+    private func orderPlaced(_ order: PlacedOrder, state: CartState) {
+        recordPurchase.execute(state.checkoutItems)
+        OrderLiveActivity.start(orderID: order.orderID ?? order.orderNumber, orderNumber: order.orderNumber,
+                                storeName: state.outlet?.name)
     }
 
     /// Ongkir bergantung alamat, jadi quote baru dikirim setelah pilihan alamat diketahui.

@@ -22,9 +22,9 @@ struct CartView: View {
                 ContentUnavailableView {
                     Label("Keranjang kosong", systemImage: "bag")
                 } description: {
-                    Text("Yuk pilih makanan & minuman favoritmu dulu.")
+                    Text("Yuk pilih kebutuhan belanjamu dulu.")
                 } actions: {
-                    Button("Lihat Menu") { store.send(.closeTapped) }
+                    Button("Mulai Belanja") { store.send(.closeTapped) }
                         .buttonStyle(CapsuleButtonStyle(.filled))
                 }
             } else {
@@ -38,7 +38,10 @@ struct CartView: View {
                 Button("Tutup") { store.send(.closeTapped) }
             }
         }
-        .onAppear { store.send(.onAppear) }
+        .onAppear {
+            store.send(.onAppear)
+            store.send(.complementsRequested)
+        }
         .sheet(item: store.binding(\.activeSheet, send: { .sheetChanged($0) })) { sheet in
             switch sheet {
             case .address:
@@ -100,6 +103,22 @@ struct CartView: View {
                 }
                 .formCard()
 
+                if !state.visibleComplements.isEmpty {
+                    VStack(alignment: .leading, spacing: Spacing.m) {
+                        Label("Sekalian beli?", systemImage: "sparkles").font(.appHeadline)
+                        ScrollView(.horizontal) {
+                            HStack(spacing: Spacing.m) {
+                                ForEach(state.visibleComplements) { product in
+                                    ProductCardView(product: product) { store.send(.complementAddTapped(product)) }
+                                }
+                            }
+                            .padding(.vertical, Spacing.xs)
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
                 paymentSection
 
                 VStack(spacing: Spacing.m) {
@@ -115,19 +134,19 @@ struct CartView: View {
                     if let error = state.quoteError {
                         HStack(alignment: .top) {
                             Label(error, systemImage: "exclamationmark.triangle.fill")
-                                .font(.footnote)
+                                .font(.appCaption)
                                 .foregroundStyle(.red)
                             Spacer()
                             Button(String(localized: "Coba lagi")) { store.send(.retryQuoteTapped) }
-                                .font(.footnote.bold())
+                                .font(.appCaptionStrong)
                         }
                     }
                     Divider()
                     HStack {
-                        Text("Total").font(.headline)
+                        Text("Total").font(.appHeadline)
                         Spacer()
                         Text(state.total.rupiahFormatted)
-                            .font(.title3.bold())
+                            .font(.appTitle3)
                             .foregroundStyle(Color.brand)
                             .contentTransition(.numericText())
                             .animation(.snappy, value: state.total)
@@ -138,7 +157,7 @@ struct CartView: View {
 
                 if let error = state.errorMessage {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.footnote)
+                        .font(.appCaption)
                         .foregroundStyle(.red)
                 }
             }
@@ -148,7 +167,7 @@ struct CartView: View {
             VStack(spacing: Spacing.s) {
                 if let hint = state.checkoutHint {
                     Text(hint)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                 }
                 PrimaryButton(state.checkoutTitle,
@@ -221,11 +240,11 @@ struct CartView: View {
             Toggle(isOn: store.binding(\.useFreeDelivery, send: { .freeDeliveryToggled($0) })) {
                 VStack(alignment: .leading, spacing: 2) {
                     Label(String(localized: "Pakai kupon gratis ongkir"), systemImage: "ticket.fill")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.appSubheadStrong)
                     Text(canUse
                          ? String(localized: "Sisa \(coupon.remaining) dari \(coupon.weeklyQuota) kupon minggu ini")
                          : String(localized: "Kupon minggu ini habis. Kuota baru mulai Senin."))
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -234,7 +253,7 @@ struct CartView: View {
         }
         if let note = state.freeDeliveryNote {
             Label(note, systemImage: "info.circle")
-                .font(.footnote)
+                .font(.appCaption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -264,7 +283,7 @@ struct CartView: View {
                 Text("–")
             }
         }
-        .font(.subheadline)
+        .font(.appSubhead)
     }
 
     private func summaryRow(_ title: String, _ value: String) -> some View {
@@ -273,7 +292,7 @@ struct CartView: View {
             Spacer()
             Text(value)
         }
-        .font(.subheadline)
+        .font(.appSubhead)
     }
 }
 
@@ -291,21 +310,21 @@ private struct CartItemRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.product.name)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.appSubheadStrong)
                 if let option = item.option {
-                    Text(option.name).font(.caption).foregroundStyle(.secondary)
+                    Text(option.name).font(.appCaption).foregroundStyle(.secondary)
                 }
                 if let combo = item.product.combo {
-                    Text(combo.summary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    Text(combo.summary).font(.appCaption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 if !item.note.isEmpty {
                     Label(item.note, systemImage: "note.text")
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 Text(item.subtotal.rupiahFormatted)
-                    .font(.subheadline.bold())
+                    .font(.appSubheadStrong)
                     .foregroundStyle(Color.brand)
             }
 
@@ -314,21 +333,21 @@ private struct CartItemRow: View {
             HStack(spacing: Spacing.m) {
                 Button(action: onDecrement) {
                     Image(systemName: item.quantity == 1 ? "trash" : "minus")
-                        .frame(width: 30, height: 30)
+                        .frame(width: 32, height: 32)
                         .background(Color.brandSoft, in: Circle())
                 }
                 .accessibilityLabel(item.quantity == 1 ? String(localized: "Hapus") : String(localized: "Kurangi"))
                 Text("\(item.quantity)")
-                    .font(.subheadline.bold())
+                    .font(.appSubheadStrong)
                     .frame(minWidth: 18)
                 Button(action: onIncrement) {
                     Image(systemName: "plus")
-                        .frame(width: 30, height: 30)
+                        .frame(width: 32, height: 32)
                         .background(Color.brandSoft, in: Circle())
                 }
                 .accessibilityLabel("Tambah")
             }
-            .font(.caption.weight(.bold))
+            .font(.appCaptionStrong)
             .foregroundStyle(Color.brand)
             .buttonStyle(.plain)
         }
@@ -349,7 +368,7 @@ private struct OrderPlacedView: View {
                 .symbolEffect(.bounce, value: order.orderNumber)
             VStack(spacing: Spacing.s) {
                 Text(order.paidVia == nil ? String(localized: "Pesanan diterima! 🎉") : String(localized: "Pembayaran berhasil! 🎉"))
-                    .font(.title2.bold())
+                    .font(.appTitle)
                 Text("No. pesanan \(order.orderNumber)\nTotal \(order.total.rupiahFormatted)" + (order.paidVia.map { "\n\($0)" } ?? ""))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -378,14 +397,14 @@ private struct SelectionCard: View {
                 IconBadge(systemImage: systemImage, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.caption.weight(.semibold))
+                        .font(.appCaptionStrong)
                         .foregroundStyle(.secondary)
                     Text(value)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.appSubheadStrong)
                         .foregroundStyle(.primary)
                     if let detail {
                         Text(detail)
-                            .font(.caption)
+                            .font(.appCaption)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -396,7 +415,7 @@ private struct SelectionCard: View {
                     ProgressView()
                 } else if let actionTitle {
                     Text(actionTitle)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.appSubheadStrong)
                         .foregroundStyle(Color.brand)
                 }
             }
@@ -426,7 +445,7 @@ private struct CheckoutOptionSheet<Rows: View>: View {
                     rows()
                     Button(action: onManage) {
                         Label(manageTitle, systemImage: "plus.circle")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.appSubheadStrong)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .foregroundStyle(Color.brand)
@@ -458,11 +477,11 @@ private struct OptionRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: Spacing.s) {
                         Text(title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.appSubheadStrong)
                             .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
                         if let badge {
                             Text(badge)
-                                .font(.caption2.weight(.bold))
+                                .font(.appMicro)
                                 .foregroundStyle(Color.brand)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
@@ -471,7 +490,7 @@ private struct OptionRow: View {
                     }
                     if let subtitle {
                         Text(subtitle)
-                            .font(.caption)
+                            .font(.appCaption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.leading)
                     }

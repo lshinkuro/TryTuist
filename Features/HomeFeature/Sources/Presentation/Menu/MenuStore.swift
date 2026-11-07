@@ -28,19 +28,27 @@ struct MenuState: Equatable {
     var toast: ToastMessage?
     /// Outlet yang stoknya sedang ditampilkan (nil = stok pusat).
     var outletID: String?
+    /// Apple Intelligence tersedia di perangkat ini → Enter di kolom cari memakai pencarian AI.
+    var isSmartSearchAvailable = false
+    var isSmartSearching = false
+    /// Hasil pencarian AI untuk `query` sekarang; `nil` = pakai pencarian kata kunci.
+    var smartResultIDs: [String]?
+    /// Mic aktif (pencarian suara).
+    var isListening = false
 
     /// Hasil filter kategori + pencarian, dikelompokkan per kategori. Dihitung dari state, tidak disimpan.
     var sections: [MenuSection] {
         guard let content = content.value else { return [] }
         let keyword = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let smartIDs = smartResultIDs.map(Set.init)
         return content.categories
             .filter { selectedCategoryID == nil || $0.id == selectedCategoryID }
             .compactMap { (category) -> MenuSection? in
                 let products = content.products.filter { product in
                     product.categoryID == category.id
-                        && (keyword.isEmpty
+                        && (smartIDs.map { $0.contains(product.id) } ?? (keyword.isEmpty
                             || product.name.lowercased().contains(keyword)
-                            || product.description.lowercased().contains(keyword))
+                            || product.description.lowercased().contains(keyword)))
                 }
                 return products.isEmpty ? nil : MenuSection(category: category, products: products)
             }
@@ -53,6 +61,11 @@ enum MenuAction {
     case refreshPulled
     case contentResponse(Result<MenuContent, CatalogError>)
     case queryChanged(String)
+    case querySubmitted
+    case smartSearchResponse(query: String, productIDs: [String]?)
+    case shoppingListTapped
+    case micTapped
+    case voiceEvent(VoiceSearchEvent)
     case categorySelected(String?)
     case productTapped(Product)
     case quickAddTapped(Product)
@@ -67,25 +80,34 @@ enum MenuAction {
 enum MenuRoute {
     case productDetail(Product)
     case cart
+    case shoppingList
 }
 
 final class MenuStore: Store<MenuState, MenuAction> {
     private let getMenu: GetMenuUseCase
     private let addToCart: AddToCartUseCase
+    private let smartSearch: SmartProductSearch
+    private let voiceSearch: VoiceSearch
     var onRoute: ((MenuRoute) -> Void)?
 
     init(getMenu: GetMenuUseCase,
          addToCart: AddToCartUseCase,
+         smartSearch: SmartProductSearch,
+         voiceSearch: VoiceSearch,
          cart: CartRepository,
          outlets: OutletSelectionRepository,
          isRootScreen: Bool,
          initialCategoryID: String? = nil) {
         self.getMenu = getMenu
         self.addToCart = addToCart
+        self.smartSearch = smartSearch
+        self.voiceSearch = voiceSearch
         var initial = MenuState(isRootScreen: isRootScreen, selectedCategoryID: initialCategoryID)
+        initial.isSmartSearchAvailable = smartSearch.isAvailable
         initial.outletID = outlets.savedOutletID
         super.init(initialState: initial)
         bind(cart.summaryPublisher) { .cartChanged($0) }
+        bind(voiceSearch.events) { .voiceEvent($0) }
         // Ganti outlet di Beranda → stok di Menu ikut berubah.
         bind(outlets.selectedPublisher.compactMap { $0?.id }.removeDuplicates()) { .outletChanged($0) }
     }
@@ -120,6 +142,24 @@ final class MenuStore: Store<MenuState, MenuAction> {
 
         case .queryChanged(let query):
             state.query = query
+            state.smartResultIDs = nil
+            state.isSmartSearching = false
+            return nil
+
+        case .querySubmitted:
+            let query = state.query.trimmingCharacters(in: .whitespaces)
+            guard state.isSmartSearchAvailable, !query.isEmpty, let products = state.content.value?.products
+            else { return nil }
+            state.isSmartSearching = true
+            let smartSearch = self.smartSearch
+            let submitted = state.query
+            return .task { .smartSearchResponse(query: submitted, productIDs: await smartSearch.search(query, in: products)) }
+
+        case .smartSearchResponse(let query, let ids):
+            // Query sudah diubah selama AI berpikir → hasil basi, abaikan.
+            guard query == state.query else { return nil }
+            state.isSmartSearching = false
+            state.smartResultIDs = ids
             return nil
 
         case .categorySelected(let id):
@@ -148,6 +188,34 @@ final class MenuStore: Store<MenuState, MenuAction> {
 
         case .cartTapped:
             return .run { [weak self] in self?.onRoute?(.cart) }
+
+        case .shoppingListTapped:
+            return .run { [weak self] in self?.onRoute?(.shoppingList) }
+
+        case .micTapped:
+            let voiceSearch = self.voiceSearch
+            if state.isListening {
+                return .run { voiceSearch.finish() }
+            }
+            state.isListening = true
+            state.query = ""
+            state.smartResultIDs = nil
+            return .task {
+                await voiceSearch.start()
+                return nil
+            }
+
+        case .voiceEvent(.transcript(let text, let isFinal)):
+            state.query = text
+            state.smartResultIDs = nil
+            guard isFinal else { return nil }
+            state.isListening = false
+            // Kalimat panjang ("yang manis buat sarapan") langsung dicari AI bila tersedia.
+            return reduce(state: &state, action: .querySubmitted)
+
+        case .voiceEvent(.failed(let message)):
+            state.isListening = false
+            return showToast(&state, .error(message))
 
         case .cartChanged(let summary):
             state.cart = summary

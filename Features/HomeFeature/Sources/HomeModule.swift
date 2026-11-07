@@ -22,7 +22,7 @@ public final class HomeModule: TabFeature {
     public func start(router: Router) {
         let flow = CatalogFlow(router: router, onExternalRoute: onExternalRoute)
         self.flow = flow
-        router.setRoot(flow.makeHome(), hidesNavigationBar: true)
+        router.setRoot(flow.makeHome(), hidesNavigationBar: true, lightStatusBar: true)
     }
 
     /// Buka Keranjang dari luar feature (shortcut Debugger).
@@ -34,11 +34,74 @@ public final class HomeModule: TabFeature {
     public func reorder(_ items: [CatalogReorderItem]) {
         flow?.reorder(items)
     }
+
+    /// Siri / Shortcuts: tambah produk ke keranjang lalu buka Keranjang.
+    public func addToCart(productID: String, name: String, quantity: Int) {
+        flow?.reorder([CatalogReorderItem(productID: productID, optionID: nil, name: name, quantity: quantity, note: "")])
+    }
+
+    /// Visual Intelligence / Shortcuts: buka detail produk.
+    public func openProduct(id: String) {
+        flow?.openProduct(id: id)
+    }
+}
+
+/// Kunci `userInfo` notifikasi lokal katalog, dibaca AppDelegate saat notifikasi di-tap.
+public enum CatalogNotifications {
+    /// Pengingat beli ulang → buka detail produk ini.
+    public static let restockProductIDKey = "restockProductID"
+}
+
+/// Produk ringkas untuk App Intents (Siri, Shortcuts, Visual Intelligence) di target App.
+public struct CatalogProductSummary {
+    public let id: String
+    public let name: String
+    public let price: Decimal
+    public let imageURL: URL?
+}
+
+/// Pencarian katalog untuk App Intents. Stok & harga mengikuti outlet terakhir yang dipilih.
+@MainActor
+public enum CatalogIntents {
+    /// Produk yang namanya memuat salah satu `terms`; bila tidak ada dan Apple Intelligence
+    /// tersedia, pakai pencarian AI (mis. label Visual Intelligence berbahasa Inggris: "rice").
+    public static func search(_ terms: [String], limit: Int = 10) async -> [CatalogProductSummary] {
+        let terms = terms.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        guard !terms.isEmpty else { return [] }
+        let products = await catalog()
+        var matches = products.filter { product in terms.contains { product.name.localizedStandardContains($0) } }
+        let smartSearch = CatalogContainer.shared.smartSearch
+        if matches.isEmpty, smartSearch.isAvailable,
+           let ids = await smartSearch.search(terms.joined(separator: ", "), in: products) {
+            matches = ids.compactMap { id in products.first { $0.id == id } }
+        }
+        return matches.prefix(limit).map(summary)
+    }
+
+    public static func products(ids: [String]) async -> [CatalogProductSummary] {
+        let products = await catalog()
+        return ids.compactMap { id in products.first { $0.id == id } }.map(summary)
+    }
+
+    /// Produk terlaris, untuk saran Siri ("Tambah <produk> ke keranjang").
+    public static func suggested(limit: Int = 50) async -> [CatalogProductSummary] {
+        await catalog().filter(\.isAvailable).sorted { $0.soldCount > $1.soldCount }.prefix(limit).map(summary)
+    }
+
+    private static func catalog() async -> [Product] {
+        let container = CatalogContainer.shared
+        let storeID = container.outletSelection.selected?.id ?? container.outletSelection.savedOutletID
+        return (try? await container.catalogRepository.fetchProducts(storeID: storeID)) ?? []
+    }
+
+    private static func summary(_ product: Product) -> CatalogProductSummary {
+        CatalogProductSummary(id: product.id, name: product.name, price: product.price, imageURL: product.imageURL)
+    }
 }
 
 @MainActor
 public final class MenuModule: TabFeature {
-    public let tabItem = TabItem(title: String(localized: "Menu"), systemImage: "menucard", selectedSystemImage: "menucard.fill")
+    public let tabItem = TabItem(title: String(localized: "Belanja"), systemImage: "basket", selectedSystemImage: "basket.fill")
     private var flow: CatalogFlow?
     private let onExternalRoute: (CatalogExternalRoute) -> Void
 
@@ -57,7 +120,7 @@ public final class MenuModule: TabFeature {
 @MainActor
 public enum CatalogFavorites {
     public static func open(on router: Router) {
-        router.push(CatalogFlow(router: router).makeFavorites(), title: String(localized: "Menu Favorit"))
+        router.push(CatalogFlow(router: router).makeFavorites(), title: String(localized: "Produk Favorit"))
     }
 }
 

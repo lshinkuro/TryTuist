@@ -17,8 +17,21 @@ struct ProductDetailState: Equatable {
     var isFavorite = false
     var isAdding = false
     var errorMessage: String?
+    /// "Tanya AI" (Apple Intelligence on-device); seksi disembunyikan bila tidak tersedia.
+    var isAssistantAvailable = false
+    var assistantQuestion = ""
+    var isAsking = false
+    var assistantAnswer: String?
 
     static let noteLimit = 100
+    static let questionLimit = 200
+    static let suggestedQuestions = [
+        String(localized: "Tips menyimpan biar awet?"),
+        String(localized: "Cocok diolah jadi apa?"),
+        String(localized: "Worth it dengan harga ini?"),
+    ]
+
+    var canAsk: Bool { !isAsking && !assistantQuestion.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var selectedOption: ProductOption? {
         product.options.first { $0.id == selectedOptionID }
@@ -60,6 +73,10 @@ enum ProductDetailAction {
     case favoriteToggled
     case addToCartTapped
     case addToCartResponse(Result<Void, CartError>)
+    case assistantQuestionChanged(String)
+    case askTapped
+    case suggestedQuestionTapped(String)
+    case assistantResponse(String?)
 }
 
 enum ProductDetailRoute {
@@ -71,14 +88,18 @@ final class ProductDetailStore: Store<ProductDetailState, ProductDetailAction> {
     private let addToCart: AddToCartUseCase
     private let getFavorites: GetFavoritesUseCase
     private let setFavorite: SetFavoriteUseCase
+    private let assistant: ProductAssistant
     var onRoute: ((ProductDetailRoute) -> Void)?
 
     init(product: Product, addToCart: AddToCartUseCase,
-         getFavorites: GetFavoritesUseCase, setFavorite: SetFavoriteUseCase) {
+         getFavorites: GetFavoritesUseCase, setFavorite: SetFavoriteUseCase, assistant: ProductAssistant) {
         self.addToCart = addToCart
         self.getFavorites = getFavorites
         self.setFavorite = setFavorite
-        super.init(initialState: ProductDetailState(product: product, selectedOptionID: product.defaultOption?.id))
+        self.assistant = assistant
+        var initial = ProductDetailState(product: product, selectedOptionID: product.defaultOption?.id)
+        initial.isAssistantAvailable = assistant.isAvailable
+        super.init(initialState: initial)
     }
 
     override func reduce(state: inout ProductDetailState, action: ProductDetailAction) -> Effect<ProductDetailAction>? {
@@ -160,6 +181,30 @@ final class ProductDetailStore: Store<ProductDetailState, ProductDetailAction> {
             state.isAdding = false
             state.errorMessage = error.errorDescription
             return nil
+
+        case .assistantQuestionChanged(let question):
+            state.assistantQuestion = String(question.prefix(ProductDetailState.questionLimit))
+            return nil
+
+        case .suggestedQuestionTapped(let question):
+            state.assistantQuestion = question
+            return ask(&state)
+
+        case .askTapped:
+            return ask(&state)
+
+        case .assistantResponse(let answer):
+            state.isAsking = false
+            state.assistantAnswer = answer ?? String(localized: "AI belum bisa menjawab. Coba lagi.")
+            return nil
         }
+    }
+
+    private func ask(_ state: inout ProductDetailState) -> Effect<ProductDetailAction>? {
+        guard state.canAsk else { return nil }
+        state.isAsking = true
+        state.assistantAnswer = nil
+        let (assistant, question, product) = (self.assistant, state.assistantQuestion, state.product)
+        return .task { .assistantResponse(await assistant.ask(question, about: product)) }
     }
 }

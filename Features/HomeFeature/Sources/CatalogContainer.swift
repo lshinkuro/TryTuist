@@ -27,6 +27,7 @@ final class CatalogContainer {
     /// "Antar ke" di Beranda (alamat tersimpan / lokasi saat ini), juga default alamat Keranjang.
     let deliveryLocation: DeliveryLocationRepository = UserDefaultsDeliveryLocationRepository()
     let locationService: LocationService = CoreLocationService()
+    let shoppingPreferences: ShoppingPreferencesRepository = UserDefaultsShoppingPreferencesRepository()
 
     private init() {
         catalogRepository = DefaultCatalogRepository(remote: Self.makeRemoteDataSource())
@@ -77,6 +78,17 @@ final class CatalogContainer {
     }
     var getMenu: GetMenuUseCase { GetMenuUseCase(repository: catalogRepository) }
     var addToCart: AddToCartUseCase { AddToCartUseCase(cart: cartRepository) }
+    var smartSearch: SmartProductSearch { AppleIntelligenceAssistant() }
+    var productAssistant: ProductAssistant { AppleIntelligenceAssistant() }
+    var planShoppingList: PlanShoppingListUseCase {
+        PlanShoppingListUseCase(repository: catalogRepository, outlets: outletSelection, assistant: productAssistant)
+    }
+    var textRecognizer: TextRecognizer { VisionTextRecognizer() }
+    /// Satu instance per screen Menu (masing-masing punya mic sendiri).
+    var voiceSearch: VoiceSearch { SpeechVoiceSearch() }
+    var recordPurchase: RecordPurchaseUseCase {
+        RecordPurchaseUseCase(history: UserDefaultsPurchaseHistoryRepository(), scheduler: LocalRestockReminderScheduler())
+    }
     var getFavorites: GetFavoritesUseCase { GetFavoritesUseCase(repository: catalogRepository, outlets: outletSelection) }
     var setFavorite: SetFavoriteUseCase { SetFavoriteUseCase(repository: catalogRepository) }
     var reorder: ReorderUseCase {

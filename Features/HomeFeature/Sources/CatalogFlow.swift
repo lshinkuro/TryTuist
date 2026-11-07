@@ -42,7 +42,9 @@ final class CatalogFlow {
                                                              useCurrentLocation: container.useCurrentLocation,
                                                              changeDelivery: container.changeDeliveryLocation,
                                                              offerPermission: container.offerLocationPermission),
-                              getProduct: container.getProduct)
+                              getProduct: container.getProduct,
+                              assistant: container.productAssistant,
+                              preferences: container.shoppingPreferences)
         store.onRoute = { [weak self, weak store] route in
             switch route {
             case .productDetail(let product):
@@ -52,7 +54,7 @@ final class CatalogFlow {
             case .menu(let categoryID, let title):
                 self?.showMenu(categoryID: categoryID, title: title)
             case .allMenu:
-                self?.showMenu(categoryID: nil, title: String(localized: "Semua Menu"))
+                self?.showMenu(categoryID: nil, title: String(localized: "Semua Produk"))
             case .cart:
                 self?.showCart()
             case .showPromoPopup(let popup):
@@ -83,6 +85,8 @@ final class CatalogFlow {
     func makeMenu(isRootScreen: Bool, categoryID: String? = nil) -> some View {
         let store = MenuStore(getMenu: container.getMenu,
                               addToCart: container.addToCart,
+                              smartSearch: container.smartSearch,
+                              voiceSearch: container.voiceSearch,
                               cart: container.cartRepository,
                               outlets: container.outletSelection,
                               isRootScreen: isRootScreen,
@@ -93,6 +97,8 @@ final class CatalogFlow {
                 self?.showProductDetail(product) { store?.send(.toastRequested($0)) }
             case .cart:
                 self?.showCart()
+            case .shoppingList:
+                self?.showShoppingList { store?.send(.toastRequested($0)) }
             }
         }
         return MenuView(store: store)
@@ -119,7 +125,8 @@ final class CatalogFlow {
     /// - Parameter onAdded: dipanggil setelah detail ditutup, untuk menampilkan toast di screen sebelumnya.
     private func showProductDetail(_ product: Product, onAdded: @escaping (ToastMessage) -> Void) {
         let store = ProductDetailStore(product: product, addToCart: container.addToCart,
-                                       getFavorites: container.getFavorites, setFavorite: container.setFavorite)
+                                       getFavorites: container.getFavorites, setFavorite: container.setFavorite,
+                                       assistant: container.productAssistant)
         store.onRoute = { [weak self] route in
             switch route {
             case .addedToCart(let toast):
@@ -170,14 +177,41 @@ final class CatalogFlow {
                 }
                 if result.added > 0 { self?.showCart() }
             } catch {
-                self?.homeStore?.send(.toastRequested(.error(String(localized: "Gagal memuat menu. Coba lagi."))))
+                self?.homeStore?.send(.toastRequested(.error(String(localized: "Gagal memuat produk. Coba lagi."))))
+            }
+        }
+    }
+
+    private func showShoppingList(onAdded: @escaping (ToastMessage) -> Void) {
+        let store = ShoppingListStore(plan: container.planShoppingList, recognizer: container.textRecognizer,
+                                      addToCart: container.addToCart, isSmart: container.productAssistant.isAvailable)
+        store.onRoute = { [weak self] route in
+            switch route {
+            case .added(let toast):
+                self?.router?.dismiss()
+                onAdded(toast)
+            }
+        }
+        router?.present(ShoppingListView(store: store), title: String(localized: "Daftar Belanja"))
+    }
+
+    func openProduct(id: String) {
+        let getProduct = container.getProduct
+        Task { [weak self] in
+            do {
+                let product = try await getProduct.execute(id: id)
+                self?.showProductDetail(product) { self?.homeStore?.send(.toastRequested($0)) }
+            } catch {
+                self?.homeStore?.send(.toastRequested(.error((error as? CatalogError ?? .unknown).errorDescription ?? "")))
             }
         }
     }
 
     private func showCart() {
         let store = CartStore(cart: container.cartRepository, options: container.checkoutOptionsRepository,
-                              outlets: container.outletSelection, delivery: container.deliveryLocation)
+                              outlets: container.outletSelection, delivery: container.deliveryLocation,
+                              catalog: container.catalogRepository, assistant: container.productAssistant,
+                              addToCart: container.addToCart, recordPurchase: container.recordPurchase)
         store.onRoute = { [weak self, weak store] route in
             switch route {
             case .close:

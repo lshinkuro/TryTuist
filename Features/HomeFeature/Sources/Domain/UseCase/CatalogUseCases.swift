@@ -15,6 +15,8 @@ struct HomeContent: Equatable {
     var outlet: OutletChoice = .empty
     /// "Antar ke": alamat tersimpan / lokasi saat ini.
     var delivery: DeliveryChoice = .empty
+    /// Semua produk yang tersedia, bahan saran AI.
+    var available: [Product] = []
 }
 
 struct MenuContent: Equatable {
@@ -44,7 +46,8 @@ struct GetHomeContentUseCase {
             recommended: Array(available.sorted { $0.rating > $1.rating }.prefix(5)),
             deals: Array(available.filter(\.isOnDeal).sorted { $0.discountPercent > $1.discountPercent }.prefix(6)),
             outlet: outlet,
-            delivery: delivery
+            delivery: delivery,
+            available: available
         )
     }
 }

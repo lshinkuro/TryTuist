@@ -42,6 +42,17 @@ struct HomeState: Equatable {
     var openingBannerID: String?
     /// Info kupon gratis ongkir mingguan (banner FREE_DELIVERY).
     var isFreeDeliveryInfoPresented = false
+    /// Kartu "Saran AI" (Apple Intelligence on-device); disembunyikan bila tidak tersedia.
+    var isAssistantAvailable = false
+    var preferences = ShoppingPreferences()
+    var isPreferencesSheetPresented = false
+    var suggestion: Loadable<ProductSuggestion> = .idle
+
+    /// Produk saran AI; id yang tidak ada di katalog (halusinasi) dibuang.
+    var suggestedProducts: [Product] {
+        guard let ids = suggestion.value?.productIDs, let products = content.value?.available else { return [] }
+        return ids.compactMap { id in products.first { $0.id == id } }
+    }
 
     var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
@@ -97,6 +108,12 @@ enum HomeAction {
     /// Kembali ke Beranda (mis. setelah menambah alamat di Profil): segarkan daftar alamat.
     case refreshDeliveryChoice
     case deliveryChoiceResponse(DeliveryChoice)
+    // Saran AI
+    case suggestionRequested
+    case suggestionResponse(ProductSuggestion?)
+    case preferencesTapped
+    case preferencesDismissed
+    case preferencesSaved(ShoppingPreferences)
 }
 
 /// Use case lokasi Beranda (digabung supaya init HomeStore tidak terlalu panjang).
@@ -136,12 +153,15 @@ final class HomeStore: Store<HomeState, HomeAction> {
     private let getPendingPayment: GetPendingPaymentUseCase
     private let location: HomeLocationUseCases
     private let getProduct: GetProductUseCase
+    private let assistant: ProductAssistant
+    private let preferences: ShoppingPreferencesRepository
     var onRoute: ((HomeRoute) -> Void)?
 
     init(getHomeContent: GetHomeContentUseCase, addToCart: AddToCartUseCase, cart: CartRepository,
          getPromoPopup: GetPromoPopupUseCase, dismissPromoPopup: DismissPromoPopupUseCase,
          changeOutlet: ChangeOutletUseCase, getPendingPayment: GetPendingPaymentUseCase,
-         location: HomeLocationUseCases, getProduct: GetProductUseCase) {
+         location: HomeLocationUseCases, getProduct: GetProductUseCase,
+         assistant: ProductAssistant, preferences: ShoppingPreferencesRepository) {
         self.getHomeContent = getHomeContent
         self.addToCart = addToCart
         self.getPromoPopup = getPromoPopup
@@ -150,7 +170,12 @@ final class HomeStore: Store<HomeState, HomeAction> {
         self.getPendingPayment = getPendingPayment
         self.location = location
         self.getProduct = getProduct
-        super.init(initialState: HomeState())
+        self.assistant = assistant
+        self.preferences = preferences
+        var initial = HomeState()
+        initial.isAssistantAvailable = assistant.isAvailable
+        initial.preferences = preferences.load()
+        super.init(initialState: initial)
         bind(cart.summaryPublisher) { .cartChanged($0) }
     }
 
@@ -462,6 +487,36 @@ final class HomeStore: Store<HomeState, HomeAction> {
         case .outletChangeResponse(.failure(let error)):
             state.switchingOutletID = nil
             return showToast(&state, .error(error.errorDescription ?? String(localized: "Gagal mengganti outlet.")))
+
+        // MARK: Saran AI
+
+        case .suggestionRequested:
+            guard state.isAssistantAvailable, !state.preferences.isEmpty, !state.suggestion.isLoading,
+                  let products = state.content.value?.available, !products.isEmpty else { return nil }
+            state.suggestion = .loading
+            let (assistant, preferences) = (self.assistant, state.preferences)
+            return .task { .suggestionResponse(await assistant.suggest(for: preferences, from: products)) }
+
+        case .suggestionResponse(let suggestion):
+            state.suggestion = suggestion.map { .loaded($0) } ?? .failed(String(localized: "AI belum bisa kasih saran. Coba lagi."))
+            return nil
+
+        case .preferencesTapped:
+            state.isPreferencesSheetPresented = true
+            return nil
+
+        case .preferencesDismissed:
+            state.isPreferencesSheetPresented = false
+            return nil
+
+        case .preferencesSaved(let preferences):
+            let preferences = preferences.sanitized
+            state.isPreferencesSheetPresented = false
+            guard preferences != state.preferences else { return nil }
+            self.preferences.save(preferences)
+            state.preferences = preferences
+            state.suggestion = .idle
+            return .task { .suggestionRequested }
         }
     }
 

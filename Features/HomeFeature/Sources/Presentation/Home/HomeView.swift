@@ -18,7 +18,6 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xxl) {
                 header
-                    .padding(.horizontal, Spacing.xl)
 
                 switch state.content {
                 case .idle, .loading:
@@ -30,11 +29,14 @@ struct HomeView: View {
                     loaded(content)
                 }
             }
-            .padding(.top, Spacing.s)
             .padding(.bottom, state.cart.isEmpty ? Spacing.xl : 96)
         }
         .scrollIndicators(.hidden)
         .background(Color.appBackground.ignoresSafeArea())
+        // Status bar putih tetap terbaca saat konten di-scroll ke bawahnya.
+        .overlay(alignment: .top) {
+            Color.brand.ignoresSafeArea(edges: .top).frame(height: 0)
+        }
         .overlay(alignment: .bottom) {
             if !state.cart.isEmpty {
                 CartBarView(summary: state.cart) { store.send(.cartTapped) }
@@ -66,6 +68,10 @@ struct HomeView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: store.binding(\.isPreferencesSheetPresented, send: { $0 ? .preferencesTapped : .preferencesDismissed })) {
+            ShoppingPreferencesView(preferences: state.preferences) { store.send(.preferencesSaved($0)) }
+                .presentationDetents([.medium, .large])
+        }
         .refreshable { @MainActor in
             store.send(.refreshPulled)
             store.send(.refreshPendingPayment)
@@ -84,25 +90,40 @@ struct HomeView: View {
     // MARK: - Header
 
     private var header: some View {
+        VStack(alignment: .leading, spacing: Spacing.xxl) {
+            brandHeader
+
+            if state.outlet != nil || state.pendingPayment != nil {
+                VStack(spacing: Spacing.m) {
+                    if let outlet = state.outlet {
+                        outletChip(outlet)
+                    }
+                    if let payment = state.pendingPayment {
+                        pendingPaymentCard(payment)
+                    }
+                }
+                .padding(.horizontal, Spacing.xl)
+            }
+        }
+    }
+
+    private var brandHeader: some View {
         VStack(alignment: .leading, spacing: Spacing.l) {
             HStack(alignment: .center, spacing: Spacing.m) {
                 Button { store.send(.deliveryTapped) } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Antar ke")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.appCaption)
                         HStack(spacing: 4) {
                             Image(systemName: state.delivery?.source == .currentLocation ? "location.fill" : "mappin.circle.fill")
-                                .foregroundStyle(Color.brand)
                             Text(deliveryText)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
+                                .font(.appSubheadStrong)
                                 .lineLimit(1)
                             Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.secondary)
+                                .font(.appMicro)
                         }
                     }
+                    .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Antar ke \(deliveryText). Ketuk untuk ganti lokasi antar.")
@@ -110,36 +131,37 @@ struct HomeView: View {
                 CartIconButton(count: state.cart.itemCount) { store.send(.cartTapped) }
             }
 
-            if let outlet = state.outlet {
-                outletChip(outlet)
-            }
-
-            if let payment = state.pendingPayment {
-                pendingPaymentCard(payment)
-            }
-
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(state.greeting), \(state.userName)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text("Mau makan apa hari ini?")
-                    .font(.title.bold())
+                    .font(.appSubhead)
+                Text("Mau belanja apa hari ini?")
+                    .font(.appLargeTitle)
                     .accessibilityAddTraits(.isHeader)
             }
+            .foregroundStyle(.white)
 
             Button { store.send(.seeAllTapped) } label: {
                 HStack(spacing: Spacing.s) {
                     Image(systemName: "magnifyingglass")
-                    Text("Cari kopi, nasi goreng, burger…")
+                    Text("Cari beras, minyak, telur, sabun…")
                     Spacer()
                 }
-                .font(.subheadline)
+                .font(.appSubhead)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, Spacing.l)
                 .frame(height: 48)
                 .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             }
             .buttonStyle(.plain)
+        }
+        .padding(.horizontal, Spacing.xl)
+        .padding(.top, Spacing.s)
+        .padding(.bottom, 24)
+        .background {
+            // Diperpanjang ke atas supaya area status bar & tarikan refresh tetap oranye.
+            UnevenRoundedRectangle(bottomLeadingRadius: 28, bottomTrailingRadius: 28, style: .continuous)
+                .fill(Color.brand)
+                .padding(.top, -600)
         }
     }
 
@@ -160,20 +182,20 @@ struct HomeView: View {
                     .foregroundStyle(.orange)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Menunggu pembayaran \(payment.amount.rupiahFormatted)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.appSubheadStrong)
                         .foregroundStyle(.primary)
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         let remaining = Int(payment.remaining(at: context.date))
                         Text(remaining > 0
                              ? String(format: "Selesaikan dalam %02d:%02d", remaining / 60, remaining % 60)
                              : String(localized: "Mengecek status pembayaran…"))
-                            .font(.caption.monospacedDigit())
+                            .font(.appCaption.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: 0)
                 Text("Bayar")
-                    .font(.caption.weight(.bold))
+                    .font(.appCaptionStrong)
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.m)
                     .padding(.vertical, Spacing.xs)
@@ -194,16 +216,16 @@ struct HomeView: View {
                     .foregroundStyle(outlet.canOrder ? Color.brand : .orange)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Dari \(outlet.name)")
-                        .font(.footnote.weight(.semibold))
+                        .font(.appCaptionStrong)
                         .foregroundStyle(.primary)
                     Text(outlet.detailText)
-                        .font(.caption2)
+                        .font(.appMicro)
                         .foregroundStyle(outlet.canOrder ? Color.secondary : Color.orange)
                 }
                 .lineLimit(1)
                 Spacer(minLength: 0)
                 Text("Ganti")
-                    .font(.caption.weight(.semibold))
+                    .font(.appCaptionStrong)
                     .foregroundStyle(Color.brand)
             }
             .padding(.horizontal, Spacing.m)
@@ -219,6 +241,8 @@ struct HomeView: View {
 
     @ViewBuilder
     private func loaded(_ content: HomeContent) -> some View {
+        if state.isAssistantAvailable { suggestionCard }
+
         if !content.banners.isEmpty {
             PromoCarouselView(banners: content.banners,
                               currentPage: store.binding(\.bannerPage, send: { .bannerPageChanged($0) }),
@@ -230,8 +254,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.m) {
                 SectionHeader(title: String(localized: "Kategori"))
                     .padding(.horizontal, Spacing.xl)
-                CategoryGridView(categories: content.categories) { store.send(.categoryTapped($0)) }
-                    .padding(.horizontal, Spacing.xl)
+                CategoryScrollerView(categories: content.categories) { store.send(.categoryTapped($0)) }
             }
         }
 
@@ -286,6 +309,61 @@ struct HomeView: View {
     }
 }
 
+// MARK: - Saran AI
+
+private extension HomeView {
+    var suggestionCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack {
+                Label("Saran AI buat kamu", systemImage: "sparkles").font(.appHeadline)
+                Spacer()
+                Button(state.preferences.isEmpty ? String(localized: "Atur") : String(localized: "Ubah")) {
+                    store.send(.preferencesTapped)
+                }
+                .font(.appSubheadStrong)
+            }
+
+            if state.preferences.isEmpty {
+                Text("Ceritakan kamu suka apa dan lagi butuh apa, nanti AI kasih saran belanja yang pas.")
+                    .font(.appSubhead)
+                    .foregroundStyle(.secondary)
+            } else {
+                switch state.suggestion {
+                case .idle, .loading:
+                    HStack(spacing: Spacing.s) {
+                        ProgressView()
+                        Text("Menyiapkan saran…").font(.appSubhead).foregroundStyle(.secondary)
+                    }
+                case .failed(let message):
+                    HStack {
+                        Text(message).font(.appSubhead).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Coba lagi") { store.send(.suggestionRequested) }.font(.appSubheadStrong)
+                    }
+                case .loaded(let suggestion):
+                    Text(suggestion.tip).font(.appSubhead)
+                    if !state.suggestedProducts.isEmpty {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: Spacing.m) {
+                                ForEach(state.suggestedProducts) { product in
+                                    ProductCardView(product: product) { store.send(.quickAddTapped(product)) }
+                                        .onTapGesture { store.send(.productTapped(product)) }
+                                }
+                            }
+                            .padding(.vertical, Spacing.xs)
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.l)
+        .background(Color.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .padding(.horizontal, Spacing.xl)
+        .task { @MainActor in store.send(.suggestionRequested) }
+    }
+}
+
 // MARK: - Komponen Beranda
 
 private struct CartIconButton: View {
@@ -302,10 +380,10 @@ private struct CartIconButton: View {
                 .overlay(alignment: .topTrailing) {
                     if count > 0 {
                         Text("\(count)")
-                            .font(.caption2.bold())
+                            .font(.appMicro)
                             .foregroundStyle(.white)
                             .frame(minWidth: 18, minHeight: 18)
-                            .background(Color.brand, in: Circle())
+                            .background(Color.brandDark, in: Circle())
                             .offset(x: 2, y: -2)
                     }
                 }
@@ -333,15 +411,15 @@ private struct PromoCarouselView: View {
                         .overlay(alignment: .bottomLeading) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("PROMO")
-                                    .font(.caption2.weight(.heavy))
+                                    .font(.appMicro)
                                     .tracking(1.5)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
                                     .background(Color.brand, in: Capsule())
                                 Text(banner.title)
-                                    .font(.title3.bold())
+                                    .font(.appTitle3)
                                 Text(banner.subtitle)
-                                    .font(.subheadline)
+                                    .font(.appSubhead)
                                     .opacity(0.9)
                             }
                             .foregroundStyle(.white)
@@ -377,34 +455,34 @@ private struct PromoCarouselView: View {
     }
 }
 
-private struct CategoryGridView: View {
+private struct CategoryScrollerView: View {
     let categories: [MenuCategory]
     let onSelect: (MenuCategory) -> Void
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.m), count: 3)
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: Spacing.m) {
-            ForEach(categories) { category in
-                Button { onSelect(category) } label: {
-                    VStack(spacing: Spacing.s) {
-                        Text(category.icon)
-                            .font(.system(size: 34))
-                            .frame(width: 60, height: 60)
-                            .background(Color.brandSoft, in: Circle())
-                        Text(category.name)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: Spacing.s) {
+                ForEach(categories) { category in
+                    Button { onSelect(category) } label: {
+                        VStack(spacing: Spacing.s) {
+                            Text(category.icon)
+                                .font(.system(size: 34))
+                                .frame(width: 64, height: 64)
+                                .background(Color.brandSoft, in: Circle())
+                            Text(category.name)
+                                .font(.appCaptionStrong)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .frame(width: 76)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.m)
-                    .formCard(cornerRadius: Radius.control)
+                    .buttonStyle(PressableButtonStyle())
                 }
-                .buttonStyle(PressableButtonStyle())
             }
+            .padding(.horizontal, Spacing.xl)
         }
+        .scrollIndicators(.hidden)
     }
 }
 
