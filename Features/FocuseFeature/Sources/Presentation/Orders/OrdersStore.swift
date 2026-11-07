@@ -20,6 +20,12 @@ struct OrdersState: Equatable {
     /// Pesanan yang sedang disiapkan untuk "Pesan Lagi" (tombolnya loading).
     var reorderingID: String?
     var toast: ToastMessage?
+    /// Kartu "Belanja bulan ini"; gagal dimuat → kartu disembunyikan.
+    var spending: Loadable<MonthlySpending> = .idle
+    /// Kalimat AI untuk kartu belanja (Apple Intelligence); nil = tidak ada.
+    var spendingNote: String?
+    /// Tombol "Asisten" (chat bantuan AI).
+    var isAssistantAvailable = false
 
     var displayedOrders: [Order] { orders.value ?? [] }
 
@@ -59,6 +65,7 @@ enum OrdersRoute {
     case detail(id: String)
     case rate(RatingTarget)
     case reorder([OrderDetail.Item])
+    case assistant
 }
 
 enum OrdersAction {
@@ -77,17 +84,28 @@ enum OrdersAction {
     case reorderTapped(Order)
     case reorderResponse(Result<OrderDetail, OrderError>)
     case toastDismissed(UUID)
+    case spendingRequested
+    case spendingResponse(Result<MonthlySpending, OrderError>)
+    case spendingNoteResponse(String?)
+    case assistantTapped
 }
 
 final class OrdersStore: Store<OrdersState, OrdersAction> {
     private let getOrders: GetOrdersUseCase
     private let getDetail: GetOrderDetailUseCase
+    private let getSpending: GetMonthlySpendingUseCase
+    private let assistant: OrderAssistant
     var onRoute: ((OrdersRoute) -> Void)?
 
-    init(getOrders: GetOrdersUseCase, getDetail: GetOrderDetailUseCase) {
+    init(getOrders: GetOrdersUseCase, getDetail: GetOrderDetailUseCase,
+         getSpending: GetMonthlySpendingUseCase, assistant: OrderAssistant) {
         self.getOrders = getOrders
         self.getDetail = getDetail
-        super.init(initialState: OrdersState())
+        self.getSpending = getSpending
+        self.assistant = assistant
+        var initial = OrdersState()
+        initial.isAssistantAvailable = assistant.isAvailable
+        super.init(initialState: initial)
     }
 
     override func reduce(state: inout OrdersState, action: OrdersAction) -> Effect<OrdersAction>? {
@@ -123,6 +141,12 @@ final class OrdersStore: Store<OrdersState, OrdersAction> {
             state.isLoadingMore = false
             switch result {
             case .success(let orders):
+                // Pesanan yang sudah selesai / batal → akhiri Live Activity-nya.
+                for order in orders where order.status != .pending {
+                    OrderLiveActivity.update(orderID: order.id, rawStatus: order.status == .completed ? "COMPLETED" : "CANCELLED",
+                                             title: order.status == .completed ? String(localized: "Selesai") : String(localized: "Dibatalkan"),
+                                             arrivalEnd: nil)
+                }
                 let current = page == 1 ? [] : (state.orders.value ?? [])
                 state.orders = .loaded(current + orders.filter { new in !current.contains { $0.id == new.id } })
                 state.page = page
@@ -173,6 +197,37 @@ final class OrdersStore: Store<OrdersState, OrdersAction> {
         case .toastDismissed(let id):
             if state.toast?.id == id { state.toast = nil }
             return nil
+
+        case .spendingRequested:
+            guard !state.spending.isLoading else { return nil }
+            if state.spending.value == nil { state.spending = .loading }
+            let getSpending = self.getSpending
+            return .task {
+                do {
+                    return .spendingResponse(.success(try await getSpending.execute()))
+                } catch {
+                    return .spendingResponse(.failure(error as? OrderError ?? .unknown))
+                }
+            }
+
+        case .spendingResponse(.success(let spending)):
+            let changed = spending != state.spending.value
+            state.spending = .loaded(spending)
+            guard changed, spending.orderCount > 0, assistant.isAvailable else { return nil }
+            state.spendingNote = nil
+            let assistant = self.assistant
+            return .task { .spendingNoteResponse(await assistant.describe(spending)) }
+
+        case .spendingResponse(.failure(let error)):
+            if state.spending.value == nil { state.spending = .failed(error.errorDescription ?? "") }
+            return nil
+
+        case .spendingNoteResponse(let note):
+            state.spendingNote = note
+            return nil
+
+        case .assistantTapped:
+            return .run { [weak self] in self?.onRoute?(.assistant) }
         }
     }
 

@@ -66,6 +66,7 @@ final class OrderDetailStore: Store<OrderDetailState, OrderDetailAction> {
 
         case .detailResponse(.success(let detail)):
             state.detail = .loaded(detail)
+            Self.syncLiveActivity(detail)
             return nil
 
         case .detailResponse(.failure(let error)):
@@ -98,6 +99,7 @@ final class OrderDetailStore: Store<OrderDetailState, OrderDetailAction> {
         case .cancelResponse(.success(let detail)):
             state.isCancelling = false
             state.detail = .loaded(detail)
+            Self.syncLiveActivity(detail)
             state.toast = ToastMessage(String(localized: "Pesanan dibatalkan"))
             return .run { [weak self] in self?.onRoute?(.cancelled) }
 
@@ -134,4 +136,12 @@ final class OrderDetailStore: Store<OrderDetailState, OrderDetailAction> {
             }
         }
     }
+
+    /// Status terbaru → Live Activity pesanan ini (bila ada).
+    private static func syncLiveActivity(_ detail: OrderDetail) {
+        OrderLiveActivity.update(orderID: detail.id, rawStatus: detail.rawStatus,
+                                 title: OrderStatusText.title(for: detail.rawStatus),
+                                 arrivalEnd: detail.estimatedArrival?.upperBound)
+    }
 }
+

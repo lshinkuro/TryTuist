@@ -18,7 +18,19 @@ struct FocusesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
-                ScreenHeader(title: String(localized: "Pesanan"), subtitle: String(localized: "Riwayat pesananmu"))
+                ScreenHeader(title: String(localized: "Pesanan"), subtitle: String(localized: "Riwayat pesananmu")) {
+                    if store.state.isAssistantAvailable {
+                        Button { store.send(.assistantTapped) } label: {
+                            Label("Asisten", systemImage: "sparkles")
+                        }
+                        .buttonStyle(CapsuleButtonStyle(.outlined))
+                        .accessibilityHint("Chat dengan asisten AI soal pesanan, kupon, dan pembayaran")
+                    }
+                }
+
+                if let spending = store.state.spending.value {
+                    MonthlySpendingCard(spending: spending, note: store.state.spendingNote)
+                }
 
                 SegmentedTabBar(titles: filters.map { $0?.title ?? String(localized: "Semua") }, selectedIndex: selectedIndex)
 
@@ -37,7 +49,7 @@ struct FocusesView: View {
                     }
                     .accessibilityHint("Ubah urutan berdasarkan jam & tanggal pesanan")
                 }
-                .font(.subheadline.weight(.semibold))
+                .font(.appSubheadStrong)
 
                 content
             }
@@ -45,8 +57,14 @@ struct FocusesView: View {
         }
         .background(Color.appBackground.ignoresSafeArea())
         .toast(store.state.toast)
-        .refreshable { @MainActor in store.send(.onAppear) }
-        .task { @MainActor in store.send(.onAppear) }
+        .refreshable { @MainActor in
+            store.send(.onAppear)
+            store.send(.spendingRequested)
+        }
+        .task { @MainActor in
+            store.send(.onAppear)
+            store.send(.spendingRequested)
+        }
     }
 
     @ViewBuilder
@@ -119,10 +137,10 @@ struct OrderRowView: View {
             HStack(spacing: Spacing.s) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(order.quantity) item")
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                     Text(order.totalPrice.rupiahFormatted)
-                        .font(.headline)
+                        .font(.appHeadline)
                 }
                 Spacer()
                 if let rating = order.rating {
@@ -145,23 +163,23 @@ struct OrderRowView: View {
 
     private var summary: some View {
         HStack(alignment: .top, spacing: Spacing.m) {
-            IconBadge(systemImage: "cup.and.saucer.fill", size: 48)
+            IconBadge(systemImage: "basket.fill", size: 48)
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(order.productName)
-                    .font(.headline)
+                    .font(.appHeadline)
                 Label(order.storeName, systemImage: "mappin.and.ellipse")
-                    .font(.subheadline)
+                    .font(.appSubhead)
                     .foregroundStyle(.secondary)
                 Label(order.createdAt.shortDateTimeFormatted, systemImage: "clock")
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: Spacing.s)
 
             Text(order.status.title)
-                .font(.caption.weight(.semibold))
+                .font(.appCaptionStrong)
                 .foregroundStyle(order.status.tint)
                 .padding(.horizontal, 10)
                 .padding(.vertical, Spacing.xs)
@@ -187,5 +205,35 @@ extension OrderStatus {
         case .completed: return .green
         case .failed: return .red
         }
+    }
+}
+
+/// "Belanja bulan ini": angka dihitung aplikasi, kalimat (opsional) dari Apple Intelligence.
+private struct MonthlySpendingCard: View {
+    let spending: MonthlySpending
+    let note: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Text("Belanja \(spending.month.formatted(.dateTime.month(.wide)))")
+                .font(.appSubhead)
+                .foregroundStyle(.secondary)
+            if spending.orderCount == 0 {
+                Text("Belum ada belanja bulan ini.").font(.appHeadline)
+            } else {
+                Text(spending.total.rupiahFormatted).font(.appTitle)
+                Text("\(spending.orderCount) pesanan · paling sering: \(spending.topProducts.joined(separator: ", "))")
+                    .font(.appCaption)
+                    .foregroundStyle(.secondary)
+            }
+            if let note {
+                Label(note, systemImage: "sparkles")
+                    .font(.appSubhead)
+                    .padding(.top, Spacing.xs)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.l)
+        .background(Color.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }

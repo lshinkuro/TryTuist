@@ -21,7 +21,9 @@ public final class FocusModule: TabFeature {
     public func start(router: Router) {
         let repository = DefaultOrderRepository(remote: Self.makeRemoteDataSource())
         let getDetail = GetOrderDetailUseCase(repository: repository)
-        let store = OrdersStore(getOrders: GetOrdersUseCase(repository: repository), getDetail: getDetail)
+        let assistant = AppleIntelligenceOrderAssistant(repository: repository)
+        let store = OrdersStore(getOrders: GetOrdersUseCase(repository: repository), getDetail: getDetail,
+                                getSpending: GetMonthlySpendingUseCase(repository: repository), assistant: assistant)
         let onReorder = self.onReorder
         let rateOrder = RateOrderUseCase(repository: repository)
         let cancelOrder = CancelOrderUseCase(repository: repository)
@@ -66,6 +68,9 @@ public final class FocusModule: TabFeature {
                 }
             case .reorder(let items):
                 reorder(items)
+            case .assistant:
+                let chatStore = SupportChatStore(chat: assistant.makeChat())
+                router?.present(SupportChatView(store: chatStore), title: String(localized: "Asisten"))
             }
         }
         router.setRoot(FocusesView(store: store), hidesNavigationBar: true)

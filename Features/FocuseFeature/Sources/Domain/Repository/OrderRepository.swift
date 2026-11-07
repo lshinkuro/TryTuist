@@ -12,6 +12,20 @@ protocol OrderRepository {
     func cancel(orderID: String) async throws -> OrderDetail
 }
 
+/// Asisten AI on-device (Apple Intelligence) untuk tab Pesanan.
+protocol OrderAssistant {
+    var isAvailable: Bool { get }
+    /// Satu kalimat tentang belanja bulan ini; `nil` = AI tidak tersedia / gagal.
+    func describe(_ spending: MonthlySpending) async -> String?
+    /// Percakapan bantuan baru; riwayat chat disimpan di objek ini.
+    func makeChat() -> SupportChat
+}
+
+protocol SupportChat: AnyObject {
+    /// `nil` = AI gagal menjawab.
+    func reply(to message: String) async -> String?
+}
+
 enum OrderError: LocalizedError, Equatable {
     case network
     case invalidResponse
