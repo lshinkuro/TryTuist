@@ -2,7 +2,6 @@
 //  CatalogRepository.swift
 //  HomeFeature · Domain
 //
-import Combine
 import Foundation
 
 protocol CatalogRepository {
@@ -39,21 +38,6 @@ protocol ProductAssistant {
     func complements(for cart: [Product], from products: [Product]) async -> [String]?
     /// Resep / rencana / daftar belanja → produk + jumlah. `nil` = AI tidak tersedia / gagal.
     func planShopping(_ request: String, from products: [Product]) async -> [PlannedItem]?
-}
-
-enum VoiceSearchEvent: Equatable {
-    /// Teks sementara selama bicara; `isFinal` = selesai mendengarkan.
-    case transcript(String, isFinal: Bool)
-    case failed(String)
-}
-
-/// Pencarian suara: dimulai hanya dari aksi user (tombol mic).
-@MainActor
-protocol VoiceSearch {
-    var events: AnyPublisher<VoiceSearchEvent, Never> { get }
-    func start() async
-    /// Berhenti mendengarkan; teks terakhir dikirim sebagai final.
-    func finish()
 }
 
 /// Baca teks dari foto (mis. catatan belanja). `nil` = tidak ada teks terbaca.

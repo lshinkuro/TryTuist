@@ -1,17 +1,33 @@
 //
 //  SpeechVoiceSearch.swift
-//  HomeFeature · Data
+//  Utility
 //
-//  Pencarian suara (Speech framework, bahasa Indonesia). Hanya mendengarkan setelah tombol mic
-//  ditekan, dan berhenti sendiri setelah 1,5 detik hening atau saat tombol ditekan lagi.
+//  Ucapan → teks (Speech framework, bahasa Indonesia) untuk pencarian suara & chat asisten.
+//  Hanya mendengarkan setelah tombol mic ditekan, dan berhenti sendiri setelah 1,5 detik hening
+//  atau saat tombol ditekan lagi.
 //
 import AVFoundation
 import Combine
 import Foundation
 import Speech
 
+public enum VoiceSearchEvent: Equatable {
+    /// Teks sementara selama bicara; `isFinal` = selesai mendengarkan.
+    case transcript(String, isFinal: Bool)
+    case failed(String)
+}
+
+/// Input suara: dimulai hanya dari aksi user (tombol mic).
 @MainActor
-final class SpeechVoiceSearch: VoiceSearch {
+public protocol VoiceSearch {
+    var events: AnyPublisher<VoiceSearchEvent, Never> { get }
+    func start() async
+    /// Berhenti mendengarkan; teks terakhir dikirim sebagai final.
+    func finish()
+}
+
+@MainActor
+public final class SpeechVoiceSearch: VoiceSearch {
     private static let silenceTimeout: TimeInterval = 1.5
 
     private let subject = PassthroughSubject<VoiceSearchEvent, Never>()
@@ -22,9 +38,11 @@ final class SpeechVoiceSearch: VoiceSearch {
     private var silenceTimer: Timer?
     private var lastTranscript = ""
 
-    var events: AnyPublisher<VoiceSearchEvent, Never> { subject.eraseToAnyPublisher() }
+    public init() {}
 
-    func start() async {
+    public var events: AnyPublisher<VoiceSearchEvent, Never> { subject.eraseToAnyPublisher() }
+
+    public func start() async {
         teardown()
         guard await Self.authorize() else {
             return fail(String(localized: "Izinkan Mikrofon & Pengenalan Suara di Pengaturan untuk cari dengan suara."))
@@ -42,7 +60,12 @@ final class SpeechVoiceSearch: VoiceSearch {
             // Di perangkat bila didukung: suara tidak dikirim ke server Apple.
             if recognizer.supportsOnDeviceRecognition { request.requiresOnDeviceRecognition = true }
             let input = engine.inputNode
-            input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { buffer, _ in
+            let format = input.outputFormat(forBus: 0)
+            // Tanpa input mic (sering di simulator) format-nya 0 Hz / 0 channel → installTap crash.
+            guard format.sampleRate > 0, format.channelCount > 0 else {
+                return fail(String(localized: "Mikrofon tidak tersedia di perangkat ini."))
+            }
+            input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
                 request.append(buffer)
             }
             engine.prepare()
@@ -61,7 +84,7 @@ final class SpeechVoiceSearch: VoiceSearch {
     }
 
     /// Berhenti mendengarkan; hasil terakhir dikirim sebagai final.
-    func finish() {
+    public func finish() {
         silenceTimer?.invalidate()
         guard request != nil else { return }
         stopAudio()
