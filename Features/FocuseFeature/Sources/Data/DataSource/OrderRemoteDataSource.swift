@@ -85,8 +85,8 @@ struct OrderMockDataSource: OrderRemoteDataSource {
         "distance_km": 2.4, "eta_min_minutes": 25, "eta_max_minutes": 35,
         "payment_method": "COD", "payment_provider": null, "voucher_code": "HEMAT10",
         "items": [
-          { "product_id": "P01", "option_id": "large", "product_name": "TOMORO Oat Latte", "option_name": "Large", "quantity": 2, "note": "less sugar", "subtotal": 30000 },
-          { "product_id": "P11", "option_id": null, "product_name": "Croissant", "option_name": null, "quantity": 1, "note": "", "subtotal": 10000 }
+          { "product_id": "P01", "option_id": "botol", "product_name": "Minyak Goreng 1 L", "option_name": "Botol", "quantity": 2, "note": "yang segel", "subtotal": 30000 },
+          { "product_id": "P11", "option_id": null, "product_name": "Biskuit Cokelat 300 g", "option_name": null, "quantity": 1, "note": "", "subtotal": 10000 }
         ],
         "store": { "id": "ST01", "name": "Gandaria City", "address": "Jl. Sultan Iskandar Muda" },
         "address": { "label": "Rumah", "recipient": "Kholis", "address": "Jl. Kebayoran Lama No. 1" },
@@ -104,15 +104,15 @@ struct OrderMockDataSource: OrderRemoteDataSource {
       "code": 200,
       "message": "success",
       "data": [
-        { "order_id": "ORD-001", "store_name": "Gandaria City", "product_name": "TOMORO Oat Latte",
+        { "order_id": "ORD-001", "store_name": "Gandaria City", "product_name": "Minyak Goreng 1 L",
           "created_at": "2024-08-20T12:46:00+07:00", "total_price": 15000, "qty": 1, "status": "PENDING" },
-        { "order_id": "ORD-002", "store_name": "Gandaria City", "product_name": "Choco Oat Latte",
+        { "order_id": "ORD-002", "store_name": "Gandaria City", "product_name": "Beras Medium 2 kg",
           "created_at": "2024-08-20T12:44:00+07:00", "total_price": 15000, "qty": 1, "status": "COMPLETED", "can_rate": true },
-        { "order_id": "ORD-003", "store_name": "Gandaria City", "product_name": "Breve Latte",
+        { "order_id": "ORD-003", "store_name": "Gandaria City", "product_name": "Keripik Kentang 160 g",
           "created_at": "2024-08-07T12:21:00+07:00", "total_price": 9000, "qty": 1, "status": "COMPLETED", "rating": 5 },
-        { "order_id": "ORD-004", "store_name": "Kemang Utara", "product_name": "TOMORO Oat Latte",
+        { "order_id": "ORD-004", "store_name": "Kemang Utara", "product_name": "Telur Ayam 1 kg",
           "created_at": "2024-08-05T09:10:00+07:00", "total_price": 30000, "qty": 2, "status": "FAILED" },
-        { "order_id": "ORD-005", "store_name": "Kemang Utara", "product_name": "Americano",
+        { "order_id": "ORD-005", "store_name": "Kemang Utara", "product_name": "Gula Pasir 1 kg",
           "created_at": "2024-08-01T08:00:00+07:00", "total_price": 18000, "qty": 1, "status": "REFUNDED_V2" }
       ]
     }

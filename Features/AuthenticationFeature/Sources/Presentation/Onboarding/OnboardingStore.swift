@@ -17,15 +17,15 @@ extension OnboardingItem {
     }
 
     static let defaults: [OnboardingItem] = [
-        .init(imageURL: unsplash("1512058564366-18510be2db19"),
-              title: String(localized: "Semua favoritmu di sini"),
-              subtitle: String(localized: "Kopi, nasi goreng, burger, sampai dessert. Tinggal pilih.")),
-        .init(imageURL: unsplash("1767471716700-2b3aa77b1ab6"),
-              title: String(localized: "Pesan cepat tanpa antre"),
-              subtitle: String(localized: "Atur varian, jumlah, dan catatan sesuai seleramu.")),
-        .init(imageURL: unsplash("1543339469-94ba2391431f"),
-              title: String(localized: "Diantar hangat ke rumah"),
-              subtitle: String(localized: "Nikmati promo dan gratis ongkir setiap hari."))
+        .init(imageURL: unsplash("1542838132-92c53300491e"),
+              title: String(localized: "Semua kebutuhan di satu tempat"),
+              subtitle: String(localized: "Sembako, sayur, daging, sampai sabun. Tinggal pilih.")),
+        .init(imageURL: unsplash("1604719312566-8912e9227c6a"),
+              title: String(localized: "Belanja cepat tanpa antre"),
+              subtitle: String(localized: "Atur varian, jumlah, dan catatan sesuai kebutuhanmu.")),
+        .init(imageURL: unsplash("1540420773420-3366772f4999"),
+              title: String(localized: "Diantar segar ke rumah"),
+              subtitle: String(localized: "Nikmati promo dan gratis ongkir setiap minggu."))
     ]
 }
 

@@ -96,7 +96,7 @@ enum CatalogMapper {
     static func categories(from response: CategoryListResponseDTO) -> [MenuCategory] {
         (response.data ?? []).compactMap { (dto) -> MenuCategory? in
             guard let id = dto.id, let name = dto.name else { return nil }
-            return MenuCategory(id: id, name: name, icon: dto.icon ?? "🍽️")
+            return MenuCategory(id: id, name: name, icon: dto.icon ?? "🛒")
         }
     }
 

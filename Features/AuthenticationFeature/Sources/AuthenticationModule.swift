@@ -63,7 +63,7 @@ public final class AuthenticationModule {
     // MARK: - Routes
 
     private func showSplash() {
-        let store = SplashStore(title: String.localized("coachmark.first_title"))
+        let store = SplashStore(title: String(localized: "Belanja kebutuhan harian, harga koperasi"))
         store.onRoute = { [weak self] destination in
             switch destination {
             case .main: self?.onAuthenticated()

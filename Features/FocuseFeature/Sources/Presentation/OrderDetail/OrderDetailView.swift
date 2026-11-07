@@ -145,7 +145,7 @@ private struct StatusStyle {
                          message: String(localized: "Kurir sedang menuju alamatmu."), tint: .blue)
         case "COMPLETED":
             return .init(icon: "checkmark.circle.fill", title: String(localized: "Pesanan selesai"),
-                         message: String(localized: "Selamat menikmati!"), tint: .green)
+                         message: String(localized: "Terima kasih sudah belanja!"), tint: .green)
         case "CANCELLED":
             return .init(icon: "xmark.circle.fill", title: String(localized: "Pesanan dibatalkan"),
                          message: detail.closingNote ?? String(localized: "Pesanan ini sudah dibatalkan."), tint: .secondary)

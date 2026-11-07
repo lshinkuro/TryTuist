@@ -55,7 +55,7 @@ struct OrderDetail: Equatable {
         let quantity: Int
         let note: String?
         let subtotal: Decimal
-        /// Isi paket combo, mis. ["1× Es Kopi Susu (Large)", "1× Croissant"]; kosong untuk produk biasa.
+        /// Isi paket combo, mis. ["1× Minyak Goreng 1 L (Botol)", "1× Gula Pasir 1 kg"]; kosong untuk produk biasa.
         var bundle: [String] = []
     }
 

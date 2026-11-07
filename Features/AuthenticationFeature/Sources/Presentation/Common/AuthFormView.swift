@@ -97,7 +97,7 @@ struct AuthFormView<Fields: View>: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            IconBadge(systemImage: "fork.knife", size: 56)
+            IconBadge(systemImage: "basket.fill", size: 56)
                 .padding(.bottom, Spacing.m)
             Text(title)
                 .font(.largeTitle.bold())

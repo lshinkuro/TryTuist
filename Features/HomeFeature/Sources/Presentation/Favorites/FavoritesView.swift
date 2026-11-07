@@ -41,9 +41,9 @@ struct FavoritesView: View {
             }
 
         case .loaded(let products) where products.isEmpty:
-            ContentUnavailableView("Belum ada menu favorit",
+            ContentUnavailableView("Belum ada produk favorit",
                                    systemImage: "heart",
-                                   description: Text("Ketuk ❤️ di detail menu untuk menyimpannya di sini."))
+                                   description: Text("Ketuk ❤️ di detail produk untuk menyimpannya di sini."))
                 .padding(.vertical, 40)
 
         case .loaded(let products):

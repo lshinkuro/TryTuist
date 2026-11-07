@@ -286,7 +286,7 @@ actor MockProfileStore {
         let topics: [[String: Any]] = [
             ["id": "order", "title": "Pesanan", "icon": "bag.fill", "articles": [
                 ["id": "order-how", "question": "Bagaimana cara memesan?",
-                 "answer": "Pilih menu di Beranda atau tab Menu, atur varian dan jumlah, lalu tekan \"Tambah ke keranjang\".\n\nBuka Keranjang, periksa pesanan, lalu tekan \"Pesan Sekarang\"."],
+                 "answer": "Pilih produk di Beranda atau tab Belanja, atur varian dan jumlah, lalu tekan \"Tambah ke keranjang\".\n\nBuka Keranjang, periksa belanjaanmu, lalu tekan \"Pesan Sekarang\"."],
                 ["id": "order-cancel", "question": "Bisakah saya membatalkan pesanan?",
                  "answer": "Bisa, selama status pesanan masih \"Menunggu\".\n\nPesanan yang sudah diproses outlet tidak bisa dibatalkan."]
             ]],
@@ -298,7 +298,7 @@ actor MockProfileStore {
             ]],
             ["id": "delivery", "title": "Pengiriman", "icon": "bicycle", "articles": [
                 ["id": "delivery-time", "question": "Berapa lama pesanan sampai?",
-                 "answer": "Rata-rata 20–40 menit, tergantung jarak outlet dan antrean pesanan."]
+                 "answer": "Rata-rata 30–60 menit, tergantung jarak outlet dan jumlah belanjaan."]
             ]]
         ]
         let q = query?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""

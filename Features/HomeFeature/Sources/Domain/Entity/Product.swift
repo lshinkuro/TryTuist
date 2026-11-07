@@ -43,7 +43,7 @@ struct Combo: Hashable {
         let optionName: String?
         let quantity: Int
 
-        /// "1× Es Kopi Susu (Large)".
+        /// "1× Minyak Goreng 1 L (Botol)".
         var label: String { "\(quantity)× \(name)" + (optionName.map { " (\($0))" } ?? "") }
     }
 

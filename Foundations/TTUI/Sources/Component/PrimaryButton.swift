@@ -35,7 +35,7 @@ public struct PrimaryButton: View {
                         .tint(.white)
                 }
             }
-            .font(.headline)
+            .font(.appHeadline)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
@@ -76,7 +76,7 @@ public struct CapsuleButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.subheadline.weight(.semibold))
+            .font(.appCaptionStrong)
             .foregroundStyle(kind == .filled ? Color.white : tint)
             .padding(.horizontal, 14)
             .frame(height: 34)

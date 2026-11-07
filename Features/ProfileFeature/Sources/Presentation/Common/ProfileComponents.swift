@@ -58,11 +58,11 @@ struct ProfileMenuRow: View {
             IconBadge(systemImage: systemImage, tint: tint, size: 34)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.body)
+                    .font(.appSubheadStrong)
                     .foregroundStyle(.primary)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -70,7 +70,7 @@ struct ProfileMenuRow: View {
             Spacer(minLength: Spacing.s)
             if showsChevron {
                 Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
+                    .font(.appCaptionStrong)
                     .foregroundStyle(.tertiary)
             }
         }

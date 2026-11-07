@@ -23,8 +23,9 @@ public final class Router {
     public func setRoot<Content: View>(_ view: Content,
                                        title: String? = nil,
                                        hidesNavigationBar: Bool = false,
+                                       lightStatusBar: Bool = false,
                                        animated: Bool = false) {
-        let controller = host(view, title: title, hidesNavigationBar: hidesNavigationBar)
+        let controller = host(view, title: title, hidesNavigationBar: hidesNavigationBar, lightStatusBar: lightStatusBar)
         if animated {
             let transition = CATransition()
             transition.duration = 0.3
@@ -65,8 +66,8 @@ public final class Router {
 
     // MARK: - Hosting
 
-    private func host<Content: View>(_ view: Content, title: String?, hidesNavigationBar: Bool) -> UIViewController {
-        let controller = HostingController(rootView: view, hidesNavigationBar: hidesNavigationBar)
+    private func host<Content: View>(_ view: Content, title: String?, hidesNavigationBar: Bool, lightStatusBar: Bool = false) -> UIViewController {
+        let controller = HostingController(rootView: view, hidesNavigationBar: hidesNavigationBar, lightStatusBar: lightStatusBar)
         controller.title = title
         controller.navigationItem.largeTitleDisplayMode = .never
         return controller
@@ -80,9 +81,16 @@ final class HostingController<Content: View>: UIHostingController<Content>, Scre
     /// Nama screen untuk Debugger, mis. "HomeView".
     let screenName = ScreenTracker.readableName(of: Content.self)
 
-    init(rootView: Content, hidesNavigationBar: Bool) {
+    private let lightStatusBar: Bool
+
+    init(rootView: Content, hidesNavigationBar: Bool, lightStatusBar: Bool) {
         self.hidesNavigationBar = hidesNavigationBar
+        self.lightStatusBar = lightStatusBar
         super.init(rootView: rootView)
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        lightStatusBar ? .lightContent : .default
     }
 
     @available(*, unavailable)

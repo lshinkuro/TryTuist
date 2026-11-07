@@ -12,7 +12,7 @@ public struct RemoteImage: View {
     private let contentMode: ContentMode
     private let fallbackSymbol: String
 
-    public init(url: URL?, contentMode: ContentMode = .fill, fallbackSymbol: String = "fork.knife") {
+    public init(url: URL?, contentMode: ContentMode = .fill, fallbackSymbol: String = "basket") {
         self.url = url
         self.contentMode = contentMode
         self.fallbackSymbol = fallbackSymbol

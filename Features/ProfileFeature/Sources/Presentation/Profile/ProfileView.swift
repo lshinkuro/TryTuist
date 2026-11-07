@@ -25,7 +25,7 @@ struct ProfileView: View {
                 logoutButton
 
                 Text("Versi \(state.appVersion)")
-                    .font(.footnote)
+                    .font(.appCaption)
                     .foregroundStyle(.tertiary)
                     .padding(.top, Spacing.s)
             }
@@ -51,8 +51,8 @@ struct ProfileView: View {
             HStack(spacing: Spacing.m) {
                 IconBadge(systemImage: "wifi.exclamationmark", tint: .red, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Profil gagal dimuat").font(.headline)
-                    Text(message).font(.caption).foregroundStyle(.secondary)
+                    Text("Profil gagal dimuat").font(.appHeadline)
+                    Text(message).font(.appCaption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Coba lagi") { store.send(.retryTapped) }
@@ -66,14 +66,14 @@ struct ProfileView: View {
                 AvatarView(name: state.displayName, size: 64)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(state.displayName)
-                        .font(.title3.bold())
+                        .font(.appTitle3)
                         .lineLimit(1)
                     Label(profile?.tier.title ?? String(localized: "Member"), systemImage: "crown.fill")
-                        .font(.subheadline)
+                        .font(.appSubhead)
                         .foregroundStyle(.orange)
                     if let email = profile?.email {
                         Text(email)
-                            .font(.caption)
+                            .font(.appCaption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
@@ -98,11 +98,11 @@ struct ProfileView: View {
                 VStack(spacing: Spacing.s) {
                     IconBadge(systemImage: action.systemImage, size: 40)
                     Text(action.value)
-                        .font(.subheadline.bold())
+                        .font(.appSubheadStrong)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Text(action.title)
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -116,12 +116,12 @@ struct ProfileView: View {
     private var promoCard: some View {
         HStack(spacing: Spacing.l) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("LANGGANAN KOPI HARIAN")
-                    .font(.caption.weight(.bold))
+                Text("LANGGANAN SUSU HARIAN")
+                    .font(.appCaptionStrong)
                     .tracking(1)
                     .opacity(0.8)
-                Text("1 cup cuma 15rb / hari")
-                    .font(.title3.bold())
+                Text("1 liter cuma 15rb / hari")
+                    .font(.appTitle3)
             }
             Spacer(minLength: 0)
             Button {
@@ -135,7 +135,7 @@ struct ProfileView: View {
         .foregroundStyle(.white)
         .padding(Spacing.xl)
         .background(alignment: .trailing) {
-            Image(systemName: "cup.and.saucer.fill")
+            Image(systemName: "basket.fill")
                 .font(.system(size: 96))
                 .foregroundStyle(Color.white.opacity(0.1))
                 .offset(x: 20, y: 16)
@@ -173,7 +173,7 @@ struct ProfileView: View {
             store.send(.logoutTapped)
         } label: {
             Label("Keluar", systemImage: "rectangle.portrait.and.arrow.right")
-                .font(.headline)
+                .font(.appHeadline)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
         }

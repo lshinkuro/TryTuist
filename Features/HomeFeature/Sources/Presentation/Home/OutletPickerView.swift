@@ -22,7 +22,7 @@ struct OutletPickerView: View {
                             .disabled(switchingOutletID != nil)
                     }
                 } footer: {
-                    Text("Harga menu sama di semua outlet. Menu yang habis di outlet baru akan dikeluarkan dari keranjang.")
+                    Text("Harga produk sama di semua outlet. Produk yang habis di outlet baru akan dikeluarkan dari keranjang.")
                 }
             }
             .navigationTitle("Pilih Outlet")

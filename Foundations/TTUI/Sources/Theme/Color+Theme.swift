@@ -15,9 +15,21 @@ public extension Color {
     static let brand = Color(uiColor: .brand)
     static let brandSoft = Color(uiColor: .brand).opacity(0.12)
     /// Background screen.
-    static let appBackground = Color(uiColor: .systemGroupedBackground)
+    static let appBackground = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor.systemGroupedBackground.resolvedColor(with: trait)
+            : UIColor(red: 0.980, green: 0.965, blue: 0.941, alpha: 1)
+    })
     /// Background card di atas `appBackground`.
     static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    /// Garis tepi card.
+    static let cardLine = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor.separator.resolvedColor(with: trait)
+            : UIColor(red: 0.922, green: 0.886, blue: 0.843, alpha: 1)
+    })
+    /// Cokelat gelap untuk elemen kecil di atas warna brand.
+    static let brandDark = Color(red: 0.165, green: 0.09, blue: 0.063)
     /// Background text field.
     static let fieldBackground = Color(uiColor: .tertiarySystemFill)
 

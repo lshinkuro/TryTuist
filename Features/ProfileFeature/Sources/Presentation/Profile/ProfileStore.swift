@@ -32,7 +32,7 @@ enum ProfileMenuItem: String, CaseIterable, Identifiable {
         case .security: return String(localized: "Keamanan Akun")
         case .addresses: return String(localized: "Alamat Pengiriman")
         case .paymentMethods: return String(localized: "Metode Pembayaran")
-        case .favorites: return String(localized: "Menu Favorit")
+        case .favorites: return String(localized: "Produk Favorit")
         case .helpCenter: return String(localized: "Pusat Bantuan")
         case .language: return String(localized: "Bahasa")
         case .privacyPolicy: return String(localized: "Kebijakan Privasi")

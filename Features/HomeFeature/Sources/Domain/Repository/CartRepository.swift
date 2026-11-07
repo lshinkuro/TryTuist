@@ -43,7 +43,7 @@ enum CartError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .productUnavailable: return String(localized: "Maaf, menu ini sedang habis.")
+        case .productUnavailable: return String(localized: "Maaf, produk ini sedang habis.")
         case .invalidQuantity: return String(localized: "Jumlah pesanan harus 1–20.")
         case .emptyCart: return String(localized: "Keranjang masih kosong.")
         case .sessionExpired: return String(localized: "Sesi kamu berakhir. Silakan masuk lagi.")

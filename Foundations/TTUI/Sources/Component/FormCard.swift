@@ -2,7 +2,7 @@
 //  FormCard.swift
 //  TTUI
 //
-//  Card standar: background adaptif, sudut membulat, shadow halus.
+//  Card standar: background adaptif, sudut membulat, garis tepi halus.
 //
 import SwiftUI
 
@@ -12,7 +12,7 @@ public struct FormCardModifier: ViewModifier {
     public func body(content: Content) -> some View {
         content
             .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 4)
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Color.cardLine))
     }
 }
 

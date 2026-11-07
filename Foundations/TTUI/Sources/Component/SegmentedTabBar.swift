@@ -17,20 +17,23 @@ public struct SegmentedTabBar: View {
     }
 
     public var body: some View {
-        HStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.s) {
             ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
                 let isSelected = index == selectedIndex
                 Button {
                     withAnimation(.snappy) { selectedIndex = index }
                 } label: {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.appCaptionStrong)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                        .foregroundStyle(isSelected ? Color.white : Color.secondary)
+                        .foregroundStyle(isSelected ? Color.white : Color.primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                         .background {
+                            Capsule()
+                                .fill(Color.cardBackground)
+                                .overlay(Capsule().strokeBorder(Color.cardLine))
                             if isSelected {
                                 Capsule()
                                     .fill(Color.brand)
@@ -43,7 +46,5 @@ public struct SegmentedTabBar: View {
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
-        .padding(Spacing.xs)
-        .background(Color.cardBackground, in: Capsule())
     }
 }

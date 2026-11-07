@@ -21,14 +21,14 @@ public struct ScreenHeader<Trailing: View>: View {
     public var body: some View {
         HStack(alignment: .center, spacing: Spacing.m) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(title)
+                    .font(.appLargeTitle)
+                    .accessibilityAddTraits(.isHeader)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.subheadline)
+                        .font(.appSubhead)
                         .foregroundStyle(.secondary)
                 }
-                Text(title)
-                    .font(.largeTitle.bold())
-                    .accessibilityAddTraits(.isHeader)
             }
             Spacer(minLength: 0)
             trailing
@@ -57,12 +57,12 @@ public struct SectionHeader: View {
     public var body: some View {
         HStack {
             Text(title)
-                .font(.title3.bold())
+                .font(.appTitle3)
                 .accessibilityAddTraits(.isHeader)
             Spacer()
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.appSubheadStrong)
             }
         }
     }

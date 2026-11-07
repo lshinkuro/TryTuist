@@ -31,7 +31,7 @@ struct ProductCardView: View {
                 }
 
             Text(product.name)
-                .font(.subheadline.weight(.semibold))
+                .font(.appSubheadStrong)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
 
@@ -47,6 +47,7 @@ struct ProductCardView: View {
         .frame(width: 168)
         .formCard()
         .contentShape(Rectangle())
+        .appearAnimation()
     }
 }
 
@@ -66,14 +67,14 @@ struct ProductRowView: View {
                     if !product.isAvailable {
                         RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                             .fill(.black.opacity(0.45))
-                            .overlay { Text("Habis").font(.caption.bold()).foregroundStyle(.white) }
+                            .overlay { Text("Habis").font(.appCaptionStrong).foregroundStyle(.white) }
                     }
                 }
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack(spacing: Spacing.xs) {
                     Text(product.name)
-                        .font(.body.weight(.semibold))
+                        .font(.appSubheadStrong)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     if product.isOnDeal {
@@ -86,7 +87,7 @@ struct ProductRowView: View {
                 }
                 // Combo: isi paket lebih berguna daripada deskripsi.
                 Text(product.combo?.summary ?? product.description)
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -102,6 +103,7 @@ struct ProductRowView: View {
         .formCard()
         .opacity(product.isAvailable ? 1 : 0.7)
         .contentShape(Rectangle())
+        .appearAnimation()
     }
 }
 
@@ -110,16 +112,22 @@ struct ProductRowView: View {
 struct AddButton: View {
     let isEnabled: Bool
     let action: () -> Void
+    @State private var taps = 0
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            taps += 1
+            action()
+        } label: {
             Image(systemName: "plus")
-                .font(.subheadline.weight(.bold))
+                .symbolEffect(.bounce, value: taps)
+                .font(.appSubheadStrong)
                 .foregroundStyle(.white)
-                .frame(width: 30, height: 30)
+                .frame(width: 32, height: 32)
                 .background(isEnabled ? Color.brand : Color.secondary.opacity(0.4), in: Circle())
         }
         .buttonStyle(PressableButtonStyle())
+        .sensoryFeedback(.impact(weight: .light), trigger: taps)
         .disabled(!isEnabled)
         .accessibilityLabel("Tambah ke keranjang")
     }
@@ -138,7 +146,7 @@ struct RatingLabel: View {
             Text("· \(soldCount.compactFormatted) terjual")
                 .foregroundStyle(.secondary)
         }
-        .font(.caption)
+        .font(.appCaption)
         .accessibilityElement(children: .combine)
     }
 }
@@ -146,7 +154,7 @@ struct RatingLabel: View {
 struct BestSellerBadge: View {
     var body: some View {
         Text("🔥 Terlaris")
-            .font(.caption2.weight(.bold))
+            .font(.appMicro)
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -159,7 +167,7 @@ struct BestSellerBadge: View {
 struct ComboBadge: View {
     var body: some View {
         Text("PAKET")
-            .font(.caption2.weight(.heavy))
+            .font(.appMicro)
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -173,7 +181,7 @@ struct DiscountBadge: View {
 
     var body: some View {
         Text(percent > 0 ? "-\(percent)%" : "PROMO")
-            .font(.caption2.weight(.heavy))
+            .font(.appMicro)
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -187,7 +195,7 @@ struct PriceLabel: View {
     let price: Decimal
     var originalPrice: Decimal?
     var axis: Axis = .horizontal
-    var font: Font = .subheadline.bold()
+    var font: Font = .appSubheadStrong
 
     private var showsOriginal: Bool { (originalPrice ?? 0) > price }
 
@@ -216,7 +224,7 @@ struct PriceLabel: View {
 
     private func original(_ value: Decimal) -> some View {
         Text(value.rupiahFormatted)
-            .font(.caption)
+            .font(.appCaption)
             .strikethrough()
             .foregroundStyle(.secondary)
     }
@@ -238,13 +246,15 @@ struct CategoryChip: View {
             HStack(spacing: 6) {
                 Text(icon)
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.appSubheadStrong)
             }
             .foregroundStyle(isSelected ? Color.white : Color.primary)
             .padding(.horizontal, 14)
             .frame(height: 38)
             .background(isSelected ? Color.brand : Color.cardBackground, in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(isSelected ? 0 : 0.08)))
+            .scaleEffect(isSelected ? 1.04 : 1)
+            .animation(.snappy, value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -262,8 +272,10 @@ struct CartBarView: View {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "bag.fill")
                         .font(.title3)
+                        .symbolEffect(.bounce, value: summary.itemCount)
                     Text("\(summary.itemCount)")
-                        .font(.caption2.bold())
+                        .contentTransition(.numericText())
+                        .font(.appMicro)
                         .foregroundStyle(Color.brand)
                         .frame(minWidth: 16, minHeight: 16)
                         .background(Color.white, in: Circle())
@@ -271,17 +283,18 @@ struct CartBarView: View {
                 }
                 VStack(alignment: .leading, spacing: 0) {
                     Text("\(summary.itemCount) item")
-                        .font(.caption)
+                        .font(.appCaption)
                         .opacity(0.85)
                     Text(summary.total.rupiahFormatted)
-                        .font(.headline)
+                        .contentTransition(.numericText())
+                        .font(.appHeadline)
                 }
                 Spacer()
                 HStack(spacing: 4) {
                     Text("Keranjang")
                     Image(systemName: "chevron.right")
                 }
-                .font(.subheadline.weight(.semibold))
+                .font(.appSubheadStrong)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, Spacing.l)
@@ -295,6 +308,26 @@ struct CartBarView: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .accessibilityLabel("Keranjang, \(summary.itemCount) item, total \(summary.total.rupiahFormatted)")
     }
+}
+
+/// Muncul pelan (fade + naik sedikit) saat pertama tampil di layar, mis. ketika di-scroll.
+private struct AppearAnimation: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared || reduceMotion ? 0 : 12)
+            .onAppear {
+                guard !appeared else { return }
+                withAnimation(.easeOut(duration: 0.35)) { appeared = true }
+            }
+    }
+}
+
+extension View {
+    func appearAnimation() -> some View { modifier(AppearAnimation()) }
 }
 
 /// Tampilan loading/error standar untuk data async.
